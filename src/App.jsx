@@ -15,9 +15,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Redirect base path to login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-
+      
         {/* Guest-only routes */}
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
         <Route path="/" element={ <GuestRoute> <Login /> </GuestRoute> } />
