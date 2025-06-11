@@ -1,4 +1,9 @@
+type: static
+name: familytree
+buildCommand: npm run build
+staticPublishPath: dist
+
 routes:
   - type: rewrite
-    source: /*
+    source: /.*
     destination: /index.html
