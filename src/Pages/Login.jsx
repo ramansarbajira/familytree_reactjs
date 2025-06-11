@@ -10,6 +10,7 @@ const Login = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false); // For loader
 
   const validate = () => {
     const newErrors = {};
@@ -39,9 +40,11 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setApiError(''); // reset before new attempt
+    setApiError('');
 
     if (!validate()) return;
+
+    setIsSubmitting(true); // Show loader
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/login`, {
@@ -51,7 +54,6 @@ const Login = () => {
       });
 
       if (!response.ok) {
-        // Get error message from API if available
         const errorData = await response.json();
         setApiError(errorData.message || 'Login failed. Please check credentials.');
         return;
@@ -62,12 +64,14 @@ const Login = () => {
       navigate('/profile');
     } catch (error) {
       setApiError('Login failed. Please check your network or credentials.');
+    } finally {
+      setIsSubmitting(false); // Hide loader
     }
   };
 
   return (
     <div className="min-h-screen w-full bg-gray-50 flex items-center justify-center px-4">
-     <div className="w-full max-w-md px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <div className="flex justify-center mb-1">
           <AuthLogo className="w-28 h-28" />
@@ -98,6 +102,7 @@ const Login = () => {
           <div className="flex-grow border-t border-gray-300"></div>
         </div>
 
+        {/* API Error */}
         {apiError && (
           <div className="error-alert mb-4 p-3 text-sm text-red-700 bg-red-100 rounded border border-red-300">
             {apiError}
@@ -111,7 +116,7 @@ const Login = () => {
             </button>
           </div>
         )}
-        
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Username */}
@@ -161,12 +166,27 @@ const Login = () => {
             <a href="/forgot-password" className="text-[var(--color-primary)] hover:underline">Forgot password?</a>
           </div>
 
-          {/* Submit Button */}
+          {/* Submit Button with Loader */}
           <button
             type="submit"
-            className="w-full py-3 bg-[var(--color-primary)] hover:brightness-110 text-white font-semibold rounded-lg transition"
+            disabled={isSubmitting}
+            className={`w-full py-3 flex items-center justify-center font-semibold rounded-lg transition ${
+              isSubmitting
+                ? 'bg-gray-400 cursor-not-allowed text-white'
+                : 'bg-[var(--color-primary)] hover:brightness-110 text-white'
+            }`}
           >
-            Login
+            {isSubmitting ? (
+              <span className="flex items-center">
+                <svg className="animate-spin h-5 w-5 mr-2 text-white" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="white" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="white" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                Logging in...
+              </span>
+            ) : (
+              'Login'
+            )}
           </button>
         </form>
 
