@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const Profile = () => {
+const OnBoarding = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,4 +39,4 @@ const Profile = () => {
   );
 };
 
-export default Profile;
+export default OnBoarding;
