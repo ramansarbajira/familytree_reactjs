@@ -1,0 +1,183 @@
+import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import AuthLogo from '../Components/AuthLogo';
+
+const Login = () => {
+  const navigate = useNavigate();
+  const usernameRef = useRef(null);
+  const passwordRef = useRef(null);
+
+  const [formData, setFormData] = useState({ username: '', password: '' });
+  const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.username.trim()) newErrors.username = 'Email or phone is required';
+    if (!formData.password.trim()) newErrors.password = 'Password is required';
+
+    setErrors(newErrors);
+
+    if (newErrors.username) {
+      usernameRef.current?.focus();
+    } else if (newErrors.password) {
+      passwordRef.current?.focus();
+    }
+
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleChange = (field, value) => {
+    setFormData({ ...formData, [field]: value });
+
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      return newErrors;
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setApiError(''); // reset before new attempt
+
+    if (!validate()) return;
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        // Get error message from API if available
+        const errorData = await response.json();
+        setApiError(errorData.message || 'Login failed. Please check credentials.');
+        return;
+      }
+
+      const data = await response.json();
+      localStorage.setItem('access_token', data.access_token);
+      navigate('/profile');
+    } catch (error) {
+      setApiError('Login failed. Please check your network or credentials.');
+    }
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-gray-50 flex items-center justify-center px-4">
+     <div className="w-full max-w-md px-4 sm:px-6 lg:px-8">
+        {/* Logo */}
+        <div className="flex justify-center mb-1">
+          <AuthLogo className="w-28 h-28" />
+        </div>
+
+        {/* Title */}
+        <div className="text-center mb-3">
+          <h2 className="text-2xl font-bold text-gray-800">Welcome back!</h2>
+          <p className="text-sm text-gray-500 mt-1">Please enter your login details</p>
+        </div>
+
+        {/* Social Icons */}
+        <div className="flex justify-center gap-5 mb-3">
+          {['google', 'twitter', 'facebook'].map((social) => (
+            <button
+              key={social}
+              className="w-16 h-16 flex items-center justify-center rounded-full bg-white border shadow hover:shadow-lg transition"
+            >
+              <img src={`/assets/${social}.png`} alt={social} className="w-10 h-10" />
+            </button>
+          ))}
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center mb-6">
+          <div className="flex-grow border-t border-gray-300"></div>
+          <span className="px-3 text-sm text-gray-400">or</span>
+          <div className="flex-grow border-t border-gray-300"></div>
+        </div>
+
+        {apiError && (
+          <div className="error-alert mb-4 p-3 text-sm text-red-700 bg-red-100 rounded border border-red-300">
+            {apiError}
+            <button
+              onClick={() => setApiError('')}
+              className="ml-3 font-bold hover:text-red-900"
+              aria-label="Dismiss error"
+              style={{ float: 'right' }}
+            >
+              &times;
+            </button>
+          </div>
+        )}
+        
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Username */}
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">Email or Phone</label>
+            <input
+              id="username"
+              ref={usernameRef}
+              type="text"
+              value={formData.username}
+              onChange={(e) => handleChange('username', e.target.value)}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                errors.username
+                  ? 'border-red-500 focus:ring-red-300'
+                  : 'border-gray-300 focus:ring-[var(--color-primary)]'
+              }`}
+              placeholder="Email or Phone No"
+            />
+            {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
+          </div>
+
+          {/* Password */}
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input
+              id="password"
+              ref={passwordRef}
+              type="password"
+              value={formData.password}
+              onChange={(e) => handleChange('password', e.target.value)}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                errors.password
+                  ? 'border-red-500 focus:ring-red-300'
+                  : 'border-gray-300 focus:ring-[var(--color-primary)]'
+              }`}
+              placeholder="Enter password"
+            />
+            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+          </div>
+
+          {/* Options */}
+          <div className="flex items-center justify-between text-sm">
+            <label className="flex items-center space-x-2">
+              <input type="checkbox" className="rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
+              <span>Stay logged in</span>
+            </label>
+            <a href="/forgot-password" className="text-[var(--color-primary)] hover:underline">Forgot password?</a>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            className="w-full py-3 bg-[var(--color-primary)] hover:brightness-110 text-white font-semibold rounded-lg transition"
+          >
+            Login
+          </button>
+        </form>
+
+        {/* Sign Up */}
+        <p className="text-center text-sm text-gray-500 mt-6">
+          Don't have an account?{' '}
+          <a href="/register" className="text-[var(--color-primary)] hover:underline">Sign up</a>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default Login;

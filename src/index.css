@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #022e79;
+    --color-secondary: #1a56bd;
+    --color-error: 239, 68, 68;
+  }
+
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #ffffff;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"] {
+    @apply w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2;
+  }
+
+  button {
+    @apply transition-colors duration-200;
+    background-color: var(--color-primary);
+  }
+  .error-alert button, .bg-unset{
+    background-color: unset;
+  }
+}
