@@ -27,4 +27,8 @@
   .error-alert button, .bg-unset{
     background-color: unset;
   }
+
 }
+.text-primary{
+    color: var(--color-primary);
+  }
