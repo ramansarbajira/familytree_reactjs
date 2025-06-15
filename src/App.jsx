@@ -10,6 +10,7 @@ import VerifyOtp from './Pages/VerifyOtp';
 
 import PrivateRoute from './Routes/PrivateRoute';
 import GuestRoute from './Routes/GuestRoute';
+import Dashboard from './Pages/Dashboard';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         {/* Authenticated-only route */}
         <Route path="/profile" element={ <PrivateRoute> <Profile /> </PrivateRoute> } />
         <Route path="/on-boarding" element={ <PrivateRoute> <OnBoarding /> </PrivateRoute> } />
+           <Route path="/dashboard" element={<Dashboard />} />
 
       </Routes>
     </Router>
