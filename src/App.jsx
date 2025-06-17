@@ -26,8 +26,8 @@ function App() {
         <Route path="/verify-otp" element={ <GuestRoute> <VerifyOtp /> </GuestRoute> } />
 
         {/* Authenticated-only route */}
-        <Route path="/profile" element={ <PrivateRoute> <Profile /> </PrivateRoute> } />
-        <Route path="/on-boarding" element={ <PrivateRoute> <OnBoarding /> </PrivateRoute> } />
+        <Route path="/profile" element={  <Profile /> } />
+        <Route path="/on-boarding" element={ <OnBoarding />  } />
            <Route path="/dashboard" element={<Dashboard />} />
 
       </Routes>

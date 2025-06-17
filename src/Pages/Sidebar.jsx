@@ -53,7 +53,8 @@ const Sidebar = ({
   };
 
   return (
-    <div className="w-64 bg-white shadow-lg h-screen flex flex-col">
+   <div className="w-64 bg-white shadow-lg h-screen flex flex-col overflow-hidden font-helvetica">
+
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
@@ -75,12 +76,12 @@ const Sidebar = ({
 
       {/* Menu Items */}
       <div className="flex-1 py-6 px-4">
-        <nav className="space-y-2">
+        <nav className="space-y-1">
           {menuItems.map((item) => (
             <div
               key={item.id}
               onClick={() => handleItemClick(item)}
-              className={`group flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${
+              className={`group flex items-center justify-between px-4 py-2.5 rounded-lg cursor-pointer transition-all duration-200 ${
                 activeTab === item.id 
                   ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600 shadow-sm' 
                   : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
@@ -115,7 +116,7 @@ const Sidebar = ({
       {/* Bottom Section */}
       <div className="border-t border-gray-200 p-6 space-y-4">
         {/* Pro Section */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-100">
+        {/* <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-100">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
               <span className="text-lg">👑</span>
@@ -126,7 +127,7 @@ const Sidebar = ({
             </span>
           </div>
           <p className="text-xs text-gray-600">Get unlimited access to all features</p>
-        </div>
+        </div> */}
         
         {/* User Profile */}
         <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">

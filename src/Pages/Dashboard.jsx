@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import ProfileInfo from './ProfileInfo';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('feed'); // Default to 'feed'
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
   const [userInfo] = useState({
     name: 'Stephan Curry',
     familyName: 'Family name',
@@ -17,15 +20,41 @@ const Dashboard = () => {
     feeds: 0
   });
 
+  // Check if screen is mobile size
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
   // Handle navigation from Sidebar
   const handleNavigate = (route, tabId) => {
     setActiveTab(tabId);
-    // Here you could also handle actual routing if using React Router
+    // Close sidebar on mobile after navigation
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
     console.log(`Navigating to ${route} with tab ${tabId}`);
+  };
+
+  // Toggle sidebar for mobile
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   // Render content based on active tab
   const renderContent = () => {
+    // On mobile, always show ProfileInfo regardless of active tab
+    if (isMobile) {
+      return <ProfileInfo />;
+    }
+
+    // Desktop behavior - show content based on active tab
     switch(activeTab) {
       case 'feeds':
         return <ProfileInfo />;
@@ -96,15 +125,66 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 relative">
+      {/* Mobile Menu Toggle Button */}
+      {isMobile && (
+        <button
+          onClick={toggleSidebar}
+          className="fixed top-4 left-4 z-50 bg-white p-3 rounded-lg shadow-lg border md:hidden"
+          aria-label="Toggle sidebar"
+        >
+          <svg
+            className="w-6 h-6 text-gray-700"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            {sidebarOpen ? (
+              // Close icon
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            ) : (
+              // Hamburger menu icon
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            )}
+          </svg>
+        </button>
+      )}
+
+      {/* Mobile Backdrop */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab}
-        userInfo={userInfo}
-        counts={counts}
-        onNavigate={handleNavigate}
-      />
+      <div className={`
+        ${isMobile 
+          ? `fixed left-0 top-0 h-full z-40 transform transition-transform duration-300 ease-in-out ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`
+          : 'relative'
+        }
+      `}>
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab}
+          userInfo={userInfo}
+          counts={counts}
+          onNavigate={handleNavigate}
+        />
+      </div>
       
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
