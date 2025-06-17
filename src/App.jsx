@@ -28,7 +28,7 @@ function App() {
         {/* Authenticated-only route */}
         <Route path="/profile" element={  <Profile /> } />
         <Route path="/on-boarding" element={ <OnBoarding />  } />
-           <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
 
       </Routes>
     </Router>

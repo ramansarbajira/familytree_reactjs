@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --color-primary: #022e79;
-    --color-secondary: #1a56bd;
+    --color-primary: #3e972b;
+    --color-secondary: #3e972b;
     --color-error: 239, 68, 68;
   }
 
@@ -32,3 +32,6 @@
 .text-primary{
     color: var(--color-primary);
   }
+.sidebarbg{
+  background-color: #fcfbfb;
+}
