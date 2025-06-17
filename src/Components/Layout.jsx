@@ -75,7 +75,7 @@ const Layout = ({ children, activeTab, setActiveTab }) => {
         )}
 
         {/* Page Content */}
-        <div className="p-4 sm:p-6 md:p-8">{children}</div>
+        <div className="">{children}</div>
       </main>
     </div>
   );
