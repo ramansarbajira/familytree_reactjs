@@ -15,7 +15,7 @@ function FamilyCodeAutocomplete({ formData, setFormData }) {
           .then(res => res.json())
           .then(data => setSuggestions(data))
           .catch(() => setSuggestions([]))
-          .finally(() => setIsLoading(false)); // Stop loader
+          .finally(() => setIsLoading(false));
       } else {
         setSuggestions([]);
         setIsLoading(false);
