@@ -9,10 +9,11 @@ const VerifyOtp = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
+  const [mobile, setMobile] = useState('');
 
   const [canResend, setCanResend] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-
+  
   // Check for email in location state or redirect
   useEffect(() => {
     if (!location.state?.email) {
@@ -20,30 +21,33 @@ const VerifyOtp = () => {
     } else {
       setEmail(location.state.email);
     }
+    if (location.state.mobile) setMobile(location.state.mobile);
   }, [location.state, navigate]);
 
   // Handle OTP resend cooldown
   useEffect(() => {
-    const otpSent = parseInt(localStorage.getItem('otp_sent_time'), 10);
-    if (otpSent) {
-      const checkTimeLeft = () => {
-        const now = Date.now();
-        const diff = 15 * 60 * 1000 - (now - otpSent); // 15 mins
-        if (diff > 0) {
-          setTimeLeft(Math.ceil(diff / 1000));
-          setCanResend(false);
-        } else {
-          setTimeLeft(0);
-          setCanResend(true);
-        }
-      };
+    let otpSent = parseInt(localStorage.getItem('otp_sent_time'), 10);
 
-      checkTimeLeft();
-      const interval = setInterval(checkTimeLeft, 1000);
-      return () => clearInterval(interval);
-    } else {
-      setCanResend(true); // allow immediately if no record
+    if (!otpSent) {
+      otpSent = Date.now();
+      localStorage.setItem('otp_sent_time', otpSent.toString());
     }
+
+    const checkTimeLeft = () => {
+      const now = Date.now();
+      const diff = 15 * 60 * 1000 - (now - otpSent); // 15 minutes
+      if (diff > 0) {
+        setTimeLeft(Math.ceil(diff / 1000));
+        setCanResend(false);
+      } else {
+        setTimeLeft(0);
+        setCanResend(true);
+      }
+    };
+
+    checkTimeLeft();
+    const interval = setInterval(checkTimeLeft, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   if (!email) {
@@ -65,7 +69,7 @@ const VerifyOtp = () => {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify({ userName:email, otp }),
       });
 
       if (!response.ok) {
@@ -76,9 +80,12 @@ const VerifyOtp = () => {
       }
 
       const data = await response.json();
-      localStorage.setItem('access_token', data.access_token);
+      
+      localStorage.setItem('access_token', data.accessToken);
       navigate('/on-boarding');
     } catch (err) {
+      console.log(err);
+      
       setError('OTP verification failed. Please try again.');
       setIsLoading(false);
     }
@@ -90,7 +97,7 @@ const VerifyOtp = () => {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/resend-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, mobile  }),
       });
 
       if (!response.ok) {
@@ -121,7 +128,7 @@ const VerifyOtp = () => {
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">Verify Your Email</h2>
           <p className="text-sm text-gray-500 mt-1">
-            We've sent a verification code to {email}
+            We've sent a verification code to {email} {mobile ? ' or ' + mobile : ''}
           </p>
         </div>
 

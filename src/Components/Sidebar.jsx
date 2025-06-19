@@ -42,6 +42,10 @@ const Sidebar = ({
   ];
 
   const handleItemClick = (item) => {
+     if (item.id === 'logout') {
+      handleLogout();
+      return;
+    }
     setActiveTab(item.id);
     if (item.route) {
       navigate(item.route);
@@ -49,6 +53,11 @@ const Sidebar = ({
     if (isMobile && onCloseMobile) {
       onCloseMobile(); // Close sidebar on mobile after selecting
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    navigate('/login');
   };
 
   return (
