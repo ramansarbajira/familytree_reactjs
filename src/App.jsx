@@ -11,6 +11,7 @@ import VerifyOtp from './Pages/VerifyOtp';
 import PrivateRoute from './Routes/PrivateRoute';
 import GuestRoute from './Routes/GuestRoute';
 import Dashboard from './Pages/Dashboard';
+import MyProfile from './Pages/MyProfile';
 
 function App() {
   return (
@@ -29,7 +30,7 @@ function App() {
         <Route path="/profile" element={  <Profile /> } />
         <Route path="/on-boarding" element={ <OnBoarding />  } />
         <Route path="/dashboard" element={<Dashboard />} />
-
+        <Route path="/myprofile" element={<MyProfile />} />
       </Routes>
     </Router>
   );
