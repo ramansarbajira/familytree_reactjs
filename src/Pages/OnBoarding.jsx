@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaUser, FaUsers, FaEnvelope, FaInfoCircle, FaCloudUploadAlt } from 'react-icons/fa';
 import AuthLogo from '../Components/AuthLogo';
+import FamilyCodeAutocomplete  from '../Components/SuggestFamily';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import { jwtDecode } from 'jwt-decode';
@@ -10,7 +11,7 @@ const OnBoarding = () => {
   const navigate = useNavigate();
   const [userId, setUserId] = useState(null);
   const [token, setToken] = useState(null);
-  
+  const [isSaving, setIsSaving] = useState(false);
 
   const sections = [
     { id: 'basic', title: 'Basic Information', icon: <FaUser className="mr-3" />, description: 'General information about you' },
@@ -229,7 +230,8 @@ const OnBoarding = () => {
 
   const handleSave = async () => {
     if (!validateCurrentSection()) return;
-  
+    setIsSaving(true);
+    
     setIsSubmitting(true);
     setApiError('');
     setApiSuccess('');
@@ -285,8 +287,7 @@ const OnBoarding = () => {
       formDataToSend.delete('motherTongue');
       formDataToSend.delete('gothram');
       formDataToSend.delete('childrenCount');
-
-      console.log([...formDataToSend.entries()]);
+      formDataToSend.delete('profileUrl');
       
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/profile/update/${userId}`, {
         method: 'PUT',
@@ -302,11 +303,12 @@ const OnBoarding = () => {
       }
   
       setApiSuccess('Profile updated successfully!');
-      setTimeout(() => navigate('/on-boarding'), 2000);
+      setTimeout(() => navigate('/profile'), 2000);
     } catch (error) {
       setApiError(error.message || 'Network error. Please try again.');
     } finally {
       setIsSubmitting(false);
+      setIsSaving(false);
     }
   };
 
@@ -401,7 +403,8 @@ const OnBoarding = () => {
             address: userProfile.address || '',
             contactNumber: userProfile.contactNumber || '',
             bio: userProfile.bio || '',
-            profileUrl: userProfile.profile || ''
+            profileUrl: userProfile.profile || '',
+            familyCode: userProfile.familyCode || ''
           };
         });
         // Parse response body
@@ -837,6 +840,7 @@ const OnBoarding = () => {
                 </div>
               )}
 
+              
               {/* Children Count */}
               {formData.maritalStatus === 'Married' && (
                 <div>
@@ -845,7 +849,26 @@ const OnBoarding = () => {
                     type="number"
                     name="childrenCount"
                     value={formData.childrenCount || ''}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      const newCount = parseInt(e.target.value || '0');
+                      setFormData((prev) => {
+                        const updated = { ...prev, childrenCount: newCount };
+
+                        for (let i = 0; i < newCount; i++) {
+                          if (prev[`childName${i}`]) {
+                            updated[`childName${i}`] = prev[`childName${i}`];
+                          } else {
+                            updated[`childName${i}`] = ''; // initialize if not present
+                          }
+                        }
+                        for (let i = newCount; i < 20; i++) {
+                          if (updated.hasOwnProperty(`childName${i}`)) {
+                            delete updated[`childName${i}`];
+                          }
+                        }
+                        return updated;
+                      });
+                    }}
                     placeholder="Enter number of children"
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-md text-sm placeholder:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                   />
@@ -872,6 +895,7 @@ const OnBoarding = () => {
                   ))}
                 </div>
               )}
+              
             </div>
           </div>
         )}
@@ -884,6 +908,63 @@ const OnBoarding = () => {
     </div>
     
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Contact number */}
+      <div className="">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Contact number</label>
+        <div className="max-w-sm">
+          <PhoneInput
+            country={'in'}
+            value={formData.contactNumber}
+            onChange={(phone) => {
+              setFormData(prev => ({ ...prev, contactNumber: phone }));
+              // Clear error when user starts typing
+              setErrors((prev) => {
+                const newErrors = { ...prev };
+                delete newErrors.contactNumber;
+                return newErrors;
+              });
+            }}
+            inputProps={{
+              name: 'contactNumber',
+              required: true,
+              placeholder: '8122345789',
+              ref: fieldRefs.contactNumber
+            }}
+            specialLabel=""
+            disableSearchIcon={true}
+            containerStyle={{
+              width: '100%'
+            }}
+            inputStyle={{
+              width: '100%',
+              height: '44px',
+              fontSize: '14px',
+              paddingLeft: '60px',
+              border: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
+              borderLeft: 'none',
+              borderRadius: '0 6px 6px 0',
+              outline: 'none',
+              boxShadow: errors.contactNumber ? '0 0 0 2px rgba(239, 68, 68, 0.2)' : 'none'
+            }}
+            buttonStyle={{
+              border: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
+              borderRight: 'none',
+              borderRadius: '6px 0 0 6px',
+              backgroundColor: 'white',
+              width: '48px',
+              height: '44px'
+            }}
+            dropdownStyle={{
+              borderRadius: '6px',
+              border: '1px solid #d1d5db',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              zIndex: 50
+            }}
+          />
+          {errors.contactNumber && <p className="text-red-500 text-xs mt-1">{errors.contactNumber}</p>}
+        </div>
+      </div>
+      
       {/* Your hobbies */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Your hobbies</label>
@@ -955,61 +1036,6 @@ const OnBoarding = () => {
         {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
       </div>
 
-{/* Contact number */}
-<div className="md:col-span-2">
-  <label className="block text-sm font-medium text-gray-700 mb-1">Contact number</label>
-  <div className="max-w-sm">
-    <PhoneInput
-      country={'in'}
-      value={formData.contactNumber}
-      onChange={(phone) => {
-        setFormData(prev => ({ ...prev, contactNumber: phone }));
-        // Clear error when user starts typing
-        setErrors((prev) => {
-          const newErrors = { ...prev };
-          delete newErrors.contactNumber;
-          return newErrors;
-        });
-      }}
-      inputProps={{
-        name: 'contactNumber',
-        required: true,
-        placeholder: '8122345789',
-        ref: fieldRefs.contactNumber
-      }}
-      disableSearchIcon={true}
-      containerStyle={{
-        width: '100%'
-      }}
-      inputStyle={{
-        width: '70%',
-        height: '44px',
-        fontSize: '14px',
-        paddingLeft: '60px',
-        border: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
-        borderLeft: 'none',
-        borderRadius: '0 6px 6px 0',
-        outline: 'none',
-        boxShadow: errors.contactNumber ? '0 0 0 2px rgba(239, 68, 68, 0.2)' : 'none'
-      }}
-      buttonStyle={{
-        border: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
-        borderRight: 'none',
-        borderRadius: '6px 0 0 6px',
-        backgroundColor: 'white',
-        width: '48px',
-        height: '44px'
-      }}
-      dropdownStyle={{
-        borderRadius: '6px',
-        border: '1px solid #d1d5db',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        zIndex: 50
-      }}
-    />
-    {errors.contactNumber && <p className="text-red-500 text-xs mt-1">{errors.contactNumber}</p>}
-  </div>
-</div>
     </div>
   </div>
 )}
@@ -1036,18 +1062,7 @@ const OnBoarding = () => {
       </div>
 
       {/* Family code/Root ID */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Family code/Root ID</label>
-        <div className="max-w-xs">
-          <input
-            type="text"
-            name="familyCode"
-            defaultValue={formData.familyCode || ''}
-            placeholder="FAM-8927"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-md text-sm placeholder:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-gray-600"
-          />
-        </div>
-      </div>
+      <FamilyCodeAutocomplete formData={formData} setFormData={setFormData} />
     </div>
   </div>
 )}
@@ -1064,7 +1079,6 @@ const OnBoarding = () => {
 
         {/* Right Side: Skip + Next/Save */}
         <div className="flex items-center gap-5">
-          {/* Skip */}
           {!isLast && (
             <button
               className="text-sm text-gray-600 hover:text-black bg-unset"
@@ -1073,14 +1087,23 @@ const OnBoarding = () => {
               Skip
             </button>
           )}
-
-          {/* Next or Save */}
           {isLast ? (
             <button
-              className="px-6 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700 text-sm"
+              className="px-6 py-2 rounded-md text-white text-sm bg-primary flex items-center justify-center gap-2 min-w-[80px]"
               onClick={handleSave}
+              disabled={isSaving}
             >
-              Save
+              {isSaving ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                  </svg>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                'Save'
+              )}
             </button>
           ) : (
             <button
@@ -1091,6 +1114,7 @@ const OnBoarding = () => {
             </button>
           )}
         </div>
+        
       </div>
 
       </div>
