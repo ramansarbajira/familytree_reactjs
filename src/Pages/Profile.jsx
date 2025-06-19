@@ -2,8 +2,10 @@ import React, { useRef, useState } from 'react';
 import { FaEdit } from "react-icons/fa";
 import Layout from '../Components/Layout';
 import ActionButtons from '../Components/ActionButtons';
+import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
+  const navigate = useNavigate(); 
   const [activeTab, setActiveTab] = useState('profile'); // Set default tab
 
   const fileInputRef = useRef(null);
@@ -68,6 +70,7 @@ const Profile = () => {
   };
 
   const handleBack = () => {
+     navigate('/myprofile'); 
     console.log("Going back...");
     // your back logic
   };
@@ -81,7 +84,7 @@ const Profile = () => {
   };
   
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+    <Layout>
       <div className="mx-auto p-8 bg-white font-helvetica">
       {/* Header */}
        {/* First Location */}

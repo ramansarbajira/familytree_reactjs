@@ -32,7 +32,7 @@ const Sidebar = ({
   const navigate = useNavigate();
   
   const menuItems = [
-    { id: 'profile', label: 'Profile', route: '/profile' },
+    { id: 'profile', label: 'Profile', route: '/myprofile' },
     { id: 'upcomingEvent', label: 'Upcoming Event' },
     { id: 'familyTree', label: 'Family Tree' },
     { id: 'addFamilyMember', label: 'Add Family Member' },
