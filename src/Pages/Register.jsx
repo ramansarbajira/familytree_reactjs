@@ -1,16 +1,19 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PhoneInput from 'react-phone-input-2';
 import AuthLogo from '../Components/AuthLogo';
 
 const Register = () => {
   const navigate = useNavigate();
   const firstNameRef = useRef(null);
+  const mobileRef = useRef(null);
   
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     mobile: '',
+    countryCode: '',
     password: ''
   });
   
@@ -20,15 +23,19 @@ const Register = () => {
 
   const validate = () => {
     const newErrors = {};
+
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (!formData.mobile.trim()) newErrors.mobile = 'Mobile number is required';
+    if (!formData.countryCode || !formData.mobile) {
+      newErrors.mobile = 'Valid mobile number is required';
+    } else if (formData.mobile.length < 6 || formData.mobile.length > 15) {
+      newErrors.mobile = 'Mobile number must be between 6 and 15 digits';
+    }
     if (!formData.password.trim()) newErrors.password = 'Password is required';
 
     setErrors(newErrors);
 
-    // Focus on first error field
     if (newErrors.firstName) {
       firstNameRef.current?.focus();
     }
@@ -63,13 +70,13 @@ const Register = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        setApiError(errorData.message || 'Registration failed. Please try again.');
+        setApiError(errorData.message || 'Login failed. Please check credentials.');
         return;
       }
-
+      
       const data = await response.json();
       // Navigate to OTP verification page with email
-      navigate('/verify-otp', { state: { email: data.email } });
+      navigate('/verify-otp', { state: { email: data.email, mobile: data.mobile  } });
     } catch (error) {
       setApiError('Registration failed. Please check your network and try again.');
     } finally {
@@ -169,23 +176,67 @@ const Register = () => {
           </div>
 
           {/* Mobile Number */}
-          <div>
+          <div className="w-full">
             <label htmlFor="mobile" className="block text-sm font-bold text-gray-700 mb-1">
-              Mobile number  <span className="text-red-500">*</span>
+              Mobile number <span className="text-red-500">*</span>
             </label>
-            <input
-              id="mobile"
-              type="tel"
-              value={formData.mobile}
-              onChange={(e) => handleChange('mobile', e.target.value)}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
-                errors.mobile
-                  ? 'border-red-500 focus:ring-red-300'
-                  : 'border-gray-300 focus:ring-[var(--color-primary)]'
-              }`}
-              placeholder="Enter mobile number"
+            <PhoneInput
+              country={'in'}
+              value={`${formData.countryCode}${formData.mobile}`}
+              onChange={(value, data) => {
+                const dialCode = `+${data.dialCode}`;
+                const mobileNumber = value.replace(data.dialCode, '').replace(/\D/g, ''); // remove country code & non-digits
+
+                setFormData((prev) => ({
+                  ...prev,
+                  countryCode: dialCode,
+                  mobile: mobileNumber
+                }));
+
+                setErrors((prev) => {
+                  const newErrors = { ...prev };
+                  delete newErrors.mobile;
+                  return newErrors;
+                });
+              }}
+              inputProps={{
+                name: 'mobile',
+                required: true,
+                id: 'mobile',
+                ref: mobileRef,
+                placeholder: 'Enter mobile number'
+              }}
+              specialLabel=""
+              disableSearchIcon={true}
+              containerStyle={{ width: '100%' }}
+              inputStyle={{
+                width: '100%',
+                height: '44px',
+                fontSize: '14px',
+                paddingLeft: '50px',
+                border: `1px solid ${errors.mobile ? '#ef4444' : '#d1d5db'}`,
+                borderRadius: '6px',
+                outline: 'none',
+                boxShadow: errors.mobile ? '0 0 0 2px rgba(239, 68, 68, 0.2)' : 'none',
+              }}
+              buttonStyle={{
+                border: `1px solid ${errors.mobile ? '#ef4444' : '#d1d5db'}`,
+                borderRight: 'none',
+                borderRadius: '6px 0 0 6px',
+                backgroundColor: 'white',
+                width: '48px',
+                height: '44px',
+              }}
+              dropdownStyle={{
+                borderRadius: '6px',
+                border: '1px solid #d1d5db',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                zIndex: 50,
+              }}
             />
-            {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
+            {errors.mobile && (
+              <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>
+            )}
           </div>
 
           {/* Password */}
@@ -231,7 +282,7 @@ const Register = () => {
         </form>
 
         {/* Login Link */}
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-gray-500 mt-6 pb-8">
           Already have an account?{' '}
           <a href="/login" className="text-[var(--color-primary)] hover:underline">Login</a>
         </p>

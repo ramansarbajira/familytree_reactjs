@@ -60,7 +60,7 @@ const Login = () => {
       }
 
       const data = await response.json();
-      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('access_token', data.accessToken);
       navigate('/profile');
     } catch (error) {
       setApiError('Login failed. Please check your network or credentials.');
@@ -191,7 +191,7 @@ const Login = () => {
         </form>
 
         {/* Sign Up */}
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-gray-500 mt-6 pb-8">
           Don't have an account?{' '}
           <a href="/register" className="text-[var(--color-primary)] hover:underline">Sign up</a>
         </p>
