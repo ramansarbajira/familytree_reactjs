@@ -1,8 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import { faUsers } from '@fortawesome/free-solid-svg-icons';
 import {
   faUser,
+  faUsers,
   faCalendarAlt,
   faSitemap,
   faUserPlus,
@@ -11,48 +13,40 @@ import {
   faSignOutAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { FaTimes } from 'react-icons/fa';
+import { useUser } from '../Contexts/UserContext';
 
 const iconMap = {
   profile: faUser,
-  upcomingEvent: faCalendarAlt,
   familyTree: faSitemap,
-  addFamilyMember: faUserPlus,
+  myFamilyMember: faUsers,
   pendingApprovals: faHourglassHalf,
   gifts: faGift,
   logout: faSignOutAlt
 };
 
-const Sidebar = ({
-  activeTab,
-  setActiveTab,
-  userInfo = {},
-  isMobile,
-  onCloseMobile
-}) => {
+const Sidebar = ({ activeTab, setActiveTab, isMobile, onCloseMobile }) => {
   const navigate = useNavigate();
+  const { userInfo } = useUser() || {};
+  
+  //console.log(userInfo);
   
   const menuItems = [
     { id: 'profile', label: 'Profile', route: '/myprofile' },
-    { id: 'upcomingEvent', label: 'Upcoming Event' },
     { id: 'familyTree', label: 'Family Tree' },
-    { id: 'addFamilyMember', label: 'Add Family Member' },
+    { id: 'myFamilyMember', label: 'My Family Member', route: '/myfamilymember'  },
     { id: 'pendingApprovals', label: 'Pending Approvals' },
     { id: 'gifts', label: 'Gifts' },
     { id: 'logout', label: 'Logout' }
   ];
 
   const handleItemClick = (item) => {
-     if (item.id === 'logout') {
+    if (item.id === 'logout') {
       handleLogout();
       return;
     }
-    setActiveTab(item.id);
-    if (item.route) {
-      navigate(item.route);
-    }
-    if (isMobile && onCloseMobile) {
-      onCloseMobile(); // Close sidebar on mobile after selecting
-    }
+    if (setActiveTab) setActiveTab(item.id);
+    if (item.route) navigate(item.route);
+    if (isMobile && onCloseMobile) onCloseMobile();
   };
 
   const handleLogout = () => {
@@ -61,10 +55,9 @@ const Sidebar = ({
   };
 
   return (
-    <div className="sidebarbg h-full flex flex-col w-full max-w-[280px]">
-      {/* Header: Logo right, close icon left */}
+    <div className="sidebarbg h-full flex flex-col w-full max-w-[280px] bg-white shadow-md">
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 sm:justify-start">
-        {/* Close icon (only mobile) */}
         {isMobile && (
           <button onClick={onCloseMobile} className="text-gray-600 mr-4 sm:hidden">
             <FaTimes size={20} />
@@ -78,17 +71,19 @@ const Sidebar = ({
               className="w-full h-full object-cover rounded-full"
             />
           </div>
-          <h4 className="text-xl font-bold text-gray-800 leading-tight hidden sm:block">Aalam</h4>
+          <h4 className="text-xl font-bold text-gray-800 hidden sm:block">Aalam</h4>
         </div>
       </div>
 
       {/* Menu Items */}
       <div className="flex-1 pl-8 py-6 overflow-y-auto">
         <nav className="flex flex-col gap-8">
-          {menuItems.map(item => (
+          {menuItems.map((item) => (
             <div
               key={item.id}
-              className={`flex items-center text-gray-800 text-base cursor-pointer ${activeTab === item.id ? 'font-semibold' : ''}`}
+              className={`flex items-center text-gray-800 text-base cursor-pointer hover:text-primary transition-colors ${
+                activeTab === item.id ? 'font-semibold text-primary' : ''
+              }`}
               onClick={() => handleItemClick(item)}
             >
               <FontAwesomeIcon icon={iconMap[item.id]} className="mr-3 text-lg" />
@@ -98,13 +93,13 @@ const Sidebar = ({
         </nav>
       </div>
 
-      {/* User Section */}
-      <div className="border-t border-gray-200 px-3 py-2 space-y-2">
+      {/* User Info Section */}
+      <div className="border-t border-gray-200 px-3 py-3">
         <div className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
           <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-pink-500 rounded-full overflow-hidden shadow-md">
-            {userInfo.profilePic ? (
+            {userInfo?.profileUrl ? (
               <img
-                src={userInfo.profilePic}
+                src={userInfo.profileUrl || '/assets/default-user.png'}
                 alt="Profile"
                 className="w-full h-full object-cover"
               />
@@ -116,10 +111,10 @@ const Sidebar = ({
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-gray-800 truncate">
-              {userInfo.name || 'User Name'}
+              {userInfo?.name || 'User Name'}
             </div>
             <div className="text-xs text-gray-500 truncate">
-              {userInfo.familyName || 'Family name'}
+              {userInfo?.familyCode || 'Family Name'}
             </div>
           </div>
         </div>

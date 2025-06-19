@@ -7,8 +7,8 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: '#43b556',
-        secondary: '#0a3d62',
+        primary: '#3f982c',
+        secondary: '#3f982c',
       },
       fontFamily: {
         helvetica: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
