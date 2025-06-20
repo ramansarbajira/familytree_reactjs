@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import Layout from '../Components/Layout'; // Assuming Layout is in Components folder
 import { useNavigate } from 'react-router-dom';
-import { FaUserPlus } from 'react-icons/fa'; // Icon for "Add New Member" button
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'; // For section icons
-import { faUsers } from '@fortawesome/free-solid-svg-icons'; // Main icon for the page header
 
 // Import additional icons needed for the card details
 import { FiPlus , FiEdit2, FiTrash2, FiSearch } from 'react-icons/fi'; // Removed FiChevronRight, FiEye as entire card is clickable
@@ -129,7 +126,7 @@ const FamilyMemberCard = ({ member, onViewDetails, onEditMember, onDeleteMember 
 const FamilyMemberListing = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('familyTree');
+  const [activeTab, setActiveTab] = useState('myFamilyMember');
 
   // Sample family members data
   const [familyMembers, setFamilyMembers] = useState([

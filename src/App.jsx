@@ -11,6 +11,8 @@ import VerifyOtp from './Pages/VerifyOtp';
 import Dashboard from './Pages/Dashboard';
 import MyProfile from './Pages/MyProfile';
 import MyFamilyMember from './Pages/MyFamilyMember';
+import PendingFamilyRequests from './Pages/PendingFamilyRequests';
+import InviteFamilyMember from './Pages/InviteFamilyMember';
 
 import { UserProvider } from './Contexts/UserContext';
 import PrivateRoute from './Routes/PrivateRoute';
@@ -36,6 +38,8 @@ function App() {
         <Route path="/myprofile" element={<PrivateRoute><UserProvider><MyProfile /></UserProvider></PrivateRoute>} />
 
         <Route path="/myfamilymember" element={<MyFamilyMember />  } />
+        <Route path="/pending-request" element={<PendingFamilyRequests />  } />
+        <Route path="/invite-member" element={<InviteFamilyMember />  } />
         
 
       </Routes>

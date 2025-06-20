@@ -44,6 +44,9 @@ export const UserProvider = ({ children }) => {
       const jsonData = await response.json();
       const { userProfile } = jsonData.data;
 
+      console.log(userProfile);
+      
+
       const childrenArray = userProfile.childrenNames
         ? JSON.parse(userProfile.childrenNames)
         : [];
