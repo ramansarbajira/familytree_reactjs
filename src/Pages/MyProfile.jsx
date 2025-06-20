@@ -558,56 +558,88 @@ const MyProfile = () => {
         </div>
       )}
 
+
+
+
+
       {/* Gallery Image Modal with Navigation */}
-      {selectedGalleryImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-          <div className="relative w-full h-full flex items-center justify-center">
-            <button 
-              onClick={() => setSelectedGalleryImage(null)}
-              className="absolute top-4 right-4 text-white hover:text-gray-300 text-3xl z-20"
-            >
-              ×
-            </button>
-            
-            <div className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center">
-              <img
-                src={selectedGalleryImage.image}
-                alt="gallery"
-                className="max-w-full max-h-full object-contain"
-              />
-              
-              {/* Navigation Arrows - Only show if more than 1 image */}
-              {galleryImages.length > 1 && (
-                <>
-                  <button
-                    onClick={prevGalleryImage}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70 transition-all z-10"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={nextGalleryImage}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70 transition-all z-10"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </>
-              )}
-              
-              {/* Image Counter */}
-              {galleryImages.length > 1 && (
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-4 py-2 rounded-full text-sm">
-                  {currentGalleryIndex + 1} / {galleryImages.length}
-                </div>
-              )}
+     {selectedGalleryImage && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-lg w-full max-w-4xl flex flex-col md:flex-row max-h-[90vh]">
+      {/* Left Side - Image */}
+      <div className="md:w-2/3 bg-gray-100 flex items-center justify-center p-4 relative">
+        <div className="w-full h-full max-h-[70vh] overflow-hidden rounded-lg relative">
+          <img
+            src={selectedGalleryImage.image}
+            alt="gallery"
+            className="w-full h-full object-contain"
+          />
+
+          {galleryImages.length > 1 && (
+            <>
+              <button
+                onClick={prevGalleryImage}
+                className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all z-10"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={nextGalleryImage}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all z-10"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </>
+          )}
+
+          {galleryImages.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+              {currentGalleryIndex + 1} / {galleryImages.length}
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right Side - Info */}
+      <div className="md:w-1/3 p-6 flex flex-col overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Gallery Image</h2>
+          <button 
+            onClick={() => setSelectedGalleryImage(null)}
+            className="text-gray-500 hover:text-gray-700 text-2xl"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full overflow-hidden">
+            <img 
+              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face" 
+              alt="Profile" 
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <span className="font-semibold">Sabarinath_Rajendran29</span>
+        </div>
+
+        <p className="text-gray-700 mb-4">Captured a beautiful moment 🌅</p>
+
+        <div className="mt-auto pt-4 border-t border-gray-200">
+          <div className="flex items-center gap-4 text-gray-600">
+            <span>❤️ 245 likes</span>
+            <span>💬 42 comments</span>
           </div>
         </div>
-      )}
+      </div>
+    </div>
+  </div>
+)}
+
     </Layout>
   );
 };

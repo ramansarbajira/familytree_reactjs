@@ -20,6 +20,8 @@ const Register = () => {
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [isLoading, setIsLoading] = useState(false); // Add loading state
+  const [showPassword, setShowPassword] = useState(false);
+
 
   const validate = () => {
     const newErrors = {};
@@ -240,24 +242,42 @@ const Register = () => {
           </div>
 
           {/* Password */}
-          <div>
-            <label htmlFor="password" className="block text-sm font-bold text-gray-800 mb-1">
-              Password <span className="text-red-500">*</span> 
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => handleChange('password', e.target.value)}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
-                errors.password
-                  ? 'border-red-500 focus:ring-red-300'
-                  : 'border-gray-300 focus:ring-[var(--color-primary)]'
-              }`}
-              placeholder="Enter password"
-            />
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-          </div>
+       <div className="relative">
+  <label htmlFor="password" className="block text-sm font-bold text-gray-800 mb-1">
+    Password <span className="text-red-500">*</span>
+  </label>
+  <input
+    id="password"
+    type={showPassword ? 'text' : 'password'}
+    value={formData.password}
+    onChange={(e) => handleChange('password', e.target.value)}
+    className={`w-full px-4 py-3 pr-10 border rounded-lg focus:outline-none focus:ring-2 ${
+      errors.password
+        ? 'border-red-500 focus:ring-red-300'
+        : 'border-gray-300 focus:ring-[var(--color-primary)]'
+    }`}
+    placeholder="Enter password"
+  />
+  <span
+    onClick={() => setShowPassword(!showPassword)}
+    className="absolute top-9 right-3 cursor-pointer text-gray-500"
+  >
+    {showPassword ? (
+      // Eye Slash SVG
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9.27-3.11-11-7.5a11.05 11.05 0 013.304-4.348M3 3l18 18M16.24 16.24A5 5 0 017.76 7.76" />
+      </svg>
+    ) : (
+      // Eye Open SVG
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1.5 12S5.5 5.5 12 5.5 22.5 12 22.5 12s-4 6.5-10.5 6.5S1.5 12 1.5 12z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    )}
+  </span>
+  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+</div>
+
 
             {/* Submit Button with loading state */}
             <button

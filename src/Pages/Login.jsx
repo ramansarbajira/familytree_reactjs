@@ -11,6 +11,7 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false); // For loader
+  const [showPassword, setShowPassword] = useState(false);
 
   const validate = () => {
     const newErrors = {};
@@ -139,23 +140,41 @@ const Login = () => {
           </div>
 
           {/* Password */}
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input
-              id="password"
-              ref={passwordRef}
-              type="password"
-              value={formData.password}
-              onChange={(e) => handleChange('password', e.target.value)}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
-                errors.password
-                  ? 'border-red-500 focus:ring-red-300'
-                  : 'border-gray-300 focus:ring-[var(--color-primary)]'
-              }`}
-              placeholder="Enter password"
-            />
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-          </div>
+         <div className="relative">
+  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+  <input
+    id="password"
+    ref={passwordRef}
+    type={showPassword ? 'text' : 'password'}
+    value={formData.password}
+    onChange={(e) => handleChange('password', e.target.value)}
+    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+      errors.password
+        ? 'border-red-500 focus:ring-red-300'
+        : 'border-gray-300 focus:ring-[var(--color-primary)]'
+    }`}
+    placeholder="Enter password"
+  />
+  {/* Eye Icon */}
+  <button
+    type="button"
+    onClick={() => setShowPassword(!showPassword)}
+    className="absolute top-9 right-4 text-gray-500 hover:text-gray-700 focus:outline-none bg-transparent"
+  tabIndex={-1}
+  >
+    {showPassword ? (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-.898.12-1.768.345-2.592m.66-2.384a9.961 9.961 0 0115.455 2.204M9.88 9.88a3 3 0 104.24 4.24M15 12a3 3 0 01-3 3m0-6a3 3 0 013 3m-3 3a3 3 0 01-3-3" />
+      </svg>
+    ) : (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm1.45 5.33L4.98 5.86m14.09 10.09A9.953 9.953 0 0021 12c0-5.523-4.477-10-10-10-1.658 0-3.216.403-4.594 1.117" />
+      </svg>
+    )}
+  </button>
+  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+</div>
+
 
           {/* Options */}
           <div className="flex items-center justify-between text-sm">
