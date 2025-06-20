@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react'; // Added useMemo although not strictly needed for menuItems if moved outside
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUserCircle,
-  faHouseUser, // Keep for Family Tree
+  faHouseUser,
   faUsers,
   faUserPlus,
   faHourglassHalf,
@@ -13,13 +13,13 @@ import {
   faRightFromBracket,
   faChevronDown,
   faChevronRight,
-  faHome, // Added faHome icon
+  faHome,
 } from '@fortawesome/free-solid-svg-icons';
 import { FaTimes } from 'react-icons/fa';
 import { useUser } from '../Contexts/UserContext';
 
 const iconMap = {
-  home: faHome, // Mapped 'home' to faHome
+  home: faHome,
   myProfile: faUserCircle,
   familyTree: faHouseUser,
   familyManagement: faUsers,
@@ -32,32 +32,34 @@ const iconMap = {
   logout: faRightFromBracket
 };
 
+// --- Move menuItems definition outside the component ---
+const menuItems = [
+  { id: 'home', label: 'Home', route: '/dashboard', icon: 'home' },
+  { id: 'myProfile', label: 'My Profile', route: '/myprofile', icon: 'myProfile' },
+  { id: 'familyTree', label: 'My Family Tree', route: '/familytree', icon: 'familyTree' },
+  {
+    id: 'familyManagement', label: 'Family Management', icon: 'familyManagement',
+    children: [
+      { id: 'myFamilyMembers', label: 'All Members', route: '/myfamilymember', icon: 'myFamilyMembers' },
+      { id: 'inviteMember', label: 'Invite New Member', route: '/invite-member', icon: 'inviteMember' },
+      { id: 'pendingRequests', label: 'Pending Access', route: '/pending-request', icon: 'pendingRequests' },
+    ]
+  },
+  { id: 'posts', label: 'Posts & Stories', route: '/posts', icon: 'posts' },
+  { id: 'gallery', label: 'Family Gallery', route: '/gallery', icon: 'gallery' },
+  { id: 'gifts', label: 'Gifts & Memories', route: '/gifts', icon: 'gifts' },
+  { id: 'logout', label: 'Logout', route: '/logout', icon: 'logout' }
+];
+// --- End of menuItems definition ---
+
 const Sidebar = ({ isMobile, onCloseMobile }) => {
   const navigate = useNavigate();
   const { userInfo } = useUser() || {};
   const location = useLocation();
 
   const [expandedParents, setExpandedParents] = useState({});
-
-  const menuItems = [
-    // Changed 'myProfile' to 'home', updated label and route
-    { id: 'home', label: 'Home', route: '/dashboard', icon: 'home' },
-    { id: 'myProfile', label: 'My Profile', route: '/myprofile', icon: 'myProfile' }, // Kept My Profile for direct access
-    { id: 'familyTree', label: 'My Family Tree', route: '/familytree', icon: 'familyTree' }, // Changed route from /dashboard to /familytree for clarity
-    {
-      id: 'familyManagement', label: 'Family Management', icon: 'familyManagement',
-      children: [
-        { id: 'myFamilyMembers', label: 'All Members', route: '/myfamilymember', icon: 'myFamilyMembers' },
-        { id: 'inviteMember', label: 'Invite New Member', route: '/invite-member', icon: 'inviteMember' },
-        { id: 'pendingRequests', label: 'Pending Access', route: '/pending-request', icon: 'pendingRequests' },
-      ]
-    },
-    { id: 'posts', label: 'Posts & Stories', route: '/posts', icon: 'posts' },
-    { id: 'gallery', label: 'Family Gallery', route: '/gallery', icon: 'gallery' },
-    { id: 'gifts', label: 'Gifts & Memories', route: '/gifts', icon: 'gifts' },
-    { id: 'logout', label: 'Logout', route: '/logout', icon: 'logout' }
-  ];
-
+  console.log(userInfo);
+  
   useEffect(() => {
     const newExpandedParents = {};
     menuItems.forEach(item => {
@@ -68,7 +70,7 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
       }
     });
     setExpandedParents(newExpandedParents);
-  }, [location.pathname, menuItems]); // Added menuItems to dependency array for robustness
+  }, [location.pathname]); // Removed menuItems from dependency array
 
   const isLinkActive = (item) => {
     if (item.route && location.pathname.startsWith(item.route)) {
@@ -88,6 +90,11 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
   };
 
   const handleItemClick = (item) => {
+    if (item.children) {
+      toggleParentExpansion(item.id);
+      return;
+    }
+
     if (item.id === 'logout') {
       handleLogout();
       return;
@@ -95,8 +102,6 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
 
     if (item.route) {
       navigate(item.route);
-    } else if (item.children) {
-      toggleParentExpansion(item.id);
     }
 
     if (isMobile && onCloseMobile) onCloseMobile();
