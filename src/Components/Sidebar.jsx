@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUserCircle,
-  faHouseUser,
+  faHouseUser, // Keep for Family Tree
   faUsers,
   faUserPlus,
   faHourglassHalf,
@@ -12,12 +12,14 @@ import {
   faGift,
   faRightFromBracket,
   faChevronDown,
-  faChevronRight
+  faChevronRight,
+  faHome, // Added faHome icon
 } from '@fortawesome/free-solid-svg-icons';
 import { FaTimes } from 'react-icons/fa';
 import { useUser } from '../Contexts/UserContext';
 
 const iconMap = {
+  home: faHome, // Mapped 'home' to faHome
   myProfile: faUserCircle,
   familyTree: faHouseUser,
   familyManagement: faUsers,
@@ -34,12 +36,14 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
   const navigate = useNavigate();
   const { userInfo } = useUser() || {};
   const location = useLocation();
-  
+
   const [expandedParents, setExpandedParents] = useState({});
 
   const menuItems = [
-    { id: 'myProfile', label: 'My Profile', route: '/myprofile', icon: 'myProfile' },
-    { id: 'familyTree', label: 'My Family Tree', route: '/dashboard', icon: 'familyTree' },
+    // Changed 'myProfile' to 'home', updated label and route
+    { id: 'home', label: 'Home', route: '/dashboard', icon: 'home' },
+    { id: 'myProfile', label: 'My Profile', route: '/myprofile', icon: 'myProfile' }, // Kept My Profile for direct access
+    { id: 'familyTree', label: 'My Family Tree', route: '/familytree', icon: 'familyTree' }, // Changed route from /dashboard to /familytree for clarity
     {
       id: 'familyManagement', label: 'Family Management', icon: 'familyManagement',
       children: [
@@ -64,7 +68,7 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
       }
     });
     setExpandedParents(newExpandedParents);
-  }, [location.pathname]);
+  }, [location.pathname, menuItems]); // Added menuItems to dependency array for robustness
 
   const isLinkActive = (item) => {
     if (item.route && location.pathname.startsWith(item.route)) {
@@ -104,9 +108,7 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
   };
 
   return (
-    // Re-added h-screen or min-h-screen to the sidebar container
-    // This is crucial for flex-1 on menu items to work for scrolling
-    <div className="sidebarbg flex flex-col w-full max-w-[280px] bg-white shadow-lg border-r border-gray-100 h-screen"> {/* <-- Re-added h-screen here */}
+    <div className="sidebarbg flex flex-col w-full max-w-[280px] bg-white shadow-lg border-r border-gray-100 h-screen">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 sm:justify-start flex-shrink-0">
         {isMobile && (
@@ -127,7 +129,7 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
       </div>
 
       {/* Menu Items Container - This is where the scrollable content goes */}
-      <div className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar"> {/* flex-1 works because parent has height */}
+      <div className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar">
         <nav className="flex flex-col gap-1">
           {menuItems.map((item) => (
             <React.Fragment key={item.id}>

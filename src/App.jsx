@@ -37,6 +37,7 @@ function App() {
         <Route path="/profile" element={<PrivateRoute><UserProvider><Profile /></UserProvider></PrivateRoute>} />
         <Route path="/myprofile" element={<PrivateRoute><UserProvider><MyProfile /></UserProvider></PrivateRoute>} />
 
+        <Route path="/dashboard" element={<Dashboard />  } />
         <Route path="/myfamilymember" element={<MyFamilyMember />  } />
         <Route path="/pending-request" element={<PendingFamilyRequests />  } />
         <Route path="/invite-member" element={<InviteFamilyMember />  } />
