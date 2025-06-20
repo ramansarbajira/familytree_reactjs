@@ -8,6 +8,12 @@ import { jwtDecode } from 'jwt-decode';
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
+import { useNavigate } from 'react-router-dom';
+
+const Profile = () => {
+  const navigate = useNavigate(); 
+  const [activeTab, setActiveTab] = useState('profile'); // Set default tab
+
   const fileInputRef = useRef(null);
   const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -318,6 +324,7 @@ const Profile = () => {
   };
 
   const handleBack = () => {
+     navigate('/myprofile'); 
     console.log("Going back...");
   };
 
@@ -443,7 +450,7 @@ const Profile = () => {
   }
   
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+    <Layout>
       <div className="mx-auto p-8 bg-white font-helvetica">
       {/* Header */}
        {/* First Location */}

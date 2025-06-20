@@ -1,6 +1,8 @@
+// layout.jsx
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
-import { FaBars, FaTimes } from 'react-icons/fa';
+import BottomNavBar from './BottomNavBar';
+import { FaBars, FaBell } from 'react-icons/fa';
 
 const Layout = ({ children, activeTab, setActiveTab }) => {
   const [isMobile, setIsMobile] = useState(false);
@@ -24,7 +26,7 @@ const Layout = ({ children, activeTab, setActiveTab }) => {
         </div>
       )}
 
-      {/* Mobile Sidebar */}
+      {/* Mobile Sidebar (remains the same) */}
       {isMobile && (
         <div
           className={`fixed inset-0 z-40 transition-transform duration-300 ${
@@ -52,30 +54,45 @@ const Layout = ({ children, activeTab, setActiveTab }) => {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto w-full relative">
-        {/* Mobile Top Bar */}
+      <main className="flex-1 overflow-y-auto w-full relative pb-[60px] md:pb-0">
+        {/* Mobile Top Bar - ADJUSTED DESIGN */}
         {isMobile && (
-         <div className="p-4 flex items-center justify-between border-b border-gray-200 bg-white sticky top-0 z-50">
+          <div className="px-4 py-3 flex items-center justify-between border-b border-gray-200 bg-white sticky top-0 z-50">
+            {/* Hamburger Button (Left) - WHITE COLOR */}
             <button
               onClick={() => setSidebarOpen(prev => !prev)}
-              className="p-2 bg-primary-500 text-white rounded-md"
+              // Changed text-gray-700 to bg-primary-500 text-white for white lines
+              className="p-1.5 bg-primary-500 text-white rounded-md transition-colors duration-200"
             >
-              {sidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+              <FaBars size={20} />
             </button>
 
-            {/* Logo aligned to right */}
-            <div className="flex-1 flex justify-end">
+            {/* Logo (Centered) - BIGGER */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
               <img
                 src="/assets/logo-green-light.png"
                 alt="Aalam Logo"
-                className="h-[3.4rem]"
+                className="h-[3rem]" // Increased height from 2.4rem to 3rem
               />
             </div>
+
+            {/* Notification Bell Icon (Right) - WHITE COLOR */}
+            <button
+              // Changed text-primary-500 to bg-primary-500 text-white for white bell
+              className="p-1.5 bg-primary-500 text-white rounded-md transition-colors duration-200 ml-auto"
+            >
+              <FaBell size={22} />
+            </button>
           </div>
         )}
 
         {/* Page Content */}
         <div className="">{children}</div>
+
+        {/* Mobile Bottom Navigation Bar */}
+        {isMobile && (
+          <BottomNavBar activeTab={activeTab} setActiveTab={setActiveTab} />
+        )}
       </main>
     </div>
   );
