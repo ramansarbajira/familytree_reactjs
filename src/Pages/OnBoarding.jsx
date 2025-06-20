@@ -403,6 +403,7 @@ const OnBoarding = () => {
             address: userProfile.address || '',
             contactNumber: userProfile.contactNumber || '',
             bio: userProfile.bio || '',
+            profile: userProfile.profile || '',
             profileUrl: userProfile.profile || '',
             familyCode: userProfile.familyCode || ''
           };
@@ -635,13 +636,13 @@ const OnBoarding = () => {
             {/* Image Upload */}
             <div className="flex justify-center mb-8">
               <div className="relative w-32 h-32 rounded-full border-2 border-gray-300 flex flex-col items-center justify-center overflow-hidden">
-                {(formData.profile || formData.profileUrl) ? (
+                {(formData.profile || formData.profile) ? (
                   <>
                     <img
                       src={
                         formData.profile
                           ? URL.createObjectURL(formData.profile)
-                          : formData.profileUrl
+                          : formData.profile
                       }
                       alt="Profile"
                       className="w-full h-full object-cover rounded-full"
@@ -657,7 +658,7 @@ const OnBoarding = () => {
                             setFormData((prev) => ({
                               ...prev,
                               profile: e.target.files[0],
-                              profileUrl: '', // clear server image once new is selected
+                               // clear server image once new is selected
                             }))
                           }
                           className="hidden"
@@ -670,7 +671,7 @@ const OnBoarding = () => {
                           setFormData((prev) => ({
                             ...prev,
                             profile: null,
-                            profileUrl: '',
+                            
                           }))
                         }
                         className="text-white text-xs font-medium hover:text-red-300 transition-colors"
