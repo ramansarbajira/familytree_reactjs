@@ -60,6 +60,7 @@ const Login = () => {
       }
 
       const data = await response.json();
+      localStorage.clear();
       localStorage.setItem('access_token', data.accessToken);
       navigate('/profile');
     } catch (error) {
