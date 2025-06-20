@@ -6,9 +6,6 @@ import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { jwtDecode } from 'jwt-decode';
 
-const Profile = () => {
-  const [activeTab, setActiveTab] = useState('profile');
-import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
   const navigate = useNavigate(); 
