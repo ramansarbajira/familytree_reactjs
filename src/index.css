@@ -5,7 +5,7 @@
 @layer base {
   :root {
     --color-primary: #3f982c;
-    --color-secondary: #3f982c;
+    --color-secondary: #2e6b22;
     --color-error: 239, 68, 68;
   }
 
@@ -37,4 +37,19 @@
 }
 .bg-primary{
   background-color: var(--color-primary);
+}
+
+
+
+/* Optional: Hide scrollbar entirely but keep functionality */
+/* If you want the scrollbar to *only* appear on hover, you'd need more complex JS/CSS or specific browser extensions,
+   but this makes it very discreet until scrolled. */
+
+.custom-scrollbar {
+    overflow-y: auto;
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+}
+.custom-scrollbar::-webkit-scrollbar {
+    display: none; 
 }

@@ -1,16 +1,16 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-  const [userInfo, setUserInfo] = useState({});
+  const [userInfo, setUserInfo] = useState(null);
   const [userLoading, setUserLoading] = useState(false);
 
-  const fetchUserDetails = async () => {
+  const fetchUserDetails = useCallback(async () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
-      console.warn('Authentication token not found. Please login again.');
+      console.warn('Authentication token not found.');
       return;
     }
 
@@ -21,7 +21,7 @@ export const UserProvider = ({ children }) => {
       console.error('Invalid JWT token');
       return;
     }
-    
+
     const userId = decoded?.id;
     if (!userId) {
       console.error('User ID not found in token');
@@ -42,7 +42,9 @@ export const UserProvider = ({ children }) => {
       if (!response.ok) throw new Error('Failed to fetch user details');
 
       const jsonData = await response.json();
-      const { userProfile } = jsonData.data;
+      const { userProfile } = jsonData.data || {};
+
+      if (!userProfile) throw new Error('No user profile returned');
 
       const childrenArray = userProfile.childrenNames
         ? JSON.parse(userProfile.childrenNames)
@@ -56,20 +58,20 @@ export const UserProvider = ({ children }) => {
       setUserInfo({
         firstName: userProfile.firstName || '',
         lastName: userProfile.lastName || '',
-        dob: userProfile.dob ? userProfile.dob.split('T')[0] : '',
-        age: calculateAge(userProfile.dob) || 0,
+        dob: userProfile.dob?.split('T')[0] || '',
+        age: calculateAge(userProfile.dob),
         gender: userProfile.gender || '',
         maritalStatus: userProfile.maritalStatus || '',
-        marriageDate: userProfile.marriageDate ? userProfile.marriageDate.split('T')[0] : '',
+        marriageDate: userProfile.marriageDate?.split('T')[0] || '',
         spouseName: userProfile.spouseName || '',
         childrenCount: childrenArray.length || 0,
         ...childFields,
         fatherName: userProfile.fatherName || '',
         motherName: userProfile.motherName || '',
-        motherTongue: userProfile.languageId ? parseInt(userProfile.languageId) : 0,
-        religionId: userProfile.religionId ? parseInt(userProfile.religionId) : 0,
+        motherTongue: parseInt(userProfile.languageId) || 0,
+        religionId: parseInt(userProfile.religionId) || 0,
         caste: userProfile.caste || '',
-        gothram: userProfile.gothramId ? parseInt(userProfile.gothramId) : 0,
+        gothram: parseInt(userProfile.gothramId) || 0,
         kuladevata: userProfile.kuladevata || '',
         hobbies: userProfile.hobbies || '',
         likes: userProfile.likes || '',
@@ -79,7 +81,7 @@ export const UserProvider = ({ children }) => {
         contactNumber: userProfile.contactNumber || '',
         bio: userProfile.bio || '',
         profileUrl: userProfile.profile || '',
-        familyCode: userProfile.familyMember && userProfile.familyMember.familyCode || '',
+        familyCode: userProfile.familyMember?.familyCode || '',
         name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim(),
         raw: userProfile,
       });
@@ -88,14 +90,20 @@ export const UserProvider = ({ children }) => {
     } finally {
       setUserLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUserDetails();
-  }, []);
+  }, [fetchUserDetails]);
+
+  const contextValue = useMemo(() => ({
+    userInfo,
+    userLoading,
+    refetchUser: fetchUserDetails,
+  }), [userInfo, userLoading, fetchUserDetails]);
 
   return (
-    <UserContext.Provider value={{ userInfo, userLoading, refetchUser: fetchUserDetails }}>
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
   );
