@@ -640,14 +640,13 @@ const OnBoarding = () => {
                   <>
                     <img
                       src={
-                        formData.profile
+                        formData.profile instanceof File
                           ? URL.createObjectURL(formData.profile)
                           : formData.profile
                       }
                       alt="Profile"
                       className="w-full h-full object-cover rounded-full"
                     />
-
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 rounded-full">
                       <label className="text-white text-xs font-medium cursor-pointer mb-2 hover:text-blue-300 transition-colors">
                         Change

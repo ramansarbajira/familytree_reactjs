@@ -13,6 +13,9 @@ import MyProfile from './Pages/MyProfile';
 import MyFamilyMember from './Pages/MyFamilyMember';
 import PendingFamilyRequests from './Pages/PendingFamilyRequests';
 import InviteFamilyMember from './Pages/InviteFamilyMember';
+import PostsAndFeedsPage from './Pages/PostsAndFeedsPage'; 
+import FamilyGalleryPage from './Pages/FamilyGalleryPage'; 
+import GiftListingPage from './Pages/GiftListingPage'; 
 
 import { UserProvider } from './Contexts/UserContext';
 import PrivateRoute from './Routes/PrivateRoute';
@@ -32,7 +35,6 @@ function App() {
         <Route path="/verify-otp" element={ <GuestRoute> <VerifyOtp /> </GuestRoute> } />
 
         {/* Authenticated-only route */}
-        <Route path="/profile" element={ <Profile /> } />
         <Route path="/on-boarding" element={ <OnBoarding />  } />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/on-boarding" element={<PrivateRoute> <OnBoarding /> </PrivateRoute>  } />
@@ -42,9 +44,11 @@ function App() {
 
         <Route path="/dashboard" element={<Dashboard />  } />
         <Route path="/myfamilymember" element={<MyFamilyMember />  } />
-        <Route path="/pending-request" element={<PendingFamilyRequests />  } />
+        <Route path ="/pending-request" element={<PendingFamilyRequests />  } />
         <Route path="/invite-member" element={<InviteFamilyMember />  } />
-        
+        <Route path="/posts-and-feeds" element={<PostsAndFeedsPage />} />
+        <Route path="/family-gallery" element={<FamilyGalleryPage />} />
+        <Route path="/gifts-memories" element={<GiftListingPage />} />
 
       </Routes>
     </Router>
