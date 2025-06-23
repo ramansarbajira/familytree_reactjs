@@ -34,7 +34,6 @@ const iconMap = {
   familyTree: faNetworkWired, // Changed for a more symbolic look
   familyManagement: faUserGear, // Changed to imply management/settings
   myFamilyMembers: faUserGroup, // Changed to a clear group icon
-  inviteMember: faUserPlus,
   pendingRequests: faUserClock, // Changed to imply pending time/requests
   posts: faShareNodes, // Changed to suggest sharing content
   gallery: faCameraRetro, // Changed to a camera for gallery
@@ -51,7 +50,6 @@ const menuItems = [
     id: 'familyManagement', label: 'Family Management', icon: 'familyManagement',
     children: [
       { id: 'myFamilyMembers', label: 'All Members', route: '/myfamilymember', icon: 'myFamilyMembers' },
-      { id: 'inviteMember', label: 'Invite New Member', route: '/invite-member', icon: 'inviteMember' },
       { id: 'pendingRequests', label: 'Pending Access', route: '/pending-request', icon: 'pendingRequests' },
     ]
   },
