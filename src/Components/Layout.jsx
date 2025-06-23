@@ -53,7 +53,7 @@ const Layout = ({ children, activeTab, setActiveTab }) => {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto w-full relative pb-[60px] md:pb-0">
+      <main className="flex-1 overflow-y-auto w-full relative pb-[60px] md:pb-0 bg-gradient-to-br from-primary-50 to-primary-100">
         {/* Mobile Top Bar - ADJUSTED DESIGN */}
         {isMobile && (
           <div className="px-4 py-3 flex items-center justify-between border-b border-gray-200 bg-white sticky top-0 z-50">

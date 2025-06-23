@@ -1,306 +1,409 @@
 import React, { useState } from 'react';
-import Layout from '../Components/Layout'; // Assuming Layout is in Components folder
+import Layout from '../Components/Layout'; // Assuming you have a Layout component
 import { useNavigate } from 'react-router-dom';
 
-// Import additional icons needed for the card details
-import { FiPlus , FiEdit2, FiTrash2, FiSearch } from 'react-icons/fi'; // Removed FiChevronRight, FiEye as entire card is clickable
-import { FaUserFriends , FaBirthdayCake, FaPhone, FaHome, FaVenusMars } from 'react-icons/fa';
-import { IoMdMale, IoMdFemale } from 'react-icons/io';
+import AddMemberFormModal from '../Components/AddMemberFormModal'; // Assuming you have this modal component
 
+// Icons
+import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiEye } from 'react-icons/fi';
+import { FaUserFriends, FaBirthdayCake, FaPhone, FaHome, FaMale, FaFemale } from 'react-icons/fa';
 
-// Component for a single family member card
+// ---
+
+// FamilyMemberCard Component
+// This component displays individual family member details in a card format.
 const FamilyMemberCard = ({ member, onViewDetails, onEditMember, onDeleteMember }) => {
-  // Relation color mapping - kept as is, good use of dynamic styling
+  // Define colors for different relations for visual distinction
   const relationColors = {
-    'Self': 'bg-primary-100 text-primary-800', // Changed to primary
+    'Self': 'bg-blue-100 text-blue-800',
     'Spouse': 'bg-purple-100 text-purple-800',
     'Son': 'bg-green-100 text-green-800',
     'Daughter': 'bg-pink-100 text-pink-800',
     'Father': 'bg-amber-100 text-amber-800',
     'Mother': 'bg-rose-100 text-rose-800',
     'Brother': 'bg-indigo-100 text-indigo-800',
-    'Sister': 'bg-teal-100 text-teal-800'
+    'Sister': 'bg-teal-100 text-teal-800',
+    'Grandfather': 'bg-lime-100 text-lime-800',
+    'Grandmother': 'bg-orange-100 text-orange-800',
   };
-
-
 
   return (
     <div
       key={member.id}
       onClick={() => onViewDetails(member.id)}
-      className="relative bg-white rounded-xl border border-gray-200 overflow-hidden shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 ease-in-out group cursor-pointer"
+      className="relative bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 ease-in-out group cursor-pointer transform hover:-translate-y-1"
     >
-      {/* Edit/Delete Actions (top right) - Always visible on mobile, hover on desktop */}
-      <div className="absolute top-3 right-3 flex space-x-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 sm:opacity-100">
-        <button
-          onClick={(e) => { e.stopPropagation(); onEditMember(member.id, e); }}
-          className="p-2 rounded-full bg-white text-primary-600 hover:bg-primary-100 hover:text-primary-700 transition-colors duration-200 shadow-md"
-          title="Edit Member"
-        >
-          <FiEdit2 size={18} />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDeleteMember(member.id, e); }}
-          className="p-2 rounded-full bg-white text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors duration-200 shadow-md"
-          title="Delete Member"
-        >
-          <FiTrash2 size={18} />
-        </button>
-      </div>
-
-      <div className="p-5 flex flex-col items-center text-center">
-        {/* Profile Picture */}
-        <div className="relative flex-shrink-0 w-28 h-28 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-primary-400 shadow-lg mb-4">
+      <div className="flex items-start p-5 pb-0">
+        {/* Profile Picture Section */}
+        <div className="relative flex-shrink-0 w-24 h-24 rounded-full overflow-hidden border-3 border-primary-200 shadow-lg">
           <img
-            // Updated placeholder to reflect primary theme colors
-            src={member.profilePic || "https://placehold.co/112x112/primary-200/primary-600?text=👤"}
+            src={member.profilePic || "https://placehold.co/96x96/e2e8f0/64748b?text=👤"}
             alt={member.name}
             className="w-full h-full object-cover"
-            // Fallback also updated to primary theme colors
-            onError={(e) => e.target.src = "https://placehold.co/112x112/primary-200/primary-600?text=👤"}
+            onError={(e) => e.target.src = "https://placehold.co/96x96/e2e8f0/64748b?text=👤"}
           />
+          {member.isAdmin && (
+            <span className="absolute bottom-0 right-0 -mr-1 -mb-1 px-2 py-0.5 bg-primary-DEFAULT text-white text-xs font-bold rounded-full border-2 border-white shadow">
+              Admin
+            </span>
+          )}
         </div>
 
-        {/* Member Name with Relation and Admin Badge */}
-        <div className="mb-4">
-          <h3 className="text-2xl font-extrabold text-gray-800 flex items-center justify-center gap-2 mb-1">
+        {/* Member Details */}
+        <div className="ml-4 flex-1 min-w-0">
+          <h3 className="text-xl font-extrabold text-gray-900 truncate pr-2">
             {member.name}
-            {member.isAdmin && (
-              // Ensure text is white for contrast on primary background
-              <span className="px-2.5 py-0.5 bg-gradient-to-r from-primary-600 to-primary text-green text-xs font-bold rounded-full shadow-md">
-                Admin
-              </span>
-            )}
           </h3>
-          <span className={`text-base font-semibold px-4 py-1.5 rounded-full ${relationColors[member.relation] || 'bg-gray-100 text-gray-800'} shadow-sm`}>
+          <span className={`mt-1 inline-block text-sm font-semibold px-3 py-1 rounded-full ${relationColors[member.relation] || 'bg-gray-100 text-gray-800'}`}>
             {member.relation}
           </span>
-        </div>
-
-        {/* Contact and Basic Info - Improved mobile layout */}
-        <div className="flex flex-col items-start gap-y-3 text-base w-full sm:grid sm:grid-cols-2 sm:gap-x-6 sm:gap-y-3">
-          <div className="flex items-center text-gray-700 w-full sm:justify-start">
-            <FaBirthdayCake className="mr-3 text-primary-500 text-xl" />
-            <span>{member.age} years</span>
+          <div className="mt-2 flex items-center text-sm text-gray-600">
+            <FaBirthdayCake className="mr-2 text-primary-500" size={16} />
+            <span className="font-medium">{member.age} years old</span>
           </div>
-          <div className="flex items-center text-gray-700 w-full sm:justify-start">
-            <FaVenusMars className="mr-3 text-primary-500 text-xl" />
-            <span>{member.gender}</span>
+          <div className="mt-1 flex items-center text-sm text-gray-600">
+            {member.gender === 'Male' ? <FaMale className="mr-2 text-blue-500" size={16} /> : <FaFemale className="mr-2 text-pink-500" size={16} />}
+            <span className="font-medium">{member.gender}</span>
           </div>
-          {member.contact && (
-            <div className="flex items-center text-gray-700 w-full sm:col-span-2 sm:justify-start">
-              <FaPhone className="mr-3 text-primary-500 text-xl" />
-              <span>{member.contact}</span>
-            </div>
-          )}
-          {member.address && (
-            <div className="flex items-center text-gray-700 w-full sm:col-span-2 sm:justify-start">
-              <FaHome className="mr-3 text-primary-500 text-xl" />
-              <span className="truncate">{member.address.split(',')[0]}</span>
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Footer with Last Updated and View Profile button */}
-      <div className="px-5 py-3 bg-primary-50 border-t border-primary-100 flex justify-between items-center text-sm">
-        <span className="text-xs text-primary-600 font-medium">
-          Last Updated: {member.lastUpdated}
+      
+      {/* Contact and Address Section */}
+      <div className="px-5 py-4 mt-4 bg-gray-50 border-t border-b border-gray-100 mx-5 rounded-lg">
+        {member.contact && (
+          <div className="flex items-center text-sm text-gray-700 mb-2">
+            <FaPhone className="mr-3 text-primary-500" size={16} />
+            <span className="font-medium">{member.contact}</span>
+          </div>
+        )}
+        {member.address && (
+          <div className="flex items-start text-sm text-gray-700">
+            <FaHome className="mr-3 text-primary-500 mt-1" size={16} />
+            <span className="line-clamp-2">{member.address}</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Actions Section */}
+      <div className="flex justify-between items-center px-5 py-4">
+        <span className="text-xs text-gray-500">
+          Last updated: {member.lastUpdated}
         </span>
-        <button
-          onClick={(e) => { e.stopPropagation(); onViewDetails(member.id); }}
-          className="bg-unset flex items-center text-primary hover:text-primary-800 font-semibold transition-colors duration-200"
-        >
-          View Full Profile
-          <svg className="ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEditMember(member.id, e); }}
+            className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700 transition-colors tooltip"
+            title="Edit Member"
+          >
+            <FiEdit2 size={18} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDeleteMember(member.id, e); }}
+            className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700 transition-colors tooltip"
+            title="Delete Member"
+          >
+            <FiTrash2 size={18} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onViewDetails(member.id); }}
+            className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700 transition-colors tooltip"
+            title="View Member"
+          >
+            <FiEye size={18} />
+          </button>
+        </div>
       </div>
     </div>
   );
-
 };
 
+// ---
 
+// FamilyMemberListing Component
+// This is the main component for displaying and managing family members.
 const FamilyMemberListing = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // For programmatic navigation (if you uncomment routes)
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('myFamilyMember');
+  const [activeTab, setActiveTab] = useState('myFamilyMember'); // For layout active tab management
+  const [isModalOpen, setIsModalOpen] = useState(false); // State for the Add/Edit Member modal
+  
+  // State for filtering members
+  const [filters, setFilters] = useState({
+    relation: [],
+    gender: '',
+    ageRange: [0, 100],
+    isAdmin: false,
+  });
+  const [sortBy, setSortBy] = useState('name-asc'); // State for sorting members
 
-  // Sample family members data
+  // Sample Family Members Data
   const [familyMembers, setFamilyMembers] = useState([
-    {
-      id: 1,
-      name: 'Stephan Curry',
-      relation: 'Self',
-      age: 36,
-      gender: 'Male',
-      maritalStatus: 'Married',
-      contact: '8122345789',
-      address: '204, North Anna Salai, Chennai',
-      dob: '14/03/1988',
-      profilePic: 'https://placehold.co/96x96/FEE2E2/EF4444?text=SC', // Use dynamic placehold.co images
-      lastUpdated: '2 days ago',
-      isAdmin: true // Added isAdmin property
-    },
-    {
-      id: 2,
-      name: 'Ayesha Curry',
-      relation: 'Spouse',
-      age: 34,
-      gender: 'Female',
-      maritalStatus: 'Married',
-      contact: '9876543210',
-      address: '204, North Anna Salai, Chennai',
-      dob: '23/07/1989',
-      profilePic: 'https://placehold.co/96x96/DBEAFE/3B82F6?text=AC',
-      lastUpdated: '1 week ago',
-      isAdmin: false
-    },
-    {
-      id: 3,
-      name: 'Canon Curry',
-      relation: 'Son',
-      age: 8,
-      gender: 'Male',
-      maritalStatus: 'Single',
-      contact: 'N/A',
-      address: '204, North Anna Salai, Chennai',
-      dob: '02/05/2015',
-      profilePic: 'https://placehold.co/96x96/DCFCE7/22C55E?text=CC',
-      lastUpdated: '3 days ago',
-      isAdmin: false
-    },
-    {
-      id: 4,
-      name: 'Dell Curry',
-      relation: 'Father',
-      age: 60,
-      gender: 'Male',
-      maritalStatus: 'Married',
-      contact: '8765432109',
-      address: '105, Old Village Road, Madurai',
-      dob: '12/12/1958',
-      profilePic: 'https://placehold.co/96x96/FEF3C7/F59E0B?text=DC',
-      lastUpdated: '1 month ago',
-      isAdmin: true
-    },
-    {
-      id: 5,
-      name: 'Sonya Curry',
-      relation: 'Mother',
-      age: 60,
-      gender: 'Female',
-      maritalStatus: 'Married',
-      contact: '7654321098',
-      address: '105, Old Village Road, Madurai',
-      dob: '05/08/1963',
-      profilePic: 'https://placehold.co/96x96/FFE4E6/EC4899?text=SC',
-      lastUpdated: '2 weeks ago',
-      isAdmin: false
-    },
-    { id: '6', name: 'Seth Curry', relation: 'Brother', age: 33, contact: '9988776655', email: 'seth.c@example.com', profilePic: 'https://placehold.co/96x96/D1FAE5/10B981?text=SC', isAdmin: false, lastUpdated: '1 day ago' },
-    { id: '7', name: 'Sydel Curry', relation: 'Sister', age: 29, contact: '4433221100', email: 'sydel.c@example.com', profilePic: 'https://placehold.co/96x96/E0F2F2/06B6D4?text=SC', isAdmin: false, lastUpdated: '5 days ago' },
+    { id: 1, name: 'Stephan Curry', relation: 'Self', age: 36, gender: 'Male', maritalStatus: 'Married', contact: '8122345789', address: '204, North Anna Salai, Chennai, Tamil Nadu 600002', dob: '1988-03-14', profilePic: 'https://randomuser.me/api/portraits/men/32.jpg', lastUpdated: '2 days ago', isAdmin: true },
+    { id: 2, name: 'Ayesha Curry', relation: 'Spouse', age: 34, gender: 'Female', maritalStatus: 'Married', contact: '9876543210', address: '204, North Anna Salai, Chennai', dob: '1989-07-23', profilePic: 'https://randomuser.me/api/portraits/women/44.jpg', lastUpdated: '1 week ago', isAdmin: false },
+    { id: 3, name: 'Canon Curry', relation: 'Son', age: 8, gender: 'Male', maritalStatus: 'Single', contact: 'N/A', address: '204, North Anna Salai, Chennai', dob: '2015-05-02', profilePic: 'https://randomuser.me/api/portraits/lego/5.jpg', lastUpdated: '3 days ago', isAdmin: false },
+    { id: 4, name: 'Dell Curry', relation: 'Father', age: 60, gender: 'Male', maritalStatus: 'Married', contact: '8765432109', address: '105, Old Village Road, Madurai, Tamil Nadu 625001', dob: '1958-12-12', profilePic: 'https://randomuser.me/api/portraits/men/75.jpg', lastUpdated: '1 month ago', isAdmin: true },
+    { id: 5, name: 'Sonya Curry', relation: 'Mother', age: 60, gender: 'Female', maritalStatus: 'Married', contact: '7654321098', address: '105, Old Village Road, Madurai', dob: '1963-08-05', profilePic: 'https://randomuser.me/api/portraits/women/75.jpg', lastUpdated: '2 weeks ago', isAdmin: false },
+    { id: 6, name: 'Seth Curry', relation: 'Brother', age: 33, gender: 'Male', contact: '9988776655', address: '301, Sports Avenue, Bangalore, Karnataka', dob: '1990-08-10', profilePic: 'https://randomuser.me/api/portraits/men/45.jpg', isAdmin: false, lastUpdated: '1 day ago' },
+    { id: 7, name: 'Sydel Curry', relation: 'Sister', age: 29, gender: 'Female', contact: '4433221100', address: '12B, Artist Colony, Mumbai, Maharashtra', dob: '1995-03-20', profilePic: 'https://randomuser.me/api/portraits/women/65.jpg', isAdmin: false, lastUpdated: '5 days ago' },
   ]);
 
-  const filteredMembers = familyMembers.filter(member => {
-    const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          member.relation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (member.contact && member.contact.includes(searchTerm));
-    return matchesSearch;
-  });
+  // Helper function to calculate age from DOB
+  const calculateAge = (dob) => {
+    if (!dob) return 'N/A';
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
-  const handleAddMember = () => navigate('/family-member/add');
+  // Filter and sort members based on current state
+  const filteredAndSortedMembers = familyMembers
+    .filter(member => {
+      const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            member.relation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (member.contact && member.contact.includes(searchTerm));
+
+      const matchesRelation = filters.relation.length === 0 || filters.relation.includes(member.relation);
+      const matchesGender = !filters.gender || member.gender === filters.gender;
+      const matchesAge = member.age >= filters.ageRange[0] && member.age <= filters.ageRange[1];
+      const matchesAdmin = !filters.isAdmin || member.isAdmin;
+
+      return matchesSearch && matchesRelation && matchesGender && matchesAge && matchesAdmin;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
+      if (sortBy === 'name-desc') return b.name.localeCompare(a.name);
+      if (sortBy === 'age-asc') return a.age - b.age;
+      if (sortBy === 'age-desc') return b.age - a.age;
+      return 0; // Default or no-sort case
+    });
+
+  // Modal handlers
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+
+  // Add new member logic
+  const handleAddNewMember = (newMemberData) => {
+    const newId = familyMembers.length > 0 ? Math.max(...familyMembers.map(m => m.id)) + 1 : 1;
+    const now = new Date();
+    // For `lastUpdated`, using a simpler string for demo purposes, but ideally a Date object or ISO string.
+    const lastUpdatedString = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`; 
+    
+    // Ensure dob is in YYYY-MM-DD format for age calculation
+    let formattedDob = newMemberData.dob;
+    if (newMemberData.dob && !newMemberData.dob.includes('-')) {
+        const parts = newMemberData.dob.split('/');
+        if (parts.length === 3) {
+            formattedDob = `${parts[2]}-${parts[1]}-${parts[0]}`; // Convert DD/MM/YYYY to YYYY-MM-DD
+        }
+    }
+
+    setFamilyMembers((prevMembers) => [
+      ...prevMembers,
+      { 
+        id: newId, 
+        ...newMemberData, 
+        dob: formattedDob, 
+        age: calculateAge(formattedDob), 
+        lastUpdated: `just now`, 
+        profilePic: newMemberData.profilePic || `https://placehold.co/96x96/e2e8f0/64748b?text=${newMemberData.name ? newMemberData.name[0] : '?'}` 
+      },
+    ]);
+    console.log('Member added successfully:', newMemberData);
+    alert('New member added successfully!');
+    handleCloseModal();
+  };
+
+  // Handlers for card actions
   const handleViewMember = (id) => {
     console.log(`Navigating to view member details for ID: ${id}`);
     alert(`View details for member ID: ${id}`);
-    // navigate(`/family-member/${id}`);
+    // Example of using navigate: navigate(`/family-member/${id}`);
   };
+
   const handleEditMember = (id, e) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent card onClick from firing
     console.log(`Navigating to edit member with ID: ${id}`);
     alert(`Edit member with ID: ${id}`);
-    // navigate(`/family-member/edit/${id}`);
+    // Example of using navigate: navigate(`/family-member/edit/${id}`);
   };
+
   const handleDeleteMember = (id, e) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent card onClick from firing
     if (window.confirm('Are you sure you want to delete this family member?')) {
       setFamilyMembers(prev => prev.filter(member => member.id !== id));
       alert(`Member with ID: ${id} deleted.`);
     }
   };
 
+  // Calculate dashboard metrics
+  const totalMembers = familyMembers.length;
+  const males = familyMembers.filter(m => m.gender === 'Male').length;
+  const females = familyMembers.filter(m => m.gender === 'Female').length;
+  const averageAge = totalMembers > 0 ? (familyMembers.reduce((sum, m) => sum + m.age, 0) / totalMembers).toFixed(1) : 0;
+  
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-      <div className="max-w-7xl mx-auto p-4 md:p-6 bg-gray-50 min-h-screen">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+      <div className="min-h-screen"> {/* Changed background gradient */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+          
+          {/* Header Section */}
+          <div className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-                <FaUserFriends className="mr-3 text-primary-800" />
-                Family Members
+              <h1 className="text-3xl font-extrabold text-gray-900 flex items-center">
+                <FaUserFriends className="mr-4 text-primary-DEFAULT" size={32} />
+                My Family Tree
               </h1>
-              <p className="text-gray-500 mt-2">
-                Manage your family tree and member details
+              <p className="text-gray-600 mt-2 text-lg">
+                Explore and manage {totalMembers} cherished family members.
               </p>
             </div>
-            <button
-              onClick={handleAddMember}
-              className="flex items-center bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white px-5 py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-            >
-              <FiPlus className="mr-2 text-lg" />
-              <span className="font-medium">Add Member</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Search Section (Redesigned) */}
-        <div className="bg-gradient-to-r from-primary-50 to-indigo-50 p-4 rounded-xl shadow-sm mb-8 border border-gray-100 flex items-center space-x-3">
-          {/* Search Icon outside the input */}
-          <FiSearch className="text-gray-500 text-xl flex-shrink-0" />
-          <input
-            type="text"
-            placeholder="Search by name, relation, or contact..."
-            className="flex-grow pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        {/* Members Grid/List */}
-        {filteredMembers.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
-            {filteredMembers.map((member) => (
-              <FamilyMemberCard
-                key={member.id}
-                member={member}
-                onViewDetails={handleViewMember}
-                onEditMember={handleEditMember}
-                onDeleteMember={handleDeleteMember}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
-            <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-5">
-              <FaUserFriends className="text-gray-400 text-3xl" />
+            
+            {/* Search and Add Member Button */}
+            <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 sm:w-64">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiSearch className="text-gray-400" size={18} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search by name, relation, or contact..."
+                  className="block w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base placeholder-gray-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <button
+                onClick={handleOpenModal}
+                className="flex items-center justify-center bg-primary-DEFAULT hover:bg-primary-700 text-white px-5 py-2.5 rounded-lg shadow-md transition-colors text-base font-semibold transform hover:scale-105"
+              >
+                <FiPlus className="mr-2" size={20} />
+                Add New Member
+              </button>
             </div>
-            <h3 className="text-xl font-medium text-gray-700 mb-2">No family members found</h3>
-            <p className="text-gray-500 mb-6">
-              {searchTerm ? 'No results for your search. Try a different term.' : 'Start by adding your first family member!'}
-            </p>
-            <button
-              onClick={handleAddMember}
-              className="mx-auto flex items-center bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-lg shadow transition-colors"
-            >
-              <FiPlus className="mr-2" />
-              Add Family Member
-            </button>
           </div>
-        )}
+
+          {/* Dashboard Overview - Displays only if there are members */}
+          {totalMembers > 0 && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 font-medium">Total Members</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{totalMembers}</p>
+                  </div>
+                  <FaUserFriends className="text-primary-400 opacity-50" size={40} />
+                </div>
+                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 font-medium">Males</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{males}</p>
+                  </div>
+                  <FaMale className="text-blue-400 opacity-50" size={40} />
+                </div>
+                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 font-medium">Females</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{females}</p>
+                  </div>
+                  <FaFemale className="text-pink-400 opacity-50" size={40} />
+                </div>
+                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 font-medium">Average Age</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{averageAge}</p>
+                  </div>
+                  <FaBirthdayCake className="text-purple-400 opacity-50" size={40} />
+                </div>
+              </div>
+
+              <hr className="my-10 border-gray-200" />
+            </>
+          )}
+
+          {/* Filter and Sort Controls - Displays only if there are members */}
+          {totalMembers > 0 && (
+            <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center space-x-3">
+                <label htmlFor="sortBy" className="text-gray-700 font-medium text-sm">Sort by:</label>
+                <select
+                  id="sortBy"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="block w-48 pl-3 pr-8 py-2 border border-gray-300 rounded-md bg-white shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                >
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                  <option value="age-asc">Age (Lowest First)</option>
+                  <option value="age-desc">Age (Highest First)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <label htmlFor="genderFilter" className="text-gray-700 font-medium text-sm">Gender:</label>
+                <select
+                  id="genderFilter"
+                  value={filters.gender}
+                  onChange={(e) => setFilters({...filters, gender: e.target.value})}
+                  className="block w-36 pl-3 pr-8 py-2 border border-gray-300 rounded-md bg-white shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                >
+                  <option value="">All</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Family Members Grid or Empty State */}
+          {filteredAndSortedMembers.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+              {filteredAndSortedMembers.map((member) => (
+                <FamilyMemberCard
+                  key={member.id}
+                  member={member}
+                  onViewDetails={handleViewMember}
+                  onEditMember={handleEditMember}
+                  onDeleteMember={handleDeleteMember}
+                />
+              ))}
+            </div>
+          ) : (
+            // Empty State Display
+            <div className="bg-white rounded-xl border border-gray-200 p-8 sm:p-12 text-center shadow-md">
+              <div className="mx-auto w-24 h-24 bg-primary-50 rounded-full flex items-center justify-center mb-6 border border-primary-100">
+                <FaUserFriends className="text-primary-400 text-4xl" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                {searchTerm || (Object.values(filters).some(f => (Array.isArray(f) ? f.length > 0 : f))) ? 'No matching family members found.' : 'Your family tree is waiting to grow!'}
+              </h3>
+              <p className="text-gray-600 mb-6 text-base max-w-md mx-auto">
+                {searchTerm || (Object.values(filters).some(f => (Array.isArray(f) ? f.length > 0 : f)))
+                  ? 'Adjust your search terms or clear the filters to see all members.' 
+                  : 'Start by adding your first family member to build your family history.'}
+              </p>
+              <button
+                onClick={handleOpenModal}
+                className="inline-flex items-center bg-primary-DEFAULT hover:bg-primary-700 text-white px-6 py-3 rounded-lg shadow-lg transition-colors font-semibold transform hover:scale-105"
+              >
+                <FiPlus className="mr-2" size={20} />
+                Add Your First Family Member
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Add/Edit Member Modal */}
+      <AddMemberFormModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onAddMember={handleAddNewMember}
+      />
     </Layout>
   );
 };
