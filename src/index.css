@@ -75,8 +75,7 @@
 
 /* Custom Scrollbar Styles for Firefox */
 .custom-scrollbar {
-  scrollbar-width: thin; /* "auto" or "none" */
-  scrollbar-color: #cbd5e0 #f1f1f1; /* thumb color track color */
+  scrollbar-width: none;
 }
 
 @keyframes scale-in {

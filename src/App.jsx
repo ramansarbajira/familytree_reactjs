@@ -15,6 +15,7 @@ import PendingFamilyRequests from './Pages/PendingFamilyRequests';
 import PostsAndFeedsPage from './Pages/PostsAndFeedsPage'; 
 import FamilyGalleryPage from './Pages/FamilyGalleryPage'; 
 import GiftListingPage from './Pages/GiftListingPage'; 
+import EventsPage from './Pages/EventsPage'; 
 
 import { UserProvider } from './Contexts/UserContext';
 import PrivateRoute from './Routes/PrivateRoute';
@@ -47,6 +48,7 @@ function App() {
         <Route path="/posts-and-feeds" element={<PostsAndFeedsPage />} />
         <Route path="/family-gallery" element={<FamilyGalleryPage />} />
         <Route path="/gifts-memories" element={<GiftListingPage />} />
+         <Route path="/events" element={<EventsPage />} />
 
       </Routes>
     </Router>
