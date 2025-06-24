@@ -1,213 +1,14 @@
 // GiftListingPage.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../Components/Layout';
 import ViewProductModal from '../Components/ViewProductModal';
 import BuyConfirmationModal from '../Components/BuyConfirmationModal';
-import { FiEye, FiShoppingCart, FiGift, FiChevronRight, FiHeart, FiStar, FiFilter } from 'react-icons/fi';
+import { FiEye, FiShoppingCart, FiGift, FiChevronRight, FiHeart, FiStar, FiFilter, FiLoader } from 'react-icons/fi';
 
 const GiftListingPage = () => {
-    // Real product images with more gift items
-    // IMPORTANT: To make the image slider in ViewProductModal fully functional,
-    // update your DUMMY_GIFTS to include an 'images' array for each product, e.g.:
-    // images: ['url1', 'url2', 'url3'] instead of just 'image: "url1"'
-    const DUMMY_GIFTS = [
-    {
-        id: 'g1',
-        images: [
-            'https://m.media-amazon.com/images/I/71h6PpG9tQL._AC_UL480_FMwebp_QL65_.jpg',
-            'https://m.media-amazon.com/images/I/81P2h8y541L._AC_UL480_FMwebp_QL65_.jpg',
-            'https://m.media-amazon.com/images/I/71uK-V3M2ZL._AC_UL480_FMwebp_QL65_.jpg'
-        ],
-        title: 'Artisan Ceramic Mug Set',
-        description: 'Hand-crafted ceramic mugs with unique glaze finishes...',
-        price: 799,
-        stock: 50,
-        buyLink: '#',
-        rating: 4.5,
-        category: 'Home',
-        bestSeller: true
-    },
-    {
-        id: 'g2',
-        images: [
-            'https://m.media-amazon.com/images/I/71Kj9JQqZVL._AC_UL480_FMwebp_QL65_.jpg',
-            'https://m.media-amazon.com/images/I/71iYM5pG1sL._AC_UL480_FMwebp_QL65_.jpg'
-        ],
-        title: 'Premium Bluetooth Headphones',
-        description: 'Crystal clear sound with active noise cancellation...',
-        price: 3499,
-        stock: 20,
-        buyLink: '#',
-        rating: 4.8,
-        category: 'Electronics',
-        bestSeller: true
-    },
-    {
-        id: 'g3',
-        images: ['https://m.media-amazon.com/images/I/71qod7ufN4L._AC_UL480_FMwebp_QL65_.jpg'], // Single image - no slider
-        title: 'Luxury Scented Candle Set',
-        description: 'Hand-poured soy wax candles with premium fragrances...',
-        price: 1299,
-        stock: 35,
-        buyLink: '#',
-        rating: 4.6,
-        category: 'Home'
-    },
-    {
-        id: 'g4',
-        images: [
-            'https://m.media-amazon.com/images/I/71Y1S1m-QAL._AC_UL480_FMwebp_QL65_.jpg',
-            'https://m.media-amazon.com/images/I/717tHT7L+CL._AC_UL480_FMwebp_QL65_.jpg',
-            'https://m.media-amazon.com/images/I/71W61pQd00L._AC_UL480_FMwebp_QL65_.jpg'
-        ],
-        title: 'Personalized Leather Journal',
-        description: 'Genuine full-grain leather notebook with custom embossing...',
-        price: 899,
-        stock: 28,
-        buyLink: '#',
-        rating: 4.4,
-        category: 'Office'
-    },
-    {
-        id: 'g5',
-        images: ['https://m.media-amazon.com/images/I/71Z+5d-D9VL._AC_UL480_FMwebp_QL65_.jpg'], // Single image - no slider
-        title: 'Wireless Charging Station',
-        description: 'Fast charging pad compatible with all Qi-enabled devices...',
-        price: 1599,
-        stock: 15,
-        buyLink: '#',
-        rating: 4.3,
-        category: 'Electronics'
-    },
-    {
-        id: 'g6',
-        images: [
-            'https://m.media-amazon.com/images/I/71QN0xJDxRL._AC_UL480_FMwebp_QL65_.jpg',
-            'https://m.media-amazon.com/images/I/81q74WzqC7L._AC_UL480_FMwebp_QL65_.jpg'
-        ],
-        title: 'Gourmet Chocolate Box',
-        description: 'Assorted luxury chocolates from around the world...',
-        price: 1499,
-        stock: 40,
-        buyLink: '#',
-        rating: 4.7,
-        category: 'Food',
-        bestSeller: true
-    },
-    // Add 'images' arrays for other gifts as needed
-    {
-        id: 'g7',
-        images: ['https://m.media-amazon.com/images/I/71yZQ4X3HVL._AC_UL480_FMwebp_QL65_.jpg'],
-        title: 'Stainless Steel Water Bottle',
-        description: 'Insulated bottle that keeps drinks hot for 12 hours...',
-        price: 999,
-        stock: 30,
-        buyLink: '#',
-        rating: 4.5,
-        category: 'Outdoor'
-    },
-    {
-        id: 'g8',
-        images: ['https://m.media-amazon.com/images/I/61n+Q++X1LL._AC_UL480_FMwebp_QL65_.jpg'],
-        title: 'Smart Watch Fitness Tracker',
-        description: 'Track heart rate, sleep, steps, and calories burned...',
-        price: 2999,
-        stock: 12,
-        buyLink: '#',
-        rating: 4.2,
-        category: 'Electronics'
-    },
-    {
-        id: 'g9',
-        images: ['https://m.media-amazon.com/images/I/61g+McQpg7L._AC_UL480_FMwebp_QL65_.jpg'],
-        title: 'Aromatherapy Essential Oils Set',
-        description: '100% pure therapeutic grade essential oils...',
-        price: 899,
-        stock: 25,
-        buyLink: '#',
-        rating: 4.6,
-        category: 'Wellness'
-    },
-    {
-        id: 'g10',
-        images: ['https://m.media-amazon.com/images/I/71YHjVXyR0L._AC_UL480_FMwebp_QL65_.jpg'],
-        title: 'Premium Coffee Gift Basket',
-        description: 'A curated selection of gourmet coffees...',
-        price: 1799,
-        stock: 18,
-        buyLink: '#',
-        rating: 4.8,
-        category: 'Food',
-        bestSeller: true
-    },
-    {
-        id: 'g11',
-        images: ['https://m.media-amazon.com/images/I/71Gg4U1dMmL._AC_UL480_FMwebp_QL65_.jpg'],
-        title: 'Designer Silk Scarf',
-        description: 'Hand-rolled edges with unique artistic patterns...',
-        price: 2499,
-        stock: 8,
-        buyLink: '#',
-        rating: 4.9,
-        category: 'Fashion'
-    },
-    {
-        id: 'g12',
-        images: ['https://m.media-amazon.com/images/I/71X8N9O5QBL._AC_UL480_FMwebp_QL65_.jpg'],
-        title: 'Portable Bluetooth Speaker',
-        description: 'Waterproof speaker with 20-hour playtime and rich bass...',
-        price: 2299,
-        stock: 22,
-        buyLink: '#',
-        rating: 4.4,
-        category: 'Electronics'
-    },
-    {
-        id: 'g13',
-        images: ['https://m.media-amazon.com/images/I/71X8N9O5QBL._AC_UL480_FMwebp_QL65_.jpg'],
-        title: 'Handmade Wooden Chess Set',
-        description: 'Artisanal chess pieces with walnut and maple board...',
-        price: 3499,
-        stock: 10,
-        buyLink: '#',
-        rating: 4.7,
-        category: 'Games'
-    },
-    {
-        id: 'g14',
-        images: ['https://m.media-amazon.com/images/I/71X8N9O5QBL._AC_UL480_FMwebp_QL65_.jpg'],
-        title: 'Personalized Photo Frame',
-        description: 'Custom engraved frame with high-quality glass...',
-        price: 699,
-        stock: 45,
-        buyLink: '#',
-        rating: 4.5,
-        category: 'Home'
-    },
-    {
-        id: 'g15',
-        images: ['https://m.media-amazon.com/images/I/71X8N9O5QBL._AC_UL480_FMwebp_QL65_.jpg'],
-        title: 'Yoga Mat & Accessories Set',
-        description: 'Eco-friendly mat with straps and blocks...',
-        price: 1999,
-        stock: 15,
-        buyLink: '#',
-        rating: 4.6,
-        category: 'Fitness'
-    },
-    {
-        id: 'g16',
-        images: ['https://m.media-amazon.com/images/I/71X8N9O5QBL._AC_UL480_FMwebp_QL65_.jpg'],
-        title: 'Gourmet Tea Sampler',
-        description: '20 premium loose leaf teas from around the world...',
-        price: 1299,
-        stock: 30,
-        buyLink: '#',
-        rating: 4.8,
-        category: 'Food'
-    }
-    ];
-
+    const [gifts, setGifts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
     const [selectedGift, setSelectedGift] = useState(null);
@@ -215,6 +16,72 @@ const GiftListingPage = () => {
     const [priceFilter, setPriceFilter] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('');
     const [sortOption, setSortOption] = useState('featured');
+
+    const BASE_URL = 'https://familytree-backend-trs6.onrender.com';
+
+    // Function to transform API data to match component structure
+    const transformApiData = (apiData) => {
+        return apiData.map(item => ({
+            id: item.id.toString(),
+            images: item.image && item.image !== 'string' && item.image !== '' 
+                ? [`${BASE_URL}/uploads/${item.image}`] 
+                : ['https://via.placeholder.com/400x300?text=No+Image'],
+            title: item.name,
+            description: item.description,
+            price: parseFloat(item.price),
+            stock: item.stock,
+            buyLink: '#',
+            rating: 4.5, // Default rating since API doesn't provide this
+            category: getCategoryName(item.categoryId),
+            bestSeller: item.stock > 20, // Consider items with high stock as best sellers
+            status: item.status
+        }));
+    };
+
+    // Function to get category name based on categoryId
+   const getCategoryName = (categoryId) => {
+    const categories = {
+        1: 'Electronics',
+        2: 'Fashion',
+        3: 'Fitness', // ✅ Corrected
+        4:  'Food',
+        5:  'Games',
+        6: 'Home',
+        7: 'Outdoor',
+    };
+    return categories[categoryId] || 'Other';
+};
+
+
+    // Fetch products from API
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(`${BASE_URL}/product`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Filter only active products (status: 1)
+                const activeProducts = data.filter(product => product.status === 1);
+                const transformedData = transformApiData(activeProducts);
+                
+                setGifts(transformedData);
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching products:', err);
+                setError('Failed to load products. Please try again later.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
 
     // Function to open the Quick View Modal
     const handleViewProduct = (gift) => {
@@ -248,7 +115,6 @@ const GiftListingPage = () => {
         // In a real app, you might update global cart state, show a toast notification, etc.
     };
 
-
     const toggleWishlist = (giftId) => {
         if (wishlist.includes(giftId)) {
             setWishlist(wishlist.filter(id => id !== giftId));
@@ -258,7 +124,7 @@ const GiftListingPage = () => {
     };
 
     // Filter and sort functions
-    const filteredGifts = DUMMY_GIFTS.filter(gift => {
+    const filteredGifts = gifts.filter(gift => {
         if (priceFilter === 'under1000' && gift.price >= 1000) return false;
         if (priceFilter === '1000-3000' && (gift.price < 1000 || gift.price > 3000)) return false;
         if (priceFilter === 'over3000' && gift.price <= 3000) return false;
@@ -276,8 +142,44 @@ const GiftListingPage = () => {
         return b.rating - a.rating;
     });
 
-    // Get unique categories
-    const categories = [...new Set(DUMMY_GIFTS.map(gift => gift.category))].sort();
+    // Get unique categories from loaded gifts
+    const categories = [...new Set(gifts.map(gift => gift.category))].sort();
+
+    // Loading state
+    if (loading) {
+        return (
+            <Layout>
+                <div className="max-w-7xl mx-auto px-4 py-8 md:px-6 lg:px-8">
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <FiLoader className="text-6xl text-primary-600 animate-spin mb-4" />
+                        <h2 className="text-2xl font-semibold text-gray-700 mb-2">Loading Products...</h2>
+                        <p className="text-gray-500">Please wait while we fetch the latest products for you.</p>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <Layout>
+                <div className="max-w-7xl mx-auto px-4 py-8 md:px-6 lg:px-8">
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <FiGift className="text-6xl text-gray-400 mb-4" />
+                        <h2 className="text-2xl font-semibold text-gray-700 mb-2">Oops! Something went wrong</h2>
+                        <p className="text-gray-500 mb-6 text-center max-w-md">{error}</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="px-6 py-3 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
 
     return (
         <Layout>
@@ -361,7 +263,7 @@ const GiftListingPage = () => {
 
                             {/* Wishlist Button (Top Right) */}
                             <button
-                                onClick={(e) => { e.stopPropagation(); toggleWishlist(gift.id); }} // Stop propagation to prevent card click
+                                onClick={(e) => { e.stopPropagation(); toggleWishlist(gift.id); }}
                                 className={`absolute top-3 right-3 z-20 p-2 rounded-full shadow-sm transition-all duration-300 ${
                                     wishlist.includes(gift.id) ? 'text-red-500 bg-white' : 'text-gray-500 bg-white hover:text-red-500'
                                 }`}
@@ -374,15 +276,17 @@ const GiftListingPage = () => {
                                 className="relative w-full h-60 bg-gray-100 overflow-hidden cursor-pointer"
                                 onClick={() => handleViewProduct(gift)}
                             >
-                                {/* Use gift.images[0] or gift.image directly for the main card image */}
                                 <img
-                                    src={gift.images ? gift.images[0] : gift.image} // Use first image from array or original single image
+                                    src={gift.images[0]}
                                     alt={gift.title}
                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                    onError={(e) => {
+                                        e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                                    }}
                                 />
                                 {/* Stock Indicator */}
                                 <span className={`absolute bottom-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${gift.stock > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                                    {gift.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                                    {gift.stock > 0 ? `${gift.stock} In Stock` : 'Out of Stock'}
                                 </span>
                             </div>
 
@@ -434,35 +338,30 @@ const GiftListingPage = () => {
                 </div>
 
                 {/* Empty State */}
-                {sortedGifts.length === 0 && (
+                {sortedGifts.length === 0 && !loading && (
                     <div className="text-center py-16 bg-gray-50 rounded-xl mt-8 shadow-sm">
                         <FiGift className="mx-auto text-6xl text-gray-400 mb-4" />
-                        <h3 className="text-2xl font-medium text-gray-700 mb-2">No gifts found for your selection!</h3>
+                        <h3 className="text-2xl font-medium text-gray-700 mb-2">No products found!</h3>
                         <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                            It seems your current filters are a bit too specific. Try broadening your search.
+                            {gifts.length === 0 
+                                ? "No products available at the moment. Please check back later."
+                                : "It seems your current filters are a bit too specific. Try broadening your search."
+                            }
                         </p>
-                        <button
-                            onClick={() => {
-                                setPriceFilter('');
-                                setCategoryFilter('');
-                                setSortOption('featured');
-                            }}
-                            className="inline-flex items-center px-8 py-3 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-lg shadow-md"
-                        >
-                            Reset All Filters
-                        </button>
+                        {gifts.length > 0 && (
+                            <button
+                                onClick={() => {
+                                    setPriceFilter('');
+                                    setCategoryFilter('');
+                                    setSortOption('featured');
+                                }}
+                                className="inline-flex items-center px-8 py-3 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-lg shadow-md"
+                            >
+                                Reset All Filters
+                            </button>
+                        )}
                     </div>
                 )}
-
-                {/* Load More Button - Only show if there are more items to load (beyond current displayed) */}
-                {DUMMY_GIFTS.length > sortedGifts.length && sortedGifts.length > 0 && (
-                     <div className="text-center mt-10">
-                         <button className="px-8 py-3 border border-primary-600 text-primary-600 font-medium rounded-full hover:bg-primary-600 hover:text-white transition-colors">
-                             Load More Gifts
-                         </button>
-                     </div>
-                 )}
-
 
                 {/* Gift Product View Modal */}
                 {selectedGift && (
@@ -471,10 +370,9 @@ const GiftListingPage = () => {
                         onClose={handleCloseViewModal}
                         gift={selectedGift}
                         onBuyNow={() => {
-                            setIsViewModalOpen(false); // Close view modal
-                            handleOpenBuyModal(selectedGift); // Open buy modal
+                            setIsViewModalOpen(false);
+                            handleOpenBuyModal(selectedGift);
                         }}
-                        // No isInWishlist and onToggleWishlist props passed here anymore
                     />
                 )}
 
