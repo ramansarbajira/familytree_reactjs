@@ -80,6 +80,8 @@ const GiftListingPage = () => {
             }
         };
 
+
+        
         fetchProducts();
     }, []);
 
