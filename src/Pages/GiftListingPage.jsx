@@ -39,19 +39,18 @@ const GiftListingPage = () => {
     };
 
     // Function to get category name based on categoryId
-   const getCategoryName = (categoryId) => {
-    const categories = {
-        1: 'Electronics',
-        2: 'Fashion',
-        3: 'Fitness', // ✅ Corrected
-        4:  'Food',
-        5:  'Games',
-        6: 'Home',
-        7: 'Outdoor',
+    const getCategoryName = (categoryId) => {
+        const categories = {
+            1: 'Electronics',
+            2: 'Fashion',
+            3: 'Games',
+            4: 'Home',
+            5: 'Sports',
+            6: 'Beauty',
+            7: 'Food'
+        };
+        return categories[categoryId] || 'Other';
     };
-    return categories[categoryId] || 'Other';
-};
-
 
     // Fetch products from API
     useEffect(() => {
@@ -80,8 +79,6 @@ const GiftListingPage = () => {
             }
         };
 
-
-        
         fetchProducts();
     }, []);
 
@@ -390,6 +387,6 @@ const GiftListingPage = () => {
             </div>
         </Layout>
     );
-};
+};  
 
 export default GiftListingPage;
