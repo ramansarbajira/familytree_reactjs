@@ -131,7 +131,6 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const { user: loggedInUser, isLoading, error } = useContext(UserContext);
   const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState([
@@ -254,191 +253,189 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
   };
 
   return (
-    <UserProvider>
-      <div className="flex h-screen bg-gray-50 text-gray-800">
-        {/* Desktop Sidebar */}
-        {!isMobile && (
-          <div className="w-74 flex-shrink-0 sidebar-container">
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-          </div>
-        )}
+    <div className="flex h-screen bg-gray-50 text-gray-800">
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <div className="w-74 flex-shrink-0 sidebar-container">
+          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
+      )}
 
-        {/* Mobile Sidebar Overlay */}
-        {isMobile && sidebarOpen && (
-          <div className="fixed inset-0 z-40 bg-black bg-opacity-30" />
-        )}
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && sidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-black bg-opacity-30" />
+      )}
 
-        {/* Mobile Sidebar */}
-        {isMobile && (
-          <div
-            className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl rounded-r-2xl transform transition-transform duration-200 sidebar-container ${
-              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Sidebar
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              isMobile={true} // Pass isMobile prop
-              onCloseMobile={() => setSidebarOpen(false)}
-            />
-          </div>
-        )}
+      {/* Mobile Sidebar */}
+      {isMobile && (
+        <div
+          className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl rounded-r-2xl transform transition-transform duration-200 sidebar-container ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            isMobile={true} // Pass isMobile prop
+            onCloseMobile={() => setSidebarOpen(false)}
+          />
+        </div>
+      )}
 
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          {/* Header */}
-          <header className="bg-white border-b border-gray-100 px-4 lg:px-6 sticky top-0 z-30 shadow-md">
-            <div className="flex items-center justify-between h-16">
-              {/* Left Section */}
-              <div className="flex items-center">
-                {isMobile && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSidebarOpen(true);
-                    }}
-                    className="mr-2 p-2 rounded-lg hover:bg-gray-100 text-gray-600"
-                  >
-                    <FiMenu size={20} />
-                  </button>
-                )}
-              
-              </div>
-
-              {/* Right Section */}
-              <div className="flex items-center space-x-4">
-                {/* Search Button (Mobile) */}
-                {isMobile && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSearchOpen(!searchOpen);
-                    }}
-                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
-                  >
-                    <FiSearch size={20} />
-                  </button>
-                )}
-
-                {/* Search Bar (Desktop) */}
-                {!isMobile && (
-                  <div className="relative search-container">
-                    <input
-                      type="text"
-                      placeholder="Search..."
-                      className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    />
-                    <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  </div>
-                )}
-
-                {/* Notifications */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setNotificationOpen(!notificationOpen);
-                    }}
-                    className="p-1 bg-unset text-primary-600 relative rounded-3xl hover:bg-gray-100 text-gray-600"
-                  >
-                    <FiBell size={20} />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
-
-                {/* Profile Dropdown */}
-                <div className="relative profile-menu">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setProfileOpen(!profileOpen);
-                    }}
-                    className="bg-unset flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white">
-                      <RiUser3Line size={16} />
-                    </div>
-                    {!isMobile && (
-                      <FiChevronDown size={16} className={`transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
-                    )}
-                  </button>
-
-                  {/* Profile Dropdown Menu */}
-                  {profileOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200">
-                      <a
-                        href="/myprofile"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        My Profile
-                      </a>
-                      <a
-                        href="#"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        Settings
-                      </a>
-                      <div className="border-t border-gray-200"></div>
-                      <button
-                        onClick={handleLogout}
-                        className="bg-unset block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        id="logout"
-                      >
-                        Sign Out
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-100 px-4 lg:px-6 sticky top-0 z-30 shadow-md">
+          <div className="flex items-center justify-between h-16">
+            {/* Left Section */}
+            <div className="flex items-center">
+              {isMobile && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSidebarOpen(true);
+                  }}
+                  className="mr-2 p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+                >
+                  <FiMenu size={20} />
+                </button>
+              )}
+             
             </div>
 
-            {/* Mobile Search Bar */}
-            {isMobile && searchOpen && (
-              <div className="mt-3 search-container">
-                <div className="relative">
+            {/* Right Section */}
+            <div className="flex items-center space-x-4">
+              {/* Search Button (Mobile) */}
+              {isMobile && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSearchOpen(!searchOpen);
+                  }}
+                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+                >
+                  <FiSearch size={20} />
+                </button>
+              )}
+
+              {/* Search Bar (Desktop) */}
+              {!isMobile && (
+                <div className="relative search-container">
                   <input
                     type="text"
                     placeholder="Search..."
-                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    autoFocus
+                    className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                   />
                   <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <button
-                    onClick={() => setSearchOpen(false)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <FiX size={18} />
-                  </button>
                 </div>
-              </div>
-            )}
-          </header>
+              )}
 
-          {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-1 md:p-1 bg-gray-50">
-            {children}
+              {/* Notifications */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setNotificationOpen(!notificationOpen);
+                  }}
+                  className="p-1 bg-unset text-primary-600 relative rounded-3xl hover:bg-gray-100 text-gray-600"
+                >
+                  <FiBell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Profile Dropdown */}
+              <div className="relative profile-menu">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setProfileOpen(!profileOpen);
+                  }}
+                  className="bg-unset flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white">
+                    <RiUser3Line size={16} />
+                  </div>
+                  {!isMobile && (
+                    <FiChevronDown size={16} className={`transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
+                  )}
+                </button>
+
+                {/* Profile Dropdown Menu */}
+                {profileOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200">
+                    <a
+                      href="/myprofile"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      My Profile
+                    </a>
+                    <a
+                      href="#"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Settings
+                    </a>
+                    <div className="border-t border-gray-200"></div>
+                    <button
+                      onClick={handleLogout}
+                      className="bg-unset block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      id="logout"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Mobile Bottom Navigation */}
-          {isMobile && (
-            <BottomNavBar activeTab={activeTab} setActiveTab={setActiveTab} />
+          {/* Mobile Search Bar */}
+          {isMobile && searchOpen && (
+            <div className="mt-3 search-container">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  autoFocus
+                />
+                <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <button
+                  onClick={() => setSearchOpen(false)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <FiX size={18} />
+                </button>
+              </div>
+            </div>
           )}
-        </main>
+        </header>
 
-        {/* Notification Panel */}
-        <NotificationPanel
-          open={notificationOpen}
-          onClose={() => setNotificationOpen(false)}
-          notifications={notifications}
-          markAsRead={markAsRead}
-        />
-      </div>
-    </UserProvider>
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-1 md:p-1 bg-gray-50">
+          {children}
+        </div>
+
+        {/* Mobile Bottom Navigation */}
+        {isMobile && (
+          <BottomNavBar activeTab={activeTab} setActiveTab={setActiveTab} />
+        )}
+      </main>
+
+      {/* Notification Panel */}
+      <NotificationPanel
+        open={notificationOpen}
+        onClose={() => setNotificationOpen(false)}
+        notifications={notifications}
+        markAsRead={markAsRead}
+      />
+    </div>
   );
 };
 
