@@ -1,110 +1,81 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faUserCircle,
-  faHouseUser,
-  faUsers,
-  faUserPlus,
-  faHourglassHalf,
-  faNewspaper,
-  faImages,
-  faRightFromBracket,
-  faChevronDown,
-  faChevronRight,
-  faHome,
-  faBars, // Keeping this if you need a mobile menu toggle icon on desktop, though not in the image.
-  faShareNodes, // For 'Posts & Stories' - more generic for sharing content
-  faCameraRetro, // For 'Family Gallery' - more visual for photos
-  faGift, // Already good for Gifts & Memories
-  faSignInAlt, // For 'Logout' - can imply signing out
-  faCircleUser, // Alternative for 'My Profile' if you prefer a solid user circle
-  faNetworkWired, // Alternative for family tree - implies connections
-  faUserGroup, // Alternative for family management - explicit group of users
-  faUserGear, // For family management - implies settings/management of users
-  faUserClock, // For pending requests - implies timed user actions
-} from '@fortawesome/free-solid-svg-icons';
-import { FaTimes } from 'react-icons/fa'; // Assuming FaTimes is for mobile close
-import { useUser } from '../Contexts/UserContext';
+  FiHome,
+  FiUser,
+  FiShare2,
+  FiImage,
+  FiGift,
+  FiUsers,
+  FiClock,
+  FiChevronDown,
+  FiCalendar
+} from 'react-icons/fi';
+import { RiGitMergeLine } from 'react-icons/ri';
+import { FaTimes } from 'react-icons/fa';
 
-// --- Improved Icon Mapping for FontAwesome ---
-const iconMap = {
-  home: faHome,
-  myProfile: faCircleUser, // Changed to faCircleUser for a more modern profile icon
-  familyTree: faNetworkWired, // Changed for a more symbolic look
-  familyManagement: faUserGear, // Changed to imply management/settings
-  myFamilyMembers: faUserGroup, // Changed to a clear group icon
-  pendingRequests: faUserClock, // Changed to imply pending time/requests
-  posts: faShareNodes, // Changed to suggest sharing content
-  gallery: faCameraRetro, // Changed to a camera for gallery
-  gifts: faGift,
-  logout: faSignInAlt, // Changed to imply signing out
-};
-
-// --- Your Original Menu Items Definition ---
 const menuItems = [
-  { id: 'home', label: 'Home', route: '/dashboard', icon: 'home' },
-  { id: 'myProfile', label: 'My Profile', route: '/myprofile', icon: 'myProfile' }, // This will now be a regular menu item
-  { id: 'familyTree', label: 'My Family Tree', route: '/familytree', icon: 'familyTree' },
+  { id: 'home', label: 'Home', route: '/dashboard', icon: <FiHome size={19} /> },
+  { id: 'events', label: 'Events', route: '/events', icon: <FiCalendar size={19} /> },
+  { id: 'familyTree', label: 'Family Tree', route: '/familytree', icon: <RiGitMergeLine size={19} /> },
   {
-    id: 'familyManagement', label: 'Family Management', icon: 'familyManagement',
+    id: 'familyManagement',
+    label: 'Family Management',
+    icon: <FiUsers size={19} />,
     children: [
-      { id: 'myFamilyMembers', label: 'All Members', route: '/myfamilymember', icon: 'myFamilyMembers' },
-      { id: 'pendingRequests', label: 'Pending Access', route: '/pending-request', icon: 'pendingRequests' },
+      { id: 'myFamilyMembers', label: 'All Members', route: '/myfamilymember', icon: <FiUsers size={17} /> },
+      { id: 'pendingRequests', label: 'Pending Requests', route: '/pending-request', icon: <FiClock size={17} /> },
     ]
   },
-  { id: 'posts', label: 'Posts & Stories', route: '/posts-and-feeds', icon: 'posts' },
-  { id: 'gallery', label: 'Family Gallery', route: '/family-gallery', icon: 'gallery' },
-  { id: 'gifts', label: 'Gifts & Memories', route: '/gifts-memories', icon: 'gifts' },
-  { id: 'logout', label: 'Logout', route: '/logout', icon: 'logout' }
+  { id: 'posts', label: 'Posts & Stories', route: '/posts-and-feeds', icon: <FiShare2 size={19} /> },
+  { id: 'gallery', label: 'Family Gallery', route: '/family-gallery', icon: <FiImage size={19} /> },
+  { id: 'gifts', label: 'Gifts & Memories', route: '/gifts-memories', icon: <FiGift size={19} /> },
 ];
-// --- End of menuItems definition ---
 
 const Sidebar = ({ isMobile, onCloseMobile }) => {
   const navigate = useNavigate();
-  const { userInfo } = useUser() || {}; // This is for the bottom user info section
   const location = useLocation();
-
   const [expandedParents, setExpandedParents] = useState({});
 
   useEffect(() => {
     const newExpandedParents = {};
     menuItems.forEach(item => {
       if (item.children) {
-        if (item.children.some(child => location.pathname.startsWith(child.route))) {
-          newExpandedParents[item.id] = true;
-        }
+        // Expand parent if any child route starts with the current path
+        newExpandedParents[item.id] = item.children.some(
+          child => location.pathname.startsWith(child.route)
+        );
       }
     });
     setExpandedParents(newExpandedParents);
-  }, [location.pathname, menuItems]); // menuItems is stable, but good to include if it were dynamic
+  }, [location.pathname]);
 
   const isLinkActive = (item) => {
-    if (item.route && location.pathname.startsWith(item.route)) {
-      return true;
+    if (item.route) {
+      // For direct links, check if the current path starts with the item's route
+      return location.pathname.startsWith(item.route);
     }
     if (item.children) {
-      // Check if any child route is active
+      // For parent items, check if ANY of its children's routes are active
       return item.children.some(child => location.pathname.startsWith(child.route));
     }
     return false;
   };
 
-  const toggleParentExpansion = (parentId) => {
-    setExpandedParents(prev => ({
-      ...prev,
-      [parentId]: !prev[parentId]
-    }));
-  };
-
   const handleItemClick = (item) => {
-    if (item.children) {
-      toggleParentExpansion(item.id);
+    if (item.id === 'logout') {
+      // handleLogout logic should be in Layout or passed as a prop
+      // For now, it will just log
+      console.log("Logout clicked from sidebar");
+      if (isMobile && onCloseMobile) onCloseMobile(); // Close sidebar on logout click
       return;
     }
 
-    if (item.id === 'logout') {
-      handleLogout();
+    if (item.children) {
+      setExpandedParents(prev => ({
+        ...prev,
+        [item.id]: !prev[item.id]
+      }));
       return;
     }
 
@@ -112,115 +83,88 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
       navigate(item.route);
     }
 
-    // Close mobile sidebar on item click for better UX
     if (isMobile && onCloseMobile) onCloseMobile();
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    // Consider adding a proper logout API call if needed
-    navigate('/login');
-  };
-
   return (
-    <div className="flex flex-col w-full max-w-[280px] bg-white shadow-lg border-r border-gray-100 h-screen">
-      {/* Header - Aalam Logo and Name */}
-      <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 sm:justify-start flex-shrink-0">
+    <div className="flex flex-col h-full bg-white  border-gray-100 shadow-xl"> {/* Adjusted shadow and border-radius */}
+      <div className="flex items-center justify-between px-6 py-3  flex-shrink-0 shadow-md">
         {isMobile && (
-          <button onClick={onCloseMobile} className="text-gray-500 mr-4 sm:hidden hover:text-gray-700 transition-colors">
-            <FaTimes size={20} />
+          <button onClick={onCloseMobile} className="text-gray-500 hover:text-gray-700 transition-colors mr-4">
+            <FaTimes size={24} />
           </button>
         )}
         <div className="flex items-center gap-3 ml-auto sm:ml-0">
-          <div className="w-[44px] h-[44px] flex-shrink-0">
-            <img
-              src="/assets/logo-green-light.png"
-              alt="Aalam Logo"
-              className="w-full h-full object-cover rounded-full"
-            />
+          <div className="w-10 h-10 flex-shrink-0"> {/* Adjusted to w-10 h-10 for consistency */}
+            <img src="/assets/logo-green-light.png" alt="Aalam Logo" className="w-full h-full object-cover rounded-full" />
           </div>
-          <h4 className="text-2xl font-extrabold text-gray-900 hidden sm:block">Aalam</h4>
+          <h2 className="text-2xl font-bold text-gray-800">Aalam</h2> {/* Removed hidden sm:block, assuming desktop sidebar is always wide enough */}
         </div>
       </div>
 
-      {/* Menu Items Container - This is where the scrollable content goes */}
-      <div className="flex-1 px-4 py-4 overflow-y-auto custom-scrollbar"> {/* Reduced py from 6 to 4 */}
-        <nav className="flex flex-col gap-1"> {/* Reduced gap from 1 to 0 for tighter fit, or kept 1 for subtle spacing */}
+      <div className="flex-1 overflow-y-auto py-5 px-4 custom-scrollbar">
+        <nav className="space-y-1.5">
           {menuItems.map((item) => (
-            <React.Fragment key={item.id}>
+            <div key={item.id}>
               {item.children ? (
-                <div className="relative">
-                  <div
-                    className={`flex items-center py-2.5 px-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700
-                      ${isLinkActive(item) ? 'font-semibold text-blue-700 bg-primary-50' : 'hover:bg-gray-100 hover:text-gray-900'}` // Subtle hover and active
-                    }
+                <div>
+                  <button
+                    className={`bg-unset flex items-center w-full px-4 py-3 rounded-lg text-left transition-all duration-200 focus:outline-none focus:ring-2
+                      ${isLinkActive(item)
+                        ? 'text-primary-700 bg-primary-50 font-semibold'
+                        : 'text-gray-700 hover:text-primary-600 hover:bg-gray-50'
+                      }`}
                     onClick={() => handleItemClick(item)}
                   >
-                    <FontAwesomeIcon icon={iconMap[item.icon]} className={`mr-3 text-xl w-6 ${isLinkActive(item) ? 'text-white-600' : 'text-gray-500'}`} />
-                    <span className="text-base">{item.label}</span>
-                    <FontAwesomeIcon
-                      icon={expandedParents[item.id] ? faChevronDown : faChevronRight}
-                      className={`ml-auto text-xs transition-transform duration-200 text-gray-500`}
-                    />
-                  </div>
+                    <span className={`mr-4 text-xl ${isLinkActive(item) ? 'text-primary-500' : 'text-gray-500'}`}>
+                      {item.icon}
+                    </span>
+                    <span className="flex-1 text-base">{item.label}</span>
+                    <span className={`transform transition-transform duration-200 text-gray-500 ${
+                      expandedParents[item.id] ? 'rotate-180' : ''
+                    }`}>
+                      <FiChevronDown size={16} />
+                    </span>
+                  </button>
                   {expandedParents[item.id] && (
-                    <div className="ml-9 mt-0.5 space-y-0.5"> {/* Tighter spacing, reduced ml */}
-                      {item.children.map((childItem) => (
-                        <div
-                          key={childItem.id}
-                          className={`flex items-center py-2 px-3 rounded-lg cursor-pointer transition-all duration-200 text-sm text-gray-600
-                            ${isLinkActive(childItem) ? 'font-medium text-blue-600 bg-primary-50' : 'hover:bg-gray-100 hover:text-white-800'}` // Subtle hover and active
-                          }
-                          onClick={() => handleItemClick(childItem)}
+                    <div className="ml-12 mt-1 space-y-1 border-l border-gray-200 pl-2">
+                      {item.children.map((child) => (
+                        <button
+                          key={child.id}
+                          className={`bg-unset flex items-center w-full px-4 py-2.5 rounded-lg text-left text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-200
+                            ${location.pathname.startsWith(child.route)
+                              ? 'text-primary-600 bg-primary-50 font-medium'
+                              : 'text-gray-600 hover:text-primary-500 hover:bg-gray-100'
+                            }`}
+                          onClick={() => handleItemClick(child)}
                         >
-                          <FontAwesomeIcon icon={iconMap[childItem.icon]} className={`mr-3 text-lg w-5 ${isLinkActive(childItem) ? 'text-white-500' : 'text-gray-400'}`} />
-                          <span>{childItem.label}</span>
-                        </div>
+                          <span className={`mr-3 ${location.pathname.startsWith(child.route) ? 'text-primary-400' : 'text-gray-400'}`}>
+                            {child.icon}
+                          </span>
+                          {child.label}
+                        </button>
                       ))}
                     </div>
                   )}
                 </div>
               ) : (
-                <div
-                  className={`flex items-center py-2.5 px-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700
-                    ${isLinkActive(item) ? 'font-semibold text-blue-700 bg-blue-50' : 'hover:bg-gray-100 hover:text-gray-900'}` // Subtle hover and active
-                  }
+                <button
+                  className={`bg-unset flex items-center w-full px-4 py-3 rounded-lg text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-300
+                    ${isLinkActive(item)
+                      ? 'text-primary-700 bg-primary-50 font-semibold'
+                      : 'text-gray-700 hover:text-primary-600 hover:bg-gray-50'
+                    }`}
                   onClick={() => handleItemClick(item)}
                 >
-                  <FontAwesomeIcon icon={iconMap[item.icon]} className={`mr-3 text-xl w-6 ${isLinkActive(item) ? 'text-blue-600' : 'text-gray-500'}`} />
+                  <span className={`mr-4 text-xl ${isLinkActive(item) ? 'text-primary-500' : 'text-gray-500'}`}>
+                    {item.icon}
+                  </span>
                   <span className="text-base">{item.label}</span>
-                </div>
+                </button>
               )}
-            </React.Fragment>
+            </div>
           ))}
         </nav>
-      </div>
-
-      {/* User Info Section - Back at the bottom */}
-      <div className="border-t border-gray-100 px-6 py-4 flex-shrink-0">
-        <div className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-          <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-pink-500 rounded-full overflow-hidden shadow-md flex-shrink-0">
-            {userInfo?.profileUrl ? (
-              <img
-                src={userInfo.profileUrl || '/assets/default-user.png'}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                <span className="text-gray-600 text-xl">👤</span>
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-gray-800 truncate">
-              {userInfo?.name || 'Your Name'}
-            </div>
-            <div className="text-xs text-gray-500 truncate">
-              {userInfo?.familyCode || 'Your Family'}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
