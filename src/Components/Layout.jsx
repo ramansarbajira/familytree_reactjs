@@ -16,7 +16,8 @@ import {
   FiHeart
 } from 'react-icons/fi';
 import { RiUser3Line } from 'react-icons/ri';
-import { UserProvider } from '../Contexts/UserContext';
+import { UserProvider, useUser } from '../Contexts/UserContext';
+import ProfileFormModal from './ProfileFormModal'; // Adjust path if necessary
 
 const NotificationPanel = ({ open, onClose, notifications, markAsRead }) => {
 
@@ -131,7 +132,12 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const navigate = useNavigate();
+
+  //user info
+  const { userInfo, userLoading } = useUser();
+  //console.log(userInfo); // This will log the user info to the console
 
   const [notifications, setNotifications] = useState([
     {
@@ -252,6 +258,15 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
     // if (isMobile && onCloseMobile) onCloseMobile();
   };
 
+  const openAddMemberModal = () => {
+    setIsAddMemberModalOpen(true);
+    setProfileOpen(false); // Close the profile dropdown when modal opens
+  };
+
+  const closeAddMemberModal = () => {
+    setIsAddMemberModalOpen(false);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 text-gray-800">
       {/* Desktop Sidebar */}
@@ -301,7 +316,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
                   <FiMenu size={20} />
                 </button>
               )}
-             
+              
             </div>
 
             {/* Right Section */}
@@ -358,9 +373,18 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
                   }}
                   className="bg-unset flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white">
-                    <RiUser3Line size={16} />
-                  </div>
+                  {/* Conditional Rendering for Profile Image or Icon */}
+                  {userInfo && userInfo.profileUrl ? (
+                    <img
+                      src={userInfo.profileUrl}
+                      alt="User Profile"
+                      className="w-8 h-8 rounded-full object-cover" // object-cover to maintain aspect ratio
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-primary-600 flex items-center justify-center text-white">
+                      <RiUser3Line size={16} />
+                    </div>
+                  )}
                   {!isMobile && (
                     <FiChevronDown size={16} className={`transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
                   )}
@@ -369,26 +393,40 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
                 {/* Profile Dropdown Menu */}
                 {profileOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200">
-                    <a
-                      href="/myprofile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      My Profile
-                    </a>
-                    <a
-                      href="#"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Settings
-                    </a>
-                    <div className="border-t border-gray-200"></div>
-                    <button
-                      onClick={handleLogout}
-                      className="bg-unset block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      id="logout"
-                    >
-                      Sign Out
-                    </button>
+                    {userLoading ? (
+                      <div className="px-4 py-2 text-sm text-gray-700">Loading user info...</div>
+                    ) : userInfo ? (
+                      <>
+                        <div className="px-4 py-2 text-sm text-gray-800 border-b border-gray-100">
+                          <p className="font-semibold">{userInfo.firstName} {userInfo.lastName}</p>
+                          {userInfo.familyCode && (
+                            <p className="text-gray-500 text-xs">Family Code: {userInfo.familyCode}</p>
+                          )}
+                        </div>
+                        <a
+                          href="/myprofile"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          My Profile
+                        </a>
+                        <button
+                        onClick={openAddMemberModal}
+                        className="bg-unset block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Settings
+                      </button>
+                        <div className="border-t border-gray-200"></div>
+                        <button
+                          onClick={handleLogout}
+                          className="bg-unset block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          id="logout"
+                        >
+                          Sign Out
+                        </button>
+                      </>
+                    ) : (
+                      <div className="px-4 py-2 text-sm text-gray-700">User not logged in.</div>
+                    )}
                   </div>
                 )}
               </div>
@@ -435,6 +473,14 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
         notifications={notifications}
         markAsRead={markAsRead}
       />
+
+      {/* Add Member Form Modal */}
+      <ProfileFormModal
+        isOpen={isAddMemberModalOpen}
+        onClose={closeAddMemberModal}
+        mode="edit-profile"
+      />
+
     </div>
   );
 };

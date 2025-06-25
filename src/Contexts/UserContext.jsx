@@ -42,8 +42,9 @@ export const UserProvider = ({ children }) => {
       if (!response.ok) throw new Error('Failed to fetch user details');
 
       const jsonData = await response.json();
-      const { userProfile } = jsonData.data || {};
-
+      const { userProfile, email, countryCode, mobile, status, role } = jsonData.data || {}; // Destructure additional fields here
+      //console.log(userProfile);
+      
       if (!userProfile) throw new Error('No user profile returned');
 
       const childrenArray = userProfile.childrenNames
@@ -56,14 +57,17 @@ export const UserProvider = ({ children }) => {
       });
 
       setUserInfo({
+        userId: userProfile.userId,
         firstName: userProfile.firstName || '',
         lastName: userProfile.lastName || '',
         dob: userProfile.dob?.split('T')[0] || '',
         age: calculateAge(userProfile.dob),
         gender: userProfile.gender || '',
+        email: email || userProfile.email || '', // Prioritize the top-level email if available
         maritalStatus: userProfile.maritalStatus || '',
         marriageDate: userProfile.marriageDate?.split('T')[0] || '',
         spouseName: userProfile.spouseName || '',
+        region: userProfile.region || '',
         childrenCount: childrenArray.length || 0,
         ...childFields,
         fatherName: userProfile.fatherName || '',
@@ -83,7 +87,14 @@ export const UserProvider = ({ children }) => {
         profileUrl: userProfile.profile || '',
         familyCode: userProfile.familyMember?.familyCode || '',
         name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim(),
-        raw: userProfile,
+        
+        // Add the new fields here
+        countryCode: countryCode || '',
+        mobile: mobile || '',
+        status: status || 0, // Assuming status is a number, default to 0
+        role: role || 0,     // Assuming role is a number, default to 0
+
+        raw: userProfile, // Keep the raw userProfile for debugging or specific needs
       });
     } catch (err) {
       console.error('Error fetching user:', err);

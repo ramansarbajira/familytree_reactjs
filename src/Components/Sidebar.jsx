@@ -23,7 +23,7 @@ const menuItems = [
     label: 'Family Management',
     icon: <FiUsers size={19} />,
     children: [
-      { id: 'myFamilyMembers', label: 'All Members', route: '/myfamilymember', icon: <FiUsers size={17} /> },
+      { id: 'myFamilyMembers', label: 'All Members', route: '/my-family-member', icon: <FiUsers size={17} /> },
       { id: 'pendingRequests', label: 'Pending Requests', route: '/pending-request', icon: <FiClock size={17} /> },
     ]
   },

@@ -4,7 +4,6 @@ import Login from './Pages/Login';
 import Register from './Pages/Register';
 import ForgotPassword from './Pages/ForgotPassword';
 import ResetPassword from './Pages/ResetPassword';
-import Profile from './Pages/Profile';
 import OnBoarding from './Pages/OnBoarding';
 import VerifyOtp from './Pages/VerifyOtp';
 
@@ -36,18 +35,15 @@ function App() {
 
         {/* Authenticated-only route */}
         <Route path="/on-boarding" element={ <OnBoarding />  } />
-        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/on-boarding" element={<PrivateRoute> <OnBoarding /> </PrivateRoute>  } />
         <Route path="/dashboard" element={<PrivateRoute><UserProvider><Dashboard /></UserProvider></PrivateRoute>} />
-        <Route path="/profile" element={<PrivateRoute><UserProvider><Profile /></UserProvider></PrivateRoute>} />
         <Route path="/myprofile" element={<PrivateRoute><UserProvider><MyProfile /></UserProvider></PrivateRoute>} />
+        <Route path="/my-family-member" element={<PrivateRoute><UserProvider><MyFamilyMember /></UserProvider></PrivateRoute>  } />
 
-        <Route path="/dashboard" element={<Dashboard />  } />
-        <Route path="/myfamilymember" element={<MyFamilyMember />  } />
-        <Route path ="/pending-request" element={<PendingFamilyRequests />  } />
-        <Route path="/posts-and-feeds" element={<PostsAndFeedsPage />} />
-        <Route path="/family-gallery" element={<FamilyGalleryPage />} />
-        <Route path="/gifts-memories" element={<GiftListingPage />} />
+        <Route path ="/pending-request" element={<PrivateRoute><UserProvider><PendingFamilyRequests /> </UserProvider> </PrivateRoute>} />
+        <Route path="/posts-and-feeds" element={<PrivateRoute><UserProvider><PostsAndFeedsPage /></UserProvider></PrivateRoute>} />
+        <Route path="/family-gallery" element={<PrivateRoute><UserProvider><FamilyGalleryPage /></UserProvider></PrivateRoute>} />
+        <Route path="/gifts-memories" element={<PrivateRoute><UserProvider><GiftListingPage /></UserProvider></PrivateRoute>} />
          <Route path="/events" element={<EventsPage />} />
 
       </Routes>

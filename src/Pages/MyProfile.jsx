@@ -5,15 +5,19 @@ import { FiEdit3, FiHeart, FiMessageCircle, FiGrid, FiPlusSquare, FiImage, FiSet
 // Assuming these modals exist in your Components directory
 import CreatePostModal from '../Components/CreatePostModal';
 import CreateAlbumModal from '../Components/CreateAlbumModal';
-import AddMemberFormModal from '../Components/AddMemberFormModal';
+import ProfileFormModal from '../Components/ProfileFormModal';
 import GalleryViewerModal from '../Components/GalleryViewerModal';
 import PostViewerModal from '../Components/PostViewerModal'; // Import the new PostViewerModal
+import { UserProvider, useUser } from '../Contexts/UserContext';
 
 const ProfilePage = () => {
+    const { userInfo, userLoading } = useUser();
+    console.log(userInfo);
+    
     const [showPosts, setShowPosts] = useState(true); // true for posts, false for galleries
     const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
     const [isCreateAlbumModalOpen, setIsCreateAlbumModalOpen] = useState(false);
-    const [isAddMemberFormModalOpen, setIsAddMemberFormModalOpen] = useState(false);
+    const [isProfileFormModalOpen, setIsProfileFormModalOpen] = useState(false);
 
     // --- State for Gallery Viewer Modal ---
     const [isGalleryViewerOpen, setIsGalleryViewerOpen] = useState(false);
@@ -25,15 +29,16 @@ const ProfilePage = () => {
 
     // --- User Data (Placeholder - replace with actual user data from props/context) ---
     const user = {
-        profileImage: "https://picsum.photos/seed/profileUser/400/400", // Unique seed for profile
-        name: "Sabarinath_Rajendran29",
-        fullName: "Sabarinath Rajendran",
-        basicInfo: "Aspiring Web Developer | Tech Enthusiast",
-        bio: "Passionate about creating intuitive and dynamic web experiences. Love exploring new technologies and sharing family moments. Let's connect!",
-        postsCount: 15,
-        galleryCount: 8,
-        followers: 120,
-        following: 80,
+        profileImage: userInfo?.profileUrl || "/assets/user.png",
+        name: userInfo?.name || "Username",
+        fullName: `${userInfo?.firstName || ''} ${userInfo?.lastName || ''}`.trim(),
+        basicInfo: userInfo?.bio ? userInfo.bio.split('.')[0] : "Family member", // Use first sentence of bio
+        bio: userInfo?.bio || "No bio yet",
+        contactNumber: userInfo?.contactNumber || "",
+        email: userInfo?.email || "",
+        familyCode: userInfo?.familyCode || userInfo?.raw?.familyMember?.familyCode || "Not assigned",
+        postsCount: 15, // These can be updated later
+        galleryCount: 8, // These can be updated later
     };
 
     // --- Placeholder Data for Posts and Galleries ---
@@ -113,7 +118,7 @@ const ProfilePage = () => {
 
     const handleCreatePostClick = () => setIsCreatePostModalOpen(true);
     const handleCreateAlbumClick = () => setIsCreateAlbumModalOpen(true);
-    const handleEditProfileClick = () => setIsAddMemberFormModalOpen(true);
+    const handleEditProfileClick = () => setIsProfileFormModalOpen(true);
 
     // --- Handlers for Gallery Viewer Modal ---
     const handleViewAlbum = (album) => {
@@ -205,7 +210,16 @@ const ProfilePage = () => {
                     </div>
                     <div className="flex-grow text-center md:text-left">
                         <div className="flex flex-col md:flex-row items-center md:justify-between mb-3 gap-2">
-                            <h1 className="text-3xl font-extrabold text-gray-900 leading-tight">{user.name}</h1>
+                            <div>
+                                <h1 className="text-3xl font-extrabold text-gray-900 leading-tight">{user.name}</h1>
+                                {user.familyCode && (
+                                    <div className="flex items-center justify-center md:justify-start gap-2 mt-1">
+                                        <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
+                                            Family Code: {user.familyCode}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                             <button
                                 onClick={handleEditProfileClick}
                                 className="bg-primary-600 text-white px-5 py-2.5 rounded-xl shadow-lg hover:bg-primary-700 transition duration-300 flex items-center gap-2 font-medium text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-opacity-75"
@@ -213,9 +227,27 @@ const ProfilePage = () => {
                                 <FiEdit3 size={18} /> Edit Profile
                             </button>
                         </div>
-                        <p className="text-lg text-gray-700 font-semibold mb-1">{user.fullName}</p>
-                        <p className="text-md text-gray-500 mb-4">{user.basicInfo}</p>
+                        
                         <p className="text-gray-800 leading-relaxed text-sm md:text-base whitespace-pre-wrap">{user.bio}</p>
+
+                        {/* Add contact information section */}
+                        {(user.contactNumber || user.email) && (
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                                <h3 className="text-sm font-semibold text-gray-500 mb-2">Contact Information</h3>
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    {user.contactNumber && (
+                                        <p className="text-gray-700 text-sm">
+                                            <span className="font-medium">Phone:</span> {user.contactNumber}
+                                        </p>
+                                    )}
+                                    {user.email && (
+                                        <p className="text-gray-700 text-sm">
+                                            <span className="font-medium">Email:</span> {user.email}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex justify-center md:justify-start gap-8 mt-5 pt-4 border-t border-gray-100">
                             <div className="text-center">
@@ -223,12 +255,8 @@ const ProfilePage = () => {
                                 <span className="block text-sm text-gray-500">Posts</span>
                             </div>
                             <div className="text-center">
-                                <span className="block font-bold text-xl md:text-2xl text-gray-900">{user.followers}</span>
-                                <span className="block text-sm text-gray-500">Followers</span>
-                            </div>
-                            <div className="text-center">
-                                <span className="block font-bold text-xl md:text-2xl text-gray-900">{user.following}</span>
-                                <span className="block text-sm text-gray-500">Following</span>
+                                <span className="block font-bold text-xl md:text-2xl text-gray-900">{user.galleryCount}</span>
+                                <span className="block text-sm text-gray-500">Galleries</span>
                             </div>
                         </div>
                     </div>
@@ -363,9 +391,10 @@ const ProfilePage = () => {
                 isOpen={isCreateAlbumModalOpen}
                 onClose={() => setIsCreateAlbumModalOpen(false)}
             />
-            <AddMemberFormModal
-                isOpen={isAddMemberFormModalOpen}
-                onClose={() => setIsAddMemberFormModalOpen(false)}
+            <ProfileFormModal
+                isOpen={isProfileFormModalOpen}
+                onClose={() => setIsProfileFormModalOpen(false)}
+                mode="edit-profile"
             />
             <GalleryViewerModal
                 isOpen={isGalleryViewerOpen}

@@ -213,16 +213,16 @@ const Dashboard = () => {
                 />
               </div>
               <div className="flex flex-wrap justify-around border-t border-gray-200 pt-4 gap-2">
-                <button className="flex items-center gap-2 text-primary-600 hover:bg-primary-50 rounded-lg px-3 py-2 transition text-xs md:text-sm font-medium">
+                <button className="bg-unset flex items-center gap-2 text-primary-600 hover:bg-primary-50 rounded-lg px-3 py-2 transition text-xs md:text-sm font-medium">
                   <FiImage size={18} /> Photo/Video
                 </button>
-                <button className="flex items-center gap-2 text-primary-600 hover:bg-primary-50 rounded-lg px-3 py-2 transition text-xs md:text-sm font-medium">
+                <button className="bg-unset flex items-center gap-2 text-primary-600 hover:bg-primary-50 rounded-lg px-3 py-2 transition text-xs md:text-sm font-medium">
                   <FiTag size={18} /> Tag Family
                 </button>
-                <button className="flex items-center gap-2 text-primary-600 hover:bg-primary-50 rounded-lg px-3 py-2 transition text-xs md:text-sm font-medium">
+                <button className="bg-unset flex items-center gap-2 text-primary-600 hover:bg-primary-50 rounded-lg px-3 py-2 transition text-xs md:text-sm font-medium">
                   <FiCalendar size={18} /> Create Event
                 </button>
-                <button className="flex items-center gap-2 text-primary-600 hover:bg-primary-50 rounded-lg px-3 py-2 transition text-xs md:text-sm font-medium">
+                <button className="bg-unset flex items-center gap-2 text-primary-600 hover:bg-primary-50 rounded-lg px-3 py-2 transition text-xs md:text-sm font-medium">
                   <FiPaperclip size={18} /> Add Document
                 </button>
               </div>

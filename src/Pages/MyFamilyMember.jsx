@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Layout from '../Components/Layout'; // Assuming you have a Layout component
 import { useNavigate } from 'react-router-dom';
 
-import AddMemberFormModal from '../Components/AddMemberFormModal'; // Assuming you have this modal component
+import ProfileFormModal from '../Components/ProfileFormModal'; // Assuming you have this modal component
 
 // Icons
 import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiEye } from 'react-icons/fi';
@@ -399,10 +399,11 @@ const FamilyMemberListing = () => {
       </div>
 
       {/* Add/Edit Member Modal */}
-      <AddMemberFormModal
+      <ProfileFormModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onAddMember={handleAddNewMember}
+        mode="add"
       />
     </Layout>
   );
