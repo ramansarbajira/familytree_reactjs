@@ -10,15 +10,15 @@ import GalleryViewerModal from '../Components/GalleryViewerModal';
 import PostViewerModal from '../Components/PostViewerModal';
 import { UserProvider, useUser } from '../Contexts/UserContext';
 
-const token = localStorage.getItem('access_token');
-
 const ProfilePage = () => {
+    const [token, setToken] = useState(null);
     const [loadingUserProfile, setLoadingUserProfile] = useState(true);
     const [user, setUser] = useState(null);
     const { userInfo, userLoading, refetchUserInfo } = useUser();
     const [userPosts, setUserPosts] = useState([]);
     const [loadingPosts, setLoadingPosts] = useState(true);
     const [loadingGalleries, setLoadingGalleries] = useState(true);
+
 
     const [showPosts, setShowPosts] = useState(true);
     const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
@@ -37,6 +37,13 @@ const ProfilePage = () => {
     const [postToEditDetails, setPostToEditDetails] = useState(null); // This will hold the detailed API response for edit
     const [isEditAlbumModalOpen, setIsEditAlbumModalOpen] = useState(false);
     const [albumToEdit, setAlbumToEdit] = useState(null);
+
+    useEffect(() => {
+        const storedToken = localStorage.getItem('access_token');
+        if (storedToken) {
+            setToken(storedToken);
+        }
+    }, []);
 
     useEffect(() => {
         if (!userInfo) return;
@@ -147,11 +154,11 @@ const ProfilePage = () => {
     };
 
     useEffect(() => {
-        if (userInfo?.userId) {
+    if (userInfo?.userId && token) {
             fetchPosts();
             fetchGalleries();
         }
-    }, [userInfo]);
+    }, [userInfo, token]);
 
     const handlePostCreated = () => {
         fetchPosts();
@@ -579,12 +586,12 @@ const ProfilePage = () => {
                             ) : (
                                 <div className="lg:col-span-3 text-center py-12 bg-white rounded-2xl shadow-md border border-gray-100">
                                     <p className="text-gray-500 text-lg mb-4">No posts yet. Share your first family moment!</p>
-                                    <button
+                                    {/* <button
                                         onClick={handleCreatePostClick}
                                         className="bg-primary-500 text-white px-8 py-3 rounded-full shadow hover:bg-primary-600 transition-colors text-base font-medium"
                                     >
                                         Create First Post
-                                    </button>
+                                    </button> */}
                                 </div>
                             )}
                         </div>
@@ -638,12 +645,12 @@ const ProfilePage = () => {
                             ) : (
                                 <div className="lg:col-span-3 text-center py-12 bg-white rounded-2xl shadow-md border border-gray-100">
                                     <p className="text-gray-500 text-lg mb-4">No galleries yet. Organize your cherished memories!</p>
-                                    <button
+                                    {/* <button
                                         onClick={handleCreateAlbumClick}
                                         className="bg-primary-500 text-white px-8 py-3 rounded-full shadow hover:bg-primary-600 transition-colors text-base font-medium"
                                     >
                                         Create First Album
-                                    </button>
+                                    </button> */}
                                 </div>
                             )}
                         </div>
