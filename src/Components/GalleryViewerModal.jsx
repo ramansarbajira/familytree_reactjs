@@ -2,55 +2,124 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaRegHeart, FaHeart, FaCommentDots, FaTimes, FaChevronLeft, FaChevronRight, FaInfoCircle, FaShareAlt } from 'react-icons/fa';
 import { AnimatePresence, motion } from 'framer-motion';
 
-const GalleryViewerModal = ({ isOpen, onClose, album, onLikePhoto }) => {
-    // All hooks must be declared unconditionally at the top level
+const GalleryViewerModal = ({ isOpen, onClose, album, currentUser, authToken }) => {
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-    const [isLiked, setIsLiked] = useState(false);
-    const [showInfo, setShowInfo] = useState(false); // This state is not currently used but kept for potential future expansion
+    const [isLiked, setIsLiked] = useState(album?.isLiked || false);
+    const [likeLoading, setLikeLoading] = useState(false);
+    const [totalLikes, setTotalLikes] = useState(album?.likes || 0);
+    const [newComment, setNewComment] = useState('');
+    const [commentLoading, setCommentLoading] = useState(false);
+    const [comments, setComments] = useState([]);
     const commentsRef = useRef(null);
+    const [commentTotal, setCommentTotal] = useState(0);
+    
 
-    // Reset photo index, like state, and info state when album changes or modal opens
-    // This effect will run every time isOpen or album changes, but its logic only acts if isOpen is true.
+    // This effect handles resetting the photo index when the modal opens or the album changes
     useEffect(() => {
         if (isOpen) {
             setCurrentPhotoIndex(0);
-            setIsLiked(false); // Reset like state for the new photo
-            // Ensure `currentPhoto` exists before trying to access its properties
-            if (album && album.photos && album.photos[0]) {
-                // Simplified like check, integrate with your actual user liking logic
-                setIsLiked(album.photos[0].likes > 20); // Example: if initial photo has many likes, assume it's liked
-            }
         }
     }, [isOpen, album]);
 
-    // Handle initial like status for the currently viewed photo when currentPhotoIndex changes
-    useEffect(() => {
-        if (album && album.photos[currentPhotoIndex]) {
-            // This is a simplified check. In a real app, you'd check if currentUser.id is in a list of photo.likedBy array.
-            // For now, we'll just simulate a toggle or a random like state.
-            setIsLiked(album.photos[currentPhotoIndex].likes > 20); // Example: if photo has > 20 likes, mark as liked
-        }
-    }, [currentPhotoIndex, album]); // Depend on currentPhotoIndex to update like state per photo
-
-    // Scroll comments to bottom when they are loaded or updated (if new comments added)
     useEffect(() => {
         if (commentsRef.current) {
             commentsRef.current.scrollTop = commentsRef.current.scrollHeight;
         }
-    }, [currentPhotoIndex, album]); // Re-scroll when the active photo (and thus its comments) changes
+    }, [currentPhotoIndex, album]);
 
-    // IMPORTANT: Remove the early return statement here.
-    // The parent component (`FamilyGalleryPage`) is responsible for conditionally rendering this modal.
-    // We can add a fallback check for `album` just in case, but it shouldn't be the primary conditional render.
+    useEffect(() => {
+        if (album) {
+            setIsLiked(album.isLiked);
+            setTotalLikes(album.likes);
+            fetchComments();
+        }
+    }, [album]);
+
     if (!album || !album.photos || album.photos.length === 0) {
-        // This case indicates an issue with the parent's data supply or selection.
-        // It's generally better to prevent rendering the modal at all from the parent
-        // if album data is invalid. Returning null here as a safety fallback.
-        console.warn("GalleryViewerModal received invalid album data.");
+        console.warn("GalleryViewerModal received invalid album data or empty photos array.");
         return null;
     }
 
     const currentPhoto = album.photos[currentPhotoIndex];
+
+    const toggleLike = async () => {
+        if (likeLoading) return;
+        setLikeLoading(true);
+
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gallery/like`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ galleryId: album.id })
+            });
+
+            const data = await response.json();
+            console.log('Response from API:', data);
+
+            setIsLiked(Boolean(data.liked));
+            
+            if (typeof data.totalLikes === 'number') {
+                setTotalLikes(data.totalLikes);
+            }
+        } catch (error) {
+            console.error("Failed to toggle like:", error);
+        } finally {
+            setLikeLoading(false);
+        }
+    };
+
+    const fetchComments = async () => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gallery/${album.id}/comments`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+            const data = await response.json();
+            if (Array.isArray(data.comments)) {
+                setComments(data.comments);
+                setCommentTotal(data.total || data.comments.length); // set total properly
+            } else {
+                console.warn("Unexpected comment format:", data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch comments:", error);
+        }
+    };
+
+    const handlePostComment = async () => {
+        if (!newComment.trim()) return;
+        setCommentLoading(true);
+
+        try {
+            // Step 1: Post the comment
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gallery/comment`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    galleryId: album.id,
+                    comments: newComment.trim()
+                })
+            });
+            if (response.ok) {
+                setNewComment("");
+                await fetchComments();
+            } else {
+                console.warn("Unexpected comment response:", response);
+            }
+        } catch (err) {
+            console.error('Failed to post comment:', err);
+        } finally {
+            // Step 6: Turn off loading **after all is done**
+            setCommentLoading(false);
+        }
+    };
 
     const goToNextPhoto = () => {
         setCurrentPhotoIndex((prevIndex) => (prevIndex + 1) % album.photos.length);
@@ -60,13 +129,6 @@ const GalleryViewerModal = ({ isOpen, onClose, album, onLikePhoto }) => {
         setCurrentPhotoIndex((prevIndex) =>
             (prevIndex - 1 + album.photos.length) % album.photos.length
         );
-    };
-
-    const handleLikeClick = () => {
-        // Toggle the liked state locally for immediate feedback
-        setIsLiked(!isLiked);
-        // Call the parent handler to update global state (or backend)
-        onLikePhoto(album.id, currentPhoto.id);
     };
 
     // Framer Motion variants for animations
@@ -82,23 +144,24 @@ const GalleryViewerModal = ({ isOpen, onClose, album, onLikePhoto }) => {
         exit: { scale: 0.9, opacity: 0, transition: { duration: 0.2 } }
     };
 
+   
+
+
     return (
-        // AnimatePresence should wrap the component that is conditionally rendered
-        // The `isOpen` prop passed to AnimatePresence ensures the exit animation plays when `isOpen` becomes false.
         <AnimatePresence>
-            {isOpen && ( // Keep this `isOpen` check here to trigger Framer Motion's exit animation
+            {isOpen && (
                 <motion.div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-85 p-4 sm:p-6 backdrop-blur-sm"
                     variants={backdropVariants}
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    onClick={onClose} // Close when clicking outside
+                    onClick={onClose}
                 >
                     <motion.div
                         className="relative bg-white rounded-3xl shadow-3xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden transform-gpu"
                         variants={modalVariants}
-                        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
+                        onClick={(e) => e.stopPropagation()}
                     >
                         {/* Close Button */}
                         <button
@@ -144,55 +207,101 @@ const GalleryViewerModal = ({ isOpen, onClose, album, onLikePhoto }) => {
                                 )}
                             </div>
 
-                            {/* Photo Details & Actions Sidebar */}
+                            {/* Album Details & Actions Sidebar */}
                             <motion.div
                                 className={`w-full md:w-96 bg-gray-50 p-6 border-t md:border-t-0 md:border-l border-gray-200 flex flex-col relative`}
                             >
-                                <h3 className="font-bold text-2xl text-gray-900 mb-3 leading-tight">{currentPhoto.caption || "No Caption"}</h3>
+                                <h3 className="font-bold text-2xl text-gray-900 mb-3 leading-tight">{album.title || "Gallery"}</h3>
                                 <div className="flex items-center gap-4 mb-5">
+                                    {/* Album Likes - simplified to show total */}
                                     <button
-                                        onClick={handleLikeClick}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-all duration-300 ${isLiked ? 'bg-red-500 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-600'}`}
+                                        onClick={toggleLike}
+                                        disabled={likeLoading}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-all duration-300 ${
+                                            isLiked ? 'bg-red-100 text-red-600' : 'bg-gray-200 text-gray-700'
+                                        }`}
+                                        title={isLiked ? 'Unlike' : 'Like'}
                                     >
-                                        {isLiked ? <FaHeart size={18} /> : <FaRegHeart size={18} />} {currentPhoto.likes + (isLiked ? 1 : 0)}
+                                        {likeLoading ? (
+                                            <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                            </svg>
+                                        ) : (
+                                            <>
+                                                {isLiked ? <FaHeart size={18} className="text-red-600" /> : <FaRegHeart size={18} className="text-gray-600" />}
+                                                {totalLikes}
+                                            </>
+                                        )}
                                     </button>
                                     <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
-                                        <FaCommentDots size={18} /> {currentPhoto.comments.length}
+                                        <FaCommentDots size={18} /> {comments.length}
                                     </button>
-                                    <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
+                                    {/* <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
                                         <FaShareAlt size={18} /> Share
-                                    </button>
+                                    </button> */}
                                 </div>
 
-                                {/* Comments Section */}
-                                <div className="flex-grow min-h-0 overflow-hidden">
-                                    <h4 className="font-semibold text-lg text-gray-800 mb-3">Comments ({currentPhoto.comments.length})</h4>
-                                    <div ref={commentsRef} className="space-y-3 max-h-[calc(100%-80px)] overflow-y-auto pr-2 custom-scrollbar">
-                                        {currentPhoto.comments.length > 0 ? (
-                                            currentPhoto.comments.map((comment, index) => (
-                                                <motion.div
-                                                    key={index}
-                                                    className="text-sm text-gray-800 bg-gray-100 p-3 rounded-lg shadow-sm border border-gray-200"
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                >
-                                                    <span className="font-semibold text-primary-700">User{index + 1}: </span>{comment}
-                                                </motion.div>
-                                            ))
+                                {/* Comments Section (now for the entire album) */}
+                                <div className="flex-grow flex flex-col overflow-hidden">
+                                    <h4 className="font-semibold text-lg text-gray-800 mb-3">Comments ({comments.length})</h4>
+                                    <div
+                                    ref={commentsRef}
+                                    className="space-y-3 overflow-y-auto pr-2 custom-scrollbar"
+                                    style={{ maxHeight: '200px' }}
+                                    >
+                                        {comments.length > 0 ? (
+                                            comments.map((comment, index) => {
+                                                const user = comment.user || {};
+                                                const fullName = `${user.firstName || 'Unknown'} ${user.lastName || ''}`.trim();
+                                                const profileUrl = user.profile || '/assets/user.png';
+
+                                                return (
+                                                    <motion.div
+                                                        key={index}
+                                                        className="flex gap-3 items-start bg-gray-100 p-3 rounded-lg shadow-sm border border-gray-200"
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                                                    >
+                                                        {/* Avatar */}
+                                                        <img
+                                                            src={profileUrl}
+                                                            alt={fullName}
+                                                            className="w-9 h-9 rounded-full object-cover border border-gray-300"
+                                                        />
+
+                                                        {/* Comment Content */}
+                                                        <div>
+                                                            <div className="font-semibold text-sm text-primary-700">{fullName || `User${index + 1}`}</div>
+                                                            <div className="text-sm text-gray-800">{comment.comment}</div>
+                                                        </div>
+                                                    </motion.div>
+                                                );
+                                            })
                                         ) : (
-                                            <p className="text-md text-gray-500 italic p-3 bg-gray-100 rounded-lg">Be the first to leave a comment!</p>
+                                            <p className="text-md text-gray-500 italic p-3 bg-gray-100 rounded-lg">
+                                                No comments yet for this album. Be the first!
+                                            </p>
                                         )}
                                     </div>
-                                    {/* Add Comment Input (simplified) */}
+                                    {/* Add Comment Input */}
                                     <div className="mt-4">
                                         <textarea
-                                            placeholder="Add a comment..."
+                                            value={newComment}
+                                            onChange={(e) => setNewComment(e.target.value)}
+                                            placeholder="Add a comment to the album..."
                                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-transparent text-sm resize-none"
                                             rows="2"
                                         ></textarea>
-                                        <button className="mt-2 w-full bg-primary-600 text-white py-2 rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md">
-                                            Post Comment
+                                        <button
+                                            onClick={handlePostComment}
+                                            disabled={commentLoading || !newComment.trim()}
+                                            className={`mt-2 w-full py-2 rounded-lg font-semibold transition-colors shadow-md ${
+                                                commentLoading ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-primary-600 text-white hover:bg-primary-700'
+                                            }`}
+                                        >
+                                            {commentLoading ? 'Posting...' : 'Post Comment'}
                                         </button>
                                     </div>
                                 </div>

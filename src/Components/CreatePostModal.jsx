@@ -1,25 +1,59 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
     FiX, FiImage, FiVideo, FiSend,
-    FiChevronDown, FiSmile, FiTrash2
+    FiChevronDown, FiSmile, FiTrash2, FiEdit3
 } from 'react-icons/fi';
-import { FaGlobeAmericas, FaUserFriends } from 'react-icons/fa'; // Ensure these are imported
+import { FaGlobeAmericas, FaUserFriends } from 'react-icons/fa';
 import EmojiPicker from 'emoji-picker-react';
 
-const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
+const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToken, mode = 'create', postData = null }) => {
+    // State for form fields
     const [content, setContent] = useState('');
-    const [imagePreview, setImagePreview] = useState(null);
     const [imageFile, setImageFile] = useState(null);
-    const [privacy, setPrivacy] = useState('family'); // 'family' or 'public'
+    const [imagePreview, setImagePreview] = useState(null); // Used for new image file previews
+    const [currentPostImageUrl, setCurrentPostImageUrl] = useState(null); // Used for existing post image
+    const [privacy, setPrivacy] = useState('family'); // Default to 'family' as the privacy type
+    const [familyCode, setFamilyCode] = useState(''); // Added for family privacy
+
+    // UI/logic states
     const [isLoading, setIsLoading] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showPrivacyDropdown, setShowPrivacyDropdown] = useState(false);
+    const [message, setMessage] = useState(''); // State for displaying messages to the user
 
+    // Refs for click outside functionality and input focus
     const modalRef = useRef(null);
     const textareaRef = useRef(null);
     const fileInputRef = useRef(null);
     const privacyDropdownRef = useRef(null);
-    const emojiPickerRef = useRef(null); // Ref for the EmojiPicker container
+    const emojiPickerRef = useRef(null);
+
+    // Effect to initialize form fields when modal opens or mode/postData changes
+    useEffect(() => {
+        if (isOpen) {
+            if (mode === 'edit' && postData) {
+                // Pre-fill form for editing
+                setContent(postData.caption || '');
+                // Ensure the privacy value from postData is handled gracefully if it's not 'family' or 'public'
+                setPrivacy(postData.privacy === 'private' ? 'family' : postData.privacy || 'family'); // Map 'private' to 'family' for consistency
+                setFamilyCode(postData.familyCode || '');
+                setCurrentPostImageUrl(postData.url || null); // Set existing image URL
+                setImageFile(null); // Clear any previously selected new file
+                setImagePreview(null); // Clear new file preview
+            } else { // 'create' mode
+                // Reset form for new post
+                setContent('');
+                setPrivacy('family'); // Always default to 'family' as the privacy type for new posts
+                setFamilyCode(currentUser?.familyCode || ''); // Pre-fill with user's family code if available
+                setImageFile(null);
+                setImagePreview(null);
+                setCurrentPostImageUrl(null);
+            }
+            setMessage(''); // Clear messages on open
+            setShowEmojiPicker(false); // Ensure emoji picker is closed
+            setShowPrivacyDropdown(false); // Ensure privacy dropdown is closed
+        }
+    }, [isOpen, mode, postData, currentUser]);
 
     // Effect to close the main modal when clicking outside of it
     useEffect(() => {
@@ -66,16 +100,23 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
         };
     }, [showEmojiPicker]);
 
-
-    if (!isOpen) return null;
+    // Only render the modal if it's open AND currentUser/authToken is defined
+    if (!isOpen || !currentUser || !authToken) {
+        return null;
+    }
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file && file.type.match('image.*')) {
             setImageFile(file);
-            setImagePreview(URL.createObjectURL(file));
-            setShowEmojiPicker(false); // Close emoji picker when image is added
+            setImagePreview(URL.createObjectURL(file)); // Set preview for the new file
+            setMessage(''); // Clear any previous messages
+        } else {
+            setImageFile(null);
+            setImagePreview(null);
+            setMessage('Please select a valid image file.');
         }
+        setShowEmojiPicker(false); // Close emoji picker when image is added
     };
 
     const handleEmojiClick = (emojiData) => {
@@ -97,31 +138,73 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!content.trim() && !imageFile) {
-            alert("Please add some content or an image to your post.");
+        setMessage(''); // Clear previous messages
+
+        if (!content.trim() && !imageFile && !currentPostImageUrl) { // Check for existing image too
+            setMessage("Please add some content or an image to your post.");
+            return;
+        }
+        
+        if (privacy === 'family' && !familyCode.trim()) {
+            setMessage("Please enter a family code for family-only privacy.");
             return;
         }
 
         setIsLoading(true);
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const formData = new FormData();
+        formData.append('caption', content.trim());
+        formData.append('privacy', privacy === 'family' ? 'private' : privacy); // Map 'family' to 'private' for backend
+        formData.append('status', '1'); 
+        formData.append('familyCode', familyCode);
 
-        const newPost = {
-            id: Date.now(),
-            author: currentUser.name,
-            avatar: currentUser.avatar,
-            time: "Just now",
-            content: content.trim(),
-            image: imagePreview, // Use imagePreview URL for the post display
-            likes: 0,
-            comments: 0,
-            privacy: privacy,
-            liked: false
-        };
+        if (imageFile) {
+            formData.append('postImage', imageFile); // Only append if a new file is selected
+        }
+        // If it's an edit and no new image, don't append postImage. Backend should retain existing.
 
-        onPostCreated(newPost);
-        handleClose();
+        let url = `${import.meta.env.VITE_API_BASE_URL}/post`;
+        let method = 'POST';
+
+        if (mode === 'edit' && postData?.id) {
+            url = `${import.meta.env.VITE_API_BASE_URL}/post/edit/${postData.id}`;
+            method = 'PUT'; // Use PUT for updating an existing resource
+        } else if (mode === 'create') {
+            url = `${import.meta.env.VITE_API_BASE_URL}/post/create`;
+            method = 'POST';
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    // 'Content-Type': 'multipart/form-data' is typically not set manually for FormData
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Failed to ${mode} post`);
+            }
+
+            // const responseData = await response.json(); // If you need response data
+
+            setMessage(`Post ${mode === 'create' ? 'created' : 'updated'} successfully!`);
+            onPostCreated(); // Notify parent component to re-fetch posts
+            
+            // Give a moment for the message to be seen, then close
+            setTimeout(() => {
+                handleClose(); 
+            }, 1000); 
+
+        } catch (error) {
+            console.error(`Error ${mode}ing post:`, error);
+            setMessage(`Error: ${error.message || `Could not ${mode} post.`}`);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleClose = () => {
@@ -131,12 +214,15 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
 
     const resetForm = () => {
         setContent('');
-        setImagePreview(null);
         setImageFile(null);
-        setPrivacy('family');
+        setImagePreview(null);
+        setCurrentPostImageUrl(null);
+        setPrivacy('family'); // Reset to 'family'
+        setFamilyCode(''); // Reset family code
         setIsLoading(false);
         setShowEmojiPicker(false);
         setShowPrivacyDropdown(false);
+        setMessage('');
     };
 
     const triggerFileInput = () => {
@@ -145,28 +231,32 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
     };
 
     const removeImage = () => {
-        setImagePreview(null);
-        setImageFile(null);
+        setImagePreview(null); // Clear new image preview
+        setImageFile(null); // Clear new image file
+        setCurrentPostImageUrl(null); // Clear existing image
+        setMessage(''); // Clear any previous messages
     };
 
     // Options for the custom privacy selector
     const PrivacyOptions = {
-        family: { icon: <FaUserFriends className="mr-1.5" />, label: "Family Only", color: "text-primary-600" },
+        family: { icon: <FaUserFriends className="mr-1.5" />, label: "Private", color: "text-primary-600" }, // Changed label to "Private"
         public: { icon: <FaGlobeAmericas className="mr-1.5" />, label: "Public", color: "text-green-600" }
     };
 
-    const currentPrivacyOption = PrivacyOptions[privacy];
+    // Ensure privacy always maps to a valid key in PrivacyOptions
+    const currentPrivacyOption = PrivacyOptions[privacy] || PrivacyOptions['family']; 
 
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300 overflow-hidden">
             <div
                 ref={modalRef}
-                className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto transform transition-all duration-300 scale-100 opacity-100"
+                className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto transform transition-all duration-300 scale-100 opacity-100
+                   max-h-[90vh] overflow-hidden flex flex-col"
                 onClick={(e) => e.stopPropagation()} // Prevent clicks inside modal from propagating to close modal
             >
                 {/* Header */}
                 <div className="p-5 border-b border-gray-100 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-gray-800">Create Post</h2>
+                    <h2 className="text-xl font-bold text-gray-800">{mode === 'create' ? 'Create New Post' : 'Edit Post'}</h2>
                     <button
                         onClick={handleClose}
                         className="bg-unset text-black-500 p-1.5 rounded-full transition-colors"
@@ -177,16 +267,16 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
                 </div>
 
                 {/* Main Content */}
-                <form onSubmit={handleSubmit} className="p-5 space-y-4">
+                <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-grow">
                     {/* Author Info */}
                     <div className="flex items-center gap-3">
                         <img
-                            src={currentUser.avatar}
+                            src={currentUser.profileUrl}
                             alt="Your Avatar"
                             className="w-10 h-10 rounded-full object-cover border-2 border-primary-200"
                         />
                         <div>
-                            <p className="font-medium text-gray-800">{currentUser.name}</p>
+                            <p className="font-medium text-gray-800">{currentUser.firstName}</p>
                             {/* Custom Privacy Dropdown */}
                             <div className="relative" ref={privacyDropdownRef}>
                                 <button
@@ -205,6 +295,7 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
                                             {Object.entries(PrivacyOptions).map(([value, { icon, label, color }]) => (
                                                 <button
                                                     key={value}
+                                                    type="button" // Important for buttons inside a form but not submitting
                                                     onClick={() => {
                                                         setPrivacy(value);
                                                         setShowPrivacyDropdown(false);
@@ -227,17 +318,15 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
                         <textarea
                             ref={textareaRef}
                             className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 text-gray-800 placeholder-gray-400 resize-none min-h-[120px] transition-all"
-                            placeholder={`What's on your mind, ${currentUser.name.split('_')[0]}?`}
+                            placeholder={`What's on your mind, ${currentUser.firstName?.split('_')[0] || 'Family Member'}?`}
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
-                            // Clicking on textarea will close emoji picker via emojiPickerRef useEffect
-                            // onClick={() => setShowEmojiPicker(false)} // This can be removed, as the new useEffect handles it more broadly
                         ></textarea>
 
                         {/* Emoji Picker */}
                         {showEmojiPicker && (
                             <div
-                                ref={emojiPickerRef} // Attach ref here
+                                ref={emojiPickerRef}
                                 className="absolute top-full -mt-2 right-0 z-10 sm:right-auto sm:left-1/2 sm:-translate-x-1/2"
                             >
                                 <EmojiPicker
@@ -253,15 +342,39 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
                         )}
                     </div>
 
+                    {/* Family Code Input (conditionally rendered) */}
+                    {privacy === 'family' && (
+                        <div className="mb-4">
+                            <label htmlFor="familyCode" className="block text-gray-700 text-sm font-bold mb-2">Family Code:</label>
+                            <input
+                                type="text"
+                                id="familyCode"
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                value={familyCode}
+                                onChange={(e) => setFamilyCode(e.target.value)}
+                                placeholder="Enter family code (e.g., FAM001)"
+                                required={privacy === 'family'}
+                            />
+                        </div>
+                    )}
+
+                    {/* Message Display (replaces alert) */}
+                    {message && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                            <span className="block sm:inline">{message}</span>
+                            <span className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer" onClick={() => setMessage('')}>
+                                <FiX size={18} />
+                            </span>
+                        </div>
+                    )}
+
                     {/* Image Preview */}
-                    {imagePreview && (
+                    {(imagePreview || currentPostImageUrl) && (
                         <div className="relative rounded-lg overflow-hidden border border-gray-200 group">
                             <img
-                                src={imagePreview}
+                                src={imagePreview || currentPostImageUrl} // Prioritize new preview, then existing image
                                 alt="Post Preview"
                                 className="w-full max-h-80 object-contain bg-gray-100"
-                                // Clicking on image will close emoji picker via emojiPickerRef useEffect
-                                // onClick={() => setShowEmojiPicker(false)} // This can be removed
                             />
                             <button
                                 type="button"
@@ -301,7 +414,7 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
                                     className="p-2 rounded-lg bg-white text-yellow-500 hover:bg-yellow-50 transition-colors shadow-sm flex items-center gap-1"
                                     title="Add emoji"
                                     onClick={(e) => {
-                                        e.stopPropagation(); // Prevents click from bubbling to modal/form background and closing picker
+                                        e.stopPropagation();
                                         setShowEmojiPicker(!showEmojiPicker);
                                     }}
                                 >
@@ -322,9 +435,9 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
 
                             <button
                                 type="submit"
-                                disabled={isLoading || (!content.trim() && !imageFile)}
+                                disabled={isLoading || (!content.trim() && !imageFile && !currentPostImageUrl) || (privacy === 'family' && !familyCode.trim())}
                                 className={`px-4 py-2 rounded-lg font-medium text-white transition-all flex items-center gap-1 ${
-                                    (content.trim() || imageFile)
+                                    (content.trim() || imageFile || currentPostImageUrl) && !(privacy === 'family' && !familyCode.trim())
                                         ? 'bg-primary-500 hover:bg-primary-600 shadow-md'
                                         : 'bg-gray-300 cursor-not-allowed'
                                 }`}
@@ -335,12 +448,12 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser }) => {
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        <span>Posting...</span>
+                                        <span>{mode === 'create' ? 'Posting...' : 'Updating...'}</span>
                                     </>
                                 ) : (
                                     <>
                                         <FiSend size={16} />
-                                        <span>Post</span>
+                                        <span>{mode === 'create' ? 'Post' : 'Update'}</span>
                                     </>
                                 )}
                             </button>
