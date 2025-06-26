@@ -140,11 +140,8 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
         formData.append('status', 1);
         formData.append('createdBy', currentUser?.userId || ''); // Ensure correct user ID prop
         
-        if (privacy === 'family') {
-            formData.append('familyCode', familyCode);
-        } else {
-            formData.delete('familyCode'); // Ensure familyCode is not sent if privacy is public
-        }
+        formData.append('familyCode', familyCode);
+        
 
         // Only append coverPhoto if a new file is selected
         if (coverPhotoFile) {
