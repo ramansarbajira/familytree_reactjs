@@ -538,11 +538,18 @@ const ProfilePage = () => {
                                         onClick={() => handleViewPost(post)}
                                     >
                                         <div className="relative w-full h-64 overflow-hidden">
-                                            <img
-                                                src={post.fullImageUrl}
-                                                alt={post.caption}
-                                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                                            />
+                                            {post.fullImageUrl ? (
+                                                <img
+                                                    src={post.fullImageUrl}
+                                                    alt="Post image"
+                                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                                />
+                                            ) : (
+                                                <div className="text-white text-center text-lg italic">
+                                                    No image available for this post.
+                                                </div>
+                                            )}
+                                            
                                             <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                                 <button
                                                     onClick={(e) => handleEditPost(e, post.id)}
