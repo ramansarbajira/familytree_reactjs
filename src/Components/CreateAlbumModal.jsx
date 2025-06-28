@@ -1,23 +1,69 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FaTimes, FaUpload, FaImage, FaTrashAlt, FaPlus } from 'react-icons/fa'; // Added FaPlus for new photo input
+import Swal from 'sweetalert2';
 
-const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum }) => {
+const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authToken, mode = 'create', albumData = null }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [privacy, setPrivacy] = useState('family'); // Default to 'family'
+    const [familyCode, setFamilyCode] = useState(''); // State for familyCode
+
+    // For new file uploads
     const [coverPhotoFile, setCoverPhotoFile] = useState(null);
-    const [galleryPhotoFiles, setGalleryPhotoFiles] = useState([]); // NEW STATE for multiple gallery photos
+    const [galleryPhotoFiles, setGalleryPhotoFiles] = useState([]); // For new multiple gallery photos
+
+    // For existing photos when in 'edit' mode
+    const [currentCoverPhotoUrl, setCurrentCoverPhotoUrl] = useState(null);
+    const [currentGalleryPhotos, setCurrentGalleryPhotos] = useState([]); // For existing multiple gallery photos (objects with id, url)
+
     const coverPhotoInputRef = useRef(null);
-    const galleryPhotoInputRef = useRef(null); // NEW REF for gallery photos input
+    const galleryPhotoInputRef = useRef(null);
+
+    // Effect to initialize form fields when modal opens or mode/albumData changes
+    useEffect(() => {
+        if (isOpen) {
+            if (mode === 'edit' && albumData) {
+                setTitle(albumData.title || '');
+                setDescription(albumData.description || '');
+                // Map backend 'private' to local 'family' if necessary
+                setPrivacy(albumData.privacy === 'private' ? 'family' : albumData.privacy || 'family');
+                setFamilyCode(albumData.familyCode || '');
+
+                // Set existing cover photo URL (assuming full URL from parent or construct here)
+                setCurrentCoverPhotoUrl(albumData.coverPhotoUrl ? 
+                                         albumData.coverPhotoUrl : null);
+                
+                // Set existing gallery photos (construct full URLs if necessary)
+                const formattedExistingPhotos = albumData.galleryPhotos?.map(photo => ({
+                    ...photo,
+                    url: photo.url
+                })) || [];
+                setCurrentGalleryPhotos(formattedExistingPhotos);
+
+                // Clear new file inputs when editing an existing album
+                setCoverPhotoFile(null);
+                setGalleryPhotoFiles([]);
+                if (coverPhotoInputRef.current) coverPhotoInputRef.current.value = '';
+                if (galleryPhotoInputRef.current) galleryPhotoInputRef.current.value = '';
+            } else { // 'create' mode
+                resetForm(); // Call reset to clear all states for a fresh form
+                // Set default family code for new albums
+                setFamilyCode(currentUser?.familyCode || '');
+            }
+        }
+    }, [isOpen, mode, albumData, currentUser]);
 
     const resetForm = () => {
         setTitle('');
         setDescription('');
         setPrivacy('family');
+        setFamilyCode('');
         setCoverPhotoFile(null);
-        setGalleryPhotoFiles([]); // Reset gallery photos too
+        setGalleryPhotoFiles([]);
+        setCurrentCoverPhotoUrl(null);
+        setCurrentGalleryPhotos([]);
         if (coverPhotoInputRef.current) coverPhotoInputRef.current.value = '';
-        if (galleryPhotoInputRef.current) galleryPhotoInputRef.current.value = ''; // Clear file input
+        if (galleryPhotoInputRef.current) galleryPhotoInputRef.current.value = '';
     };
 
     const handleClose = () => {
@@ -28,46 +74,141 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum }) => {
     const handleCoverPhotoChange = (e) => {
         if (e.target.files && e.target.files[0]) {
             setCoverPhotoFile(e.target.files[0]);
+            setCurrentCoverPhotoUrl(null); // Clear existing cover photo if new one is selected
         }
     };
 
-    // NEW HANDLER for multiple gallery photo selection
+    const handleRemoveCoverPhoto = () => {
+        setCoverPhotoFile(null);
+        setCurrentCoverPhotoUrl(null); // Remove both new preview and existing URL
+        if (coverPhotoInputRef.current) coverPhotoInputRef.current.value = '';
+    };
+
     const handleGalleryPhotosChange = (e) => {
         if (e.target.files) {
-            // Convert FileList to Array and append to existing files
             const newFiles = Array.from(e.target.files);
             setGalleryPhotoFiles((prevFiles) => [...prevFiles, ...newFiles]);
-            // Clear the input value so the same file(s) can be selected again
-            e.target.value = null;
+            e.target.value = null; // Clear the input value so the same file(s) can be selected again
         }
     };
 
-    // NEW HANDLER to remove a gallery photo
-    const handleRemoveGalleryPhoto = (indexToRemove) => {
-        setGalleryPhotoFiles((prevFiles) =>
-            prevFiles.filter((_, index) => index !== indexToRemove)
-        );
+    const handleRemoveGalleryPhoto = (indexToRemove, isExisting = false) => {
+        if (isExisting) {
+            // For existing photos, filter them out locally.
+            // A more robust solution would involve sending these IDs to the backend for deletion.
+            setCurrentGalleryPhotos((prevPhotos) =>
+                prevPhotos.filter((_, index) => index !== indexToRemove)
+            );
+            // Optionally, you might want to collect IDs of deleted existing photos to send to backend
+            // For now, we are assuming backend update handles changes or needs separate delete calls.
+        } else {
+            // For newly selected files
+            setGalleryPhotoFiles((prevFiles) =>
+                prevFiles.filter((_, index) => index !== indexToRemove)
+            );
+        }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!title.trim()) {
-            alert('Album title is required!');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Missing Title',
+                text: 'Album title is required!',
+                confirmButtonColor: '#d33',
+            });
             return;
         }
 
-        const newAlbumData = {
-            title,
-            description,
-            privacy,
-            coverPhotoFile, // Pass the File object for cover photo
-            galleryPhotoFiles, // Pass the array of File objects for gallery photos
-        };
+        if (privacy === 'family' && !familyCode.trim()) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Missing Family Code',
+                text: 'Please enter a family code for private albums.',
+                confirmButtonColor: '#d33',
+            });
+            return;
+        }
 
-        onCreateAlbum(newAlbumData);
-        handleClose(); // Close and reset form after submission
+
+        const formData = new FormData();
+        formData.append('galleryTitle', title);
+        formData.append('galleryDescription', description || '');
+        formData.append('privacy', privacy === 'family' ? 'private' : privacy); // Map 'family' to 'private' for backend
+        formData.append('status', 1);
+        formData.append('createdBy', currentUser?.userId || ''); // Ensure correct user ID prop
+        
+        formData.append('familyCode', familyCode);
+        
+
+        // Only append coverPhoto if a new file is selected
+        if (coverPhotoFile) {
+            formData.append('coverPhoto', coverPhotoFile);
+        } 
+        
+        else if (mode === 'edit' && currentCoverPhotoUrl === null && albumData?.coverPhotoUrl) {
+             formData.append('coverPhoto', ''); // Or a specific indicator your API understands for deletion
+        }
+
+
+        // Append newly added gallery photo files
+        galleryPhotoFiles.forEach((file) => {
+            formData.append('images', file); // key `images` must match backend for new files
+        });
+
+        let url = `${import.meta.env.VITE_API_BASE_URL}/gallery`;
+        let method = 'POST';
+
+        if (mode === 'edit' && albumData?.id) {
+            url = `${import.meta.env.VITE_API_BASE_URL}/gallery/${albumData.id}`;
+            method = 'PUT';
+        } else if (mode === 'create') {
+            url = `${import.meta.env.VITE_API_BASE_URL}/gallery/create`;
+            method = 'POST';
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                },
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                const errorMessage = result?.message || `Failed to ${mode} album`;
+                throw new Error(errorMessage);
+            }
+
+            console.log(`Album ${mode === 'create' ? 'Created' : 'Updated'}:`, result);
+
+            onCreateAlbum(result); // Notify parent to refresh listing
+            handleClose(); // Close modal
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: `Album ${mode === 'create' ? 'created' : 'updated'} successfully.`,
+                confirmButtonColor: '#3f982c',
+            });
+
+        } catch (err) {
+            console.error(err);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: err.message || 'Something went wrong.',
+                confirmButtonColor: '#d33',
+            });
+        }
     };
+
 
     if (!isOpen) return null;
 
@@ -75,11 +216,11 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4 sm:p-6 animate-fade-in">
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col transform scale-95 animate-scale-up">
                 {/* Modal Header */}
-                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-primary-500 to-primary-600 text-white">
-                    <h3 className="text-2xl font-bold text-black">Create New Album</h3>
+                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center text-white">
+                    <h3 className="text-2xl font-bold text-black">{mode === 'create' ? 'Create New Album' : 'Edit Album'}</h3>
                     <button
                         onClick={handleClose}
-                        className="text-white hover:text-gray-100 transition-colors"
+                        className="bg-unset text-black hover:text-gray-100 transition-colors"
                         title="Close"
                     >
                         <FaTimes size={24} />
@@ -135,7 +276,7 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum }) => {
                                         checked={privacy === 'family'}
                                         onChange={(e) => setPrivacy(e.target.value)}
                                     />
-                                    <span className="ml-2 text-gray-700">Family Only</span>
+                                    <span className="ml-2 text-gray-700">Private</span> {/* Updated label */}
                                 </label>
                                 <label className="inline-flex items-center">
                                     <input
@@ -150,6 +291,24 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum }) => {
                                 </label>
                             </div>
                         </div>
+
+                         {/* Family Code Input (conditionally rendered) */}
+                         {privacy === 'family' && (
+                            <div>
+                                <label htmlFor="familyCode" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Family Code <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    id="familyCode"
+                                    value={familyCode}
+                                    onChange={(e) => setFamilyCode(e.target.value)}
+                                    className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition duration-150 ease-in-out"
+                                    placeholder="Enter family code"
+                                    required={privacy === 'family'}
+                                />
+                            </div>
+                        )}
 
                         {/* Cover Photo Upload */}
                         <div>
@@ -171,24 +330,24 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum }) => {
                                     className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition duration-150 ease-in-out"
                                 >
                                     <FaUpload className="mr-2 -ml-1 h-5 w-5 text-gray-500" />
-                                    Choose Cover Photo
+                                    {currentCoverPhotoUrl || coverPhotoFile ? 'Change Cover Photo' : 'Choose Cover Photo'}
                                 </button>
-                                {coverPhotoFile && (
+                                {(coverPhotoFile || currentCoverPhotoUrl) && (
                                     <span className="text-sm text-gray-600 truncate max-w-[calc(100%-180px)]">
-                                        {coverPhotoFile.name}
+                                        {coverPhotoFile ? coverPhotoFile.name : 'Existing Photo'}
                                     </span>
                                 )}
                             </div>
-                            {coverPhotoFile && (
+                            {(coverPhotoFile || currentCoverPhotoUrl) && (
                                 <div className="mt-4 relative w-48 h-32 rounded-lg overflow-hidden border border-gray-200 shadow-sm">
                                     <img
-                                        src={URL.createObjectURL(coverPhotoFile)}
+                                        src={coverPhotoFile ? URL.createObjectURL(coverPhotoFile) : currentCoverPhotoUrl}
                                         alt="Cover Preview"
                                         className="w-full h-full object-cover"
                                     />
                                     <button
                                         type="button"
-                                        onClick={() => setCoverPhotoFile(null)}
+                                        onClick={handleRemoveCoverPhoto}
                                         className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600 transition-colors"
                                         title="Remove cover photo"
                                     >
@@ -198,7 +357,7 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum }) => {
                             )}
                         </div>
 
-                        {/* --- NEW: Gallery Photos Upload Section --- */}
+                        {/* Gallery Photos Upload Section */}
                         <div>
                             <label htmlFor="galleryPhotos" className="block text-sm font-medium text-gray-700 mb-2">
                                 Add Photos to Album
@@ -221,20 +380,41 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum }) => {
                                 Add More Photos
                             </button>
 
-                            {/* Photo Previews and Management */}
-                            {galleryPhotoFiles.length > 0 && (
+                            {/* Photo Previews and Management - Combined existing and new */}
+                            {(currentGalleryPhotos.length > 0 || galleryPhotoFiles.length > 0) && (
                                 <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                                    {galleryPhotoFiles.map((file, index) => (
-                                        <div key={index} className="relative w-full aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm group">
+                                    {/* Existing photos */}
+                                    {currentGalleryPhotos.map((photo, index) => (
+                                        <div key={`existing-${photo.id || index}`} className="relative w-full aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm group">
                                             <img
-                                                src={URL.createObjectURL(file)}
-                                                alt={`Gallery photo ${index + 1}`}
+                                                src={photo.url}
+                                                alt={`Existing gallery photo ${index + 1}`}
                                                 className="w-full h-full object-cover"
                                             />
                                             <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleRemoveGalleryPhoto(index)}
+                                                    onClick={() => handleRemoveGalleryPhoto(index, true)} // Pass true for isExisting
+                                                    className="bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors transform hover:scale-110"
+                                                    title="Remove photo"
+                                                >
+                                                    <FaTrashAlt size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {/* Newly added photos */}
+                                    {galleryPhotoFiles.map((file, index) => (
+                                        <div key={`new-${index}`} className="relative w-full aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm group">
+                                            <img
+                                                src={URL.createObjectURL(file)}
+                                                alt={`New gallery photo ${index + 1}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveGalleryPhoto(index, false)} // Pass false for isExisting
                                                     className="bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors transform hover:scale-110"
                                                     title="Remove photo"
                                                 >
@@ -245,7 +425,7 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum }) => {
                                     ))}
                                 </div>
                             )}
-                            {galleryPhotoFiles.length === 0 && (
+                            {(currentGalleryPhotos.length === 0 && galleryPhotoFiles.length === 0) && (
                                 <p className="mt-2 text-sm text-gray-500 italic">No photos selected for the album yet.</p>
                             )}
                         </div>
@@ -262,9 +442,9 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum }) => {
                         </button>
                         <button
                             type="submit"
-                            className="px-5 py-2.5 rounded-lg bg-primary from-green-500 to-teal-500 text-white font-semibold shadow-md hover:from-green-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out"
+                            className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold shadow-md hover:from-green-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out"
                         >
-                            Create Album
+                            {mode === 'create' ? 'Create Album' : 'Update Album'}
                         </button>
                     </div>
                 </form>

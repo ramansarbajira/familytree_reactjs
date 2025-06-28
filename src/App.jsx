@@ -44,7 +44,7 @@ function App() {
         <Route path="/posts-and-feeds" element={<PrivateRoute><UserProvider><PostsAndFeedsPage /></UserProvider></PrivateRoute>} />
         <Route path="/family-gallery" element={<PrivateRoute><UserProvider><FamilyGalleryPage /></UserProvider></PrivateRoute>} />
         <Route path="/gifts-memories" element={<PrivateRoute><UserProvider><GiftListingPage /></UserProvider></PrivateRoute>} />
-         <Route path="/events" element={<EventsPage />} />
+         <Route path="/events" element={<PrivateRoute><UserProvider><EventsPage /></UserProvider></PrivateRoute>} />
 
       </Routes>
     </Router>
