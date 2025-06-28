@@ -4,6 +4,7 @@ import Layout from '../Components/Layout';
 import ViewProductModal from '../Components/ViewProductModal';
 import BuyConfirmationModal from '../Components/BuyConfirmationModal';
 import { FiEye, FiShoppingCart, FiGift, FiChevronRight, FiHeart, FiStar, FiFilter, FiLoader } from 'react-icons/fi';
+import { useUser } from '../Contexts/UserContext';
 
 const GiftListingPage = () => {
     const [gifts, setGifts] = useState([]);
@@ -16,6 +17,26 @@ const GiftListingPage = () => {
     const [priceFilter, setPriceFilter] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('');
     const [sortOption, setSortOption] = useState('featured');
+     const { userInfo} = useUser();
+     const token = localStorage.getItem('access_token');
+const storedUserInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+const [receiverId, setRecipientUserId] = useState(null);
+
+
+let userId = userInfo?.userId || storedUserInfo.userId;
+let familyCode = userInfo?.familyCode || storedUserInfo.familyCode;
+
+if (!userId && token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    userId = payload.id;
+  } catch (e) {
+    console.error('Failed to decode JWT:', e);
+  }
+}
+
+console.log('✅ userId:', userId);
+console.log('✅ familyCode:', familyCode);
 
     const BASE_URL = 'https://familytree-backend-trs6.onrender.com';
 
@@ -121,6 +142,14 @@ const GiftListingPage = () => {
             setWishlist([...wishlist, giftId]);
         }
     };
+
+
+    const getUserAddress = () => {
+    if (userInfo?.address && userInfo.address.trim()) {
+        return userInfo.address;
+    }
+    return "Address not provided"; // Or prompt user to add address
+};
 
     // Filter and sort functions
     const filteredGifts = gifts.filter(gift => {
@@ -271,23 +300,24 @@ const GiftListingPage = () => {
                             </button>
 
                             {/* Product Image */}
-                            <div
-                                className="relative w-full h-60 bg-gray-100 overflow-hidden cursor-pointer"
-                                onClick={() => handleViewProduct(gift)}
-                            >
-                                <img
-                                    src={gift.images[0]}
-                                    alt={gift.title}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                    onError={(e) => {
-                                        e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
-                                    }}
-                                />
-                                {/* Stock Indicator */}
-                                <span className={`absolute bottom-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${gift.stock > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                                    {gift.stock > 0 ? `${gift.stock} In Stock` : 'Out of Stock'}
-                                </span>
-                            </div>
+                          
+                        <div
+    className="relative w-full h-60 bg-gray-100 overflow-hidden cursor-pointer"
+    onClick={() => handleViewProduct(gift)}
+>
+    <img
+        src={gift.image && gift.image !== "string" ? gift.image : 'https://placehold.co/400x300?text=No+Image'}
+        alt={gift.name}
+        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+        onError={(e) => {
+            e.target.src = 'https://placehold.co/400x300?text=No+Image';
+        }}
+    />
+    {/* Stock Indicator */}
+    <span className={`absolute bottom-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${gift.stock > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+        {gift.stock > 0 ? `${gift.stock} In Stock` : 'Out of Stock'}
+    </span>
+</div>
 
                             {/* Product Details & Actions */}
                             <div className="p-5 flex flex-col justify-between flex-grow">
@@ -377,13 +407,21 @@ const GiftListingPage = () => {
 
                 {/* Buy Confirmation Modal */}
                 {selectedGift && (
-                    <BuyConfirmationModal
-                        isOpen={isBuyModalOpen}
-                        onClose={handleCloseBuyModal}
-                        gift={selectedGift}
-                        onConfirmBuy={handleFinalBuy}
-                    />
-                )}
+    <BuyConfirmationModal
+  isOpen={isBuyModalOpen}
+  onClose={handleCloseBuyModal}
+  gift={selectedGift}
+  userId={userId}
+  familyCode={familyCode}
+  receiverId={receiverId}
+  from={getUserAddress()}
+  onConfirmBuy={(giftId, quantity, details) => {
+    console.log('Order confirmed:', giftId, quantity, details);
+    // Handle success (e.g., show toast, redirect, etc.)
+  }}
+/>
+
+)}
             </div>
         </Layout>
     );
