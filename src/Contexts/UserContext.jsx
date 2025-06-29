@@ -47,9 +47,20 @@ export const UserProvider = ({ children }) => {
       
       if (!userProfile) throw new Error('No user profile returned');
 
-      const childrenArray = userProfile.childrenNames
-        ? JSON.parse(userProfile.childrenNames)
-        : [];
+      let childrenArray = [];
+
+      if (userProfile.childrenNames) {
+        try {
+          // If it's valid JSON (e.g. '["Son", "Daugther"]')
+          childrenArray = JSON.parse(userProfile.childrenNames);
+          if (!Array.isArray(childrenArray)) {
+            childrenArray = userProfile.childrenNames.split(',').map(c => c.trim());
+          }
+        } catch (err) {
+          // Fallback: treat as comma-separated string
+          childrenArray = userProfile.childrenNames.split(',').map(c => c.trim());
+        }
+}
 
       const childFields = {};
       childrenArray.forEach((name, index) => {

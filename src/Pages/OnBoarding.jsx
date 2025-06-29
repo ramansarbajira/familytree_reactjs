@@ -288,6 +288,10 @@ const OnBoarding = () => {
       formDataToSend.delete('gothram');
       formDataToSend.delete('childrenCount');
       formDataToSend.delete('profileUrl');
+
+      // const payload = Object.fromEntries(
+      //   Object.entries(formDataToSend).filter(([_, value]) => value !== '')
+      // );
       
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/profile/update/${userId}`, {
         method: 'PUT',
@@ -303,7 +307,7 @@ const OnBoarding = () => {
       }
   
       setApiSuccess('Profile updated successfully!');
-      setTimeout(() => navigate('/myprofile'), 2000);
+      //setTimeout(() => navigate('/myprofile'), 2000);
     } catch (error) {
       setApiError(error.message || 'Network error. Please try again.');
     } finally {
@@ -917,7 +921,6 @@ const OnBoarding = () => {
             value={formData.contactNumber}
             onChange={(phone) => {
               setFormData(prev => ({ ...prev, contactNumber: phone }));
-              // Clear error when user starts typing
               setErrors((prev) => {
                 const newErrors = { ...prev };
                 delete newErrors.contactNumber;
@@ -940,14 +943,18 @@ const OnBoarding = () => {
               height: '44px',
               fontSize: '14px',
               paddingLeft: '60px',
-              border: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
+              borderTop: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
+              borderBottom: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
+              borderRight: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
               borderLeft: 'none',
               borderRadius: '0 6px 6px 0',
               outline: 'none',
               boxShadow: errors.contactNumber ? '0 0 0 2px rgba(239, 68, 68, 0.2)' : 'none'
             }}
             buttonStyle={{
-              border: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
+              borderTop: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
+              borderBottom: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
+              borderLeft: `1px solid ${errors.contactNumber ? '#ef4444' : '#d1d5db'}`,
               borderRight: 'none',
               borderRadius: '6px 0 0 6px',
               backgroundColor: 'white',

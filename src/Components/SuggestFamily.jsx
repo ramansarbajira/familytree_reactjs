@@ -43,7 +43,7 @@ function FamilyCodeAutocomplete({ formData, setFormData }) {
           setQuery(e.target.value);
           setShowSuggestions(true);
         }}
-        placeholder="FAM-8927"
+        placeholder="FAM1111"
         autoComplete="off"
         className="w-full px-4 py-2.5 border border-gray-300 rounded-md text-sm placeholder:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-gray-600"
       />
