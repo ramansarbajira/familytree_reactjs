@@ -10,6 +10,7 @@ import VerifyOtp from './Pages/VerifyOtp';
 import Dashboard from './Pages/Dashboard';
 import MyProfile from './Pages/MyProfile';
 import MyFamilyMember from './Pages/MyFamilyMember';
+import MyFamily from './Pages/MyFamily';
 import PendingFamilyRequests from './Pages/PendingFamilyRequests';
 import PostsAndFeedsPage from './Pages/PostsAndFeedsPage'; 
 import FamilyGalleryPage from './Pages/FamilyGalleryPage'; 
@@ -39,6 +40,7 @@ function App() {
         <Route path="/dashboard" element={<PrivateRoute><UserProvider><Dashboard /></UserProvider></PrivateRoute>} />
         <Route path="/myprofile" element={<PrivateRoute><UserProvider><MyProfile /></UserProvider></PrivateRoute>} />
         <Route path="/my-family-member" element={<PrivateRoute><UserProvider><MyFamilyMember /></UserProvider></PrivateRoute>  } />
+        <Route path="/my-family" element={<PrivateRoute><UserProvider><MyFamily /></UserProvider></PrivateRoute>  } />
 
         <Route path ="/pending-request" element={<PrivateRoute><UserProvider><PendingFamilyRequests /> </UserProvider> </PrivateRoute>} />
         <Route path="/posts-and-feeds" element={<PrivateRoute><UserProvider><PostsAndFeedsPage /></UserProvider></PrivateRoute>} />

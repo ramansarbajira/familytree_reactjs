@@ -38,6 +38,11 @@ export const UserProvider = ({ children }) => {
           'Content-Type': 'application/json',
         },
       });
+      if (response.status === 401) {
+        localStorage.removeItem('access_token'); // Clear token
+        window.location.href = '/login'; //  Redirect to login page
+        return;
+      }
 
       if (!response.ok) throw new Error('Failed to fetch user details');
 
@@ -74,13 +79,16 @@ export const UserProvider = ({ children }) => {
         dob: userProfile.dob?.split('T')[0] || '',
         age: calculateAge(userProfile.dob),
         gender: userProfile.gender || '',
-        email: email || userProfile.email || '', // Prioritize the top-level email if available
+        email: email || userProfile.email || '',
         maritalStatus: userProfile.maritalStatus || '',
         marriageDate: userProfile.marriageDate?.split('T')[0] || '',
         spouseName: userProfile.spouseName || '',
         region: userProfile.region || '',
         childrenCount: childrenArray.length || 0,
-        ...childFields,
+        ...childFields, // Safe generated fields like childName0, childName1, etc.
+
+        // Explicitly DO NOT add userProfile.childrenNames here to avoid duplication
+
         fatherName: userProfile.fatherName || '',
         motherName: userProfile.motherName || '',
         motherTongue: parseInt(userProfile.languageId) || 0,
@@ -99,14 +107,14 @@ export const UserProvider = ({ children }) => {
         familyCode: userProfile.familyMember?.familyCode || '',
         name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim(),
         
-        // Add the new fields here
         countryCode: countryCode || '',
         mobile: mobile || '',
-        status: status || 0, // Assuming status is a number, default to 0
-        role: role || 0,     // Assuming role is a number, default to 0
+        status: status || 0,
+        role: role || 0,
 
-        raw: userProfile, // Keep the raw userProfile for debugging or specific needs
+        raw: userProfile, // <--- This may contain childrenNames already
       });
+      
     } catch (err) {
       console.error('Error fetching user:', err);
     } finally {

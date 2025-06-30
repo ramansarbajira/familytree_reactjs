@@ -23,6 +23,7 @@ const menuItems = [
     label: 'Family Management',
     icon: <FiUsers size={19} />,
     children: [
+      { id: 'myFamily', label: 'My Family', route: '/my-family', icon: <FiUsers size={17} /> },
       { id: 'myFamilyMembers', label: 'All Members', route: '/my-family-member', icon: <FiUsers size={17} /> },
       { id: 'pendingRequests', label: 'Pending Requests', route: '/pending-request', icon: <FiClock size={17} /> },
     ]
@@ -52,12 +53,10 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
 
   const isLinkActive = (item) => {
     if (item.route) {
-      // For direct links, check if the current path starts with the item's route
-      return location.pathname.startsWith(item.route);
+      return location.pathname === item.route; //  Use exact match
     }
     if (item.children) {
-      // For parent items, check if ANY of its children's routes are active
-      return item.children.some(child => location.pathname.startsWith(child.route));
+      return item.children.some(child => location.pathname === child.route); //  Exact match for children
     }
     return false;
   };

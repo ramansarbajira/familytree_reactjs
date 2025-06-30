@@ -17,172 +17,33 @@ import {
 } from 'react-icons/fi';
 import { RiUser3Line } from 'react-icons/ri';
 import { UserProvider, useUser } from '../Contexts/UserContext';
-import ProfileFormModal from './ProfileFormModal'; // Adjust path if necessary
-
-const NotificationPanel = ({ open, onClose, notifications, markAsRead }) => {
-
-  const notificationTypes = {
-    request: { icon: <FiUser className="text-blue-500" />, bg: 'bg-blue-50' },
-    birthday: { icon: <FiGift className="text-pink-500" />, bg: 'bg-pink-50' },
-    event: { icon: <FiCalendar className="text-purple-500" />, bg: 'bg-purple-50' },
-    anniversary: { icon: <FiHeart className="text-red-500" />, bg: 'bg-red-50' }
-  };
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end pt-16">
-      <div className="fixed inset-0 bg-black bg-opacity-30" onClick={onClose} />
-
-      <div className="relative z-50 w-full max-w-sm bg-white shadow-xl rounded-t-lg overflow-hidden notification-panel">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center">
-          <h3 className="font-semibold text-lg">Notifications</h3>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => notifications.forEach(n => !n.read && markAsRead(n.id))}
-              className="bg-unset text-sm text-primary-600 hover:text-primary-800 px-2 py-1 rounded"
-            >
-              Mark all read
-            </button>
-            <button
-              onClick={onClose}
-              className="bg-unset text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
-            >
-              <FiX size={18} />
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-y-auto max-h-[calc(100vh-8rem)]">
-          {notifications.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
-              <FiBell size={24} className="mx-auto mb-2 text-gray-300" />
-              <p>No notifications yet</p>
-            </div>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {notifications.map((notification) => (
-                <li
-                  key={notification.id}
-                  className={`${!notification.read ? 'bg-blue-50/30' : ''} hover:bg-gray-50 transition-colors`}
-                >
-                  <div className="px-4 py-3 flex items-start">
-                    <div className={`flex-shrink-0 p-2 rounded-full ${notificationTypes[notification.type].bg} mr-3`}>
-                      {notificationTypes[notification.type].icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between">
-                        <p className={`text-sm font-medium ${!notification.read ? 'text-gray-900' : 'text-gray-600'}`}>
-                          {notification.title}
-                        </p>
-                        {!notification.read && (
-                          <button
-                            onClick={() => markAsRead(notification.id)}
-                            className="bg-unset text-gray-400 hover:text-gray-600 ml-2"
-                            title="Mark as read"
-                          >
-                            <FiCheck size={14} />
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-500 mt-1">{notification.message}</p>
-                      <div className="flex items-center mt-2 text-xs text-gray-400">
-                        <FiClock className="mr-1" size={12} />
-                        <span>{notification.time}</span>
-                      </div>
-
-                      {notification.actions && (
-                        <div className="mt-3 flex space-x-2">
-                          {notification.actions.map((action, i) => (
-                            <button
-                              key={i}
-                              onClick={action.onClick}
-                              className={`text-xs px-3 py-1 rounded-md ${
-                                action.primary
-                                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                              }`}
-                            >
-                              {action.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-3 text-center">
-          <button className="bg-unset text-sm text-primary-600 hover:text-primary-800 font-medium">
-            View all notifications
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+import ProfileFormModal from './ProfileFormModal';
+import NotificationPanel from './NotificationPanel';
+import { getNotificationType, getNotificationActions } from '../utils/notifications';
 
 const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
+  const [token, setToken] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState([]); // store list
+  
   const navigate = useNavigate();
+
+  useEffect(() => {
+      const storedToken = localStorage.getItem('access_token');
+      if (storedToken) {
+          setToken(storedToken);
+      }
+  }, []);
 
   //user info
   const { userInfo, userLoading } = useUser();
-  //console.log(userInfo); // This will log the user info to the console
-
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'request',
-      title: 'New Connection Request',
-      message: 'Alex Johnson wants to connect with you',
-      time: 'Just now',
-      read: false,
-      actions: [
-        { label: 'Accept', primary: true, onClick: () => handleRequest(1, 'accept') },
-        { label: 'Decline', primary: false, onClick: () => handleRequest(1, 'decline') }
-      ]
-    },
-    {
-      id: 2,
-      type: 'birthday',
-      title: 'Birthday Reminder',
-      message: "Today is Sarah Miller's birthday. Don't forget to wish them!",
-      time: 'Today, 9:00 AM',
-      read: false,
-      actions: [
-        { label: 'Send Wish', primary: true, onClick: () => sendBirthdayWish(2) }
-      ]
-    },
-    {
-      id: 3,
-      type: 'event',
-      title: 'Upcoming Event',
-      message: 'Team meeting starts in 15 minutes',
-      time: 'Today, 2:45 PM',
-      read: true
-    },
-    {
-      id: 4,
-      type: 'anniversary',
-      title: 'Work Anniversary',
-      message: 'Congratulations! You completed 2 years at Company',
-      time: 'Yesterday',
-      read: false,
-      actions: [
-        { label: 'Share', primary: false, onClick: () => shareAnniversary(4) }
-      ]
-    }
-  ]);
+  console.log(userInfo); // This will log the user info to the console
 
   // Responsive handling
   useEffect(() => {
@@ -224,38 +85,9 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [sidebarOpen, searchOpen, profileOpen, notificationOpen]);
 
-  const markAsRead = (id) => {
-    setNotifications(notifications.map(n =>
-      n.id === id ? { ...n, read: true } : n
-    ));
-  };
-
-  const handleRequest = (id, action) => {
-    markAsRead(id);
-    console.log(`Request ${id} ${action}ed`);
-    // Add your actual request handling logic here
-  };
-
-  const sendBirthdayWish = (id) => {
-    markAsRead(id);
-    console.log(`Birthday wish sent for ${id}`);
-    // Add your actual birthday wish logic here
-  };
-
-  const shareAnniversary = (id) => {
-    markAsRead(id);
-    console.log(`Anniversary ${id} shared`);
-    // Add your actual share logic here
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     navigate('/login');
-    // Note: onCloseMobile is not defined here. If this function is passed from a parent,
-    // ensure it's available. Otherwise, remove the conditional call.
-    // if (isMobile && onCloseMobile) onCloseMobile();
   };
 
   const openAddMemberModal = () => {
@@ -266,6 +98,97 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
   const closeAddMemberModal = () => {
     setIsAddMemberModalOpen(false);
   };
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      const formatted = data.map((n) => ({
+        id: n.id,
+        type: getNotificationType(n.type), // implement this function
+        title: n.title,
+        message: n.message,
+        time: new Date(n.createdAt).toLocaleString(),
+        read: n.isRead,
+        actions: getNotificationActions(n) // implement this function if needed
+      }));
+
+      setNotifications(formatted);
+    } catch (err) {
+      console.error('Error loading notifications:', err);
+    }
+  };
+
+  const markAsRead = async (id) => {
+    try {
+      await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/${id}/read`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      );
+      fetchUnreadCount();
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await Promise.all(
+        notifications
+          .filter((n) => !n.read)
+          .map((n) =>
+            fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/${n.id}/read`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            })
+          )
+      );
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      fetchUnreadCount();
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/unread/count`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      setUnreadCount(data.unreadCount); // Adjust based on API response shape
+    } catch (err) {
+      console.error('Error fetching unread count:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchNotifications();
+      fetchUnreadCount();
+    }
+  }, [userInfo]);
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-800">
@@ -480,6 +403,8 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
         onClose={closeAddMemberModal}
         mode="edit-profile"
       />
+
+
 
     </div>
   );

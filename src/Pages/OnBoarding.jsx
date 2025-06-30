@@ -307,7 +307,7 @@ const OnBoarding = () => {
       }
   
       setApiSuccess('Profile updated successfully!');
-      //setTimeout(() => navigate('/myprofile'), 2000);
+      setTimeout(() => navigate('/myprofile'), 2000);
     } catch (error) {
       setApiError(error.message || 'Network error. Please try again.');
     } finally {
