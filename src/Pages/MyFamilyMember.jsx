@@ -43,8 +43,6 @@ const FamilyMemberListing = () => {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onAddMember={(newMember) => {
-            // Optionally, you can lift state up later, or move add logic inside FamilyMemberCard
-            alert('Add member logic should be implemented inside FamilyMemberCard or lifted up');
             handleCloseModal();
           }}
           mode="add"

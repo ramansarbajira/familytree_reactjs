@@ -49,10 +49,12 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [errors, setErrors] = useState({});
-  const [apiError, setApiError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const firstErrorRef = useRef(null);
   const lastMemberDataRef = useRef({});
+  const hasInitializedForm = useRef(false);
+  const [apiError, setApiError] = useState(null);
+  const errorRef = useRef(null);
 
    // State for dropdown data
   const [dropdownData, setDropdownData] = useState({
@@ -63,79 +65,89 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     error: null
   });
 
+  useEffect(() => {
+    if (apiError && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [apiError]);
+
   // Effect to populate form data when modal opens or mode changes
   useEffect(() => {
     if (isOpen) {
-      if (mode === 'edit-profile' || mode === 'edit-member') {
-        const sourceData = mode === 'edit-profile' ? userInfo : memberData;
-        const currentMemberDataKey = sourceData?.email || sourceData?.id || JSON.stringify(sourceData);
-        const lastProcessedKey = lastMemberDataRef.current?.email || lastMemberDataRef.current?.id || JSON.stringify(lastMemberDataRef.current);
+      if (!hasInitializedForm.current) {
+        if (mode === 'edit-profile' || mode === 'edit-member') {
+          const sourceData = mode === 'edit-profile' ? userInfo : memberData;
+          const currentMemberDataKey = sourceData?.email || sourceData?.id || JSON.stringify(sourceData);
+          const lastProcessedKey = lastMemberDataRef.current?.email || lastMemberDataRef.current?.id || JSON.stringify(lastMemberDataRef.current);
 
-        if (currentMemberDataKey !== lastProcessedKey && sourceData) {
-          // Handle children names
-          let childrenNames = [];
-          if (sourceData.childrenNames) {
-            if (Array.isArray(sourceData.childrenNames)) {
-              childrenNames = [...sourceData.childrenNames];
-            } else if (typeof sourceData.childrenNames === 'string') {
-              try {
-                childrenNames = JSON.parse(sourceData.childrenNames);
-              } catch {
-                childrenNames = [];
+          if (currentMemberDataKey !== lastProcessedKey && sourceData) {
+            // Handle children names
+            let childrenNames = [];
+            if (sourceData.childrenNames) {
+              if (Array.isArray(sourceData.childrenNames)) {
+                childrenNames = [...sourceData.childrenNames];
+              } else if (typeof sourceData.childrenNames === 'string') {
+                try {
+                  childrenNames = JSON.parse(sourceData.childrenNames);
+                } catch {
+                  childrenNames = [];
+                }
+              }
+            } else if (sourceData.childrenCount > 0) {
+              childrenNames = Array.from({ length: sourceData.childrenCount }, (_, i) =>
+                sourceData[`childName${i}`] || ''
+              );
+            }
+
+            // Parse contact number
+            let countryCode = '+91';
+            let mobile = '';
+            if (sourceData.contactNumber) {
+              if (sourceData.contactNumber.startsWith('+')) {
+                const parts = sourceData.contactNumber.split('-');
+                countryCode = parts[0] || '+91';
+                mobile = parts.slice(1).join('') || '';
+              } else {
+                mobile = sourceData.contactNumber.replace(/^\+\d+[-]?/, '');
               }
             }
-          } else if (sourceData.childrenCount > 0) {
-            childrenNames = Array.from({ length: sourceData.childrenCount }, (_, i) => 
-              sourceData[`childName${i}`] || ''
-            );
-          }
 
-          // Parse contact number
-          let countryCode = '+91';
-          let mobile = '';
-          if (sourceData.contactNumber) {
-            if (sourceData.contactNumber.startsWith('+')) {
-              const parts = sourceData.contactNumber.split('-');
-              countryCode = parts[0] || '+91';
-              mobile = parts.slice(1).join('') || '';
-            } else {
-              mobile = sourceData.contactNumber.replace(/^\+\d+[-]?/, '');
-            }
-          }
+            const newFormData = {
+              ...initialFormData,
+              ...sourceData,
+              dob: sourceData.dob ? new Date(sourceData.dob).toISOString().split('T')[0] : '',
+              marriageDate: sourceData.marriageDate ? new Date(sourceData.marriageDate).toISOString().split('T')[0] : '',
+              childrenNames,
+              childrenCount: sourceData.childrenCount || childrenNames.length,
+              profileImageUrl: sourceData.profileUrl || sourceData.profile || '',
+              profileImageFile: null,
+              familyCode: sourceData.familyCode || (sourceData.raw?.familyMember?.familyCode || ''),
+              countryCode,
+              mobile,
+              religionId: sourceData.religionId ? String(sourceData.religionId) : '',
+              languageId: sourceData.languageId ? String(sourceData.languageId) : (sourceData.motherTongue ? String(sourceData.motherTongue) : ''),
+              gothramId: sourceData.gothramId ? String(sourceData.gothramId) : (sourceData.gothram ? String(sourceData.gothram) : ''),
+            };
 
-          const newFormData = {
-            ...initialFormData,
-            ...sourceData,
-            dob: sourceData.dob ? new Date(sourceData.dob).toISOString().split('T')[0] : '',
-            marriageDate: sourceData.marriageDate ? new Date(sourceData.marriageDate).toISOString().split('T')[0] : '',
-            childrenNames,
-            childrenCount: sourceData.childrenCount || childrenNames.length,
-            profileImageUrl: sourceData.profileUrl || sourceData.profile || '',
-            profileImageFile: null,
-            familyCode: sourceData.familyCode || (sourceData.raw?.familyMember?.familyCode || ''),
-            countryCode,
-            mobile,
-            religionId: sourceData.religionId ? String(sourceData.religionId) : '',
-            languageId: sourceData.languageId ? String(sourceData.languageId) : (sourceData.motherTongue ? String(sourceData.motherTongue) : ''),
-            gothramId: sourceData.gothramId ? String(sourceData.gothramId) : (sourceData.gothram ? String(sourceData.gothram) : ''),
-          };
-          //console.log(newFormData);
-          
-          setFormData(newFormData);
-          lastMemberDataRef.current = { ...sourceData };
+            setFormData(newFormData);
+            lastMemberDataRef.current = { ...sourceData };
+            setErrors({});
+            setApiError('');
+            setShowPasswordField(false);
+          }
+        } else {
+          setFormData(initialFormData);
+          lastMemberDataRef.current = {};
           setErrors({});
           setApiError('');
-          setShowPasswordField(false);
+          setShowPasswordField(true);
         }
-      } else { // mode === 'add'
-        if (JSON.stringify(formData) !== JSON.stringify(initialFormData)) {
-          setFormData(initialFormData);
-        }
-        lastMemberDataRef.current = {};
-        setErrors({});
-        setApiError('');
-        setShowPasswordField(true);
+
+        hasInitializedForm.current = true;
       }
+    } else {
+      // Reset on modal close
+      hasInitializedForm.current = false;
     }
   }, [isOpen, mode, memberData, userInfo]); // Added userInfo to dependencies
 
@@ -350,6 +362,13 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       'address',
       'bio',
       'familyCode',
+
+      'email',
+      'countryCode',
+      'mobile',
+      'password',
+      'role',
+      'status',
     ];
 
     const formDataToSend = new FormData();
@@ -379,7 +398,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
 
       if (value !== undefined && value !== null && value !== '') {
         if (
-          ['religionId', 'languageId', 'gothramId', 'countryId', 'age'].includes(field)
+          ['religionId', 'languageId', 'gothramId', 'countryId', 'age', 'status', 'role'].includes(field)
         ) {
           formDataToSend.append(field, parseInt(value));
         } else if (field === 'childrenNames' && Array.isArray(value)) {
@@ -394,9 +413,10 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     if (!formDataToSend.has('contactNumber') && formData.countryCode && formData.mobile) {
       formDataToSend.append('contactNumber', `${formData.countryCode}-${formData.mobile}`);
     }
+    
+    formDataToSend.append('familyCode', userInfo?.familyCode);
 
     // 5. Debug
-    console.log('Submitting form data:');
     for (let [key, value] of formDataToSend.entries()) {
       console.log(`${key}:`, value);
     }
@@ -406,7 +426,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     let httpMethod = '';
 
     if (mode === 'add') {
-      apiUrl = `${import.meta.env.VITE_API_BASE_URL}/user/register`;
+      apiUrl = `${import.meta.env.VITE_API_BASE_URL}/family/member/register-and-join-family`;
       httpMethod = 'POST';
     } else {
       const userId = memberData.id || userInfo?.userId || '';
@@ -443,16 +463,23 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       const resultData = await response.json();
       if (mode === 'add' && onAddMember) {
         onAddMember(resultData);
+        Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Family member created successfully.',
+        confirmButtonColor: '#3f982c',
+      });
       } else if (onUpdateProfile) {
         onUpdateProfile(resultData);
-      }
-      onClose();
-      Swal.fire({
+        Swal.fire({
         icon: 'success',
         title: 'Success!',
         text: 'Profile updated successfully.',
         confirmButtonColor: '#3f982c',
       });
+      }
+      onClose();
+      
     } catch (error) {
       setApiError('Network error or server unreachable. Please try again.');
       Swal.fire({
@@ -500,7 +527,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
           {apiError && (
             <div className="mb-4 p-3 text-sm text-red-700 bg-red-100 rounded border border-red-300 flex justify-between items-center">
               {apiError}
-              <button onClick={() => setApiError('')} className="text-red-700 hover:text-red-900">
+              <button onClick={() => setApiError('')} className="bg-unset text-red-700 hover:text-red-900">
                 &times;
               </button>
             </div>
@@ -632,6 +659,22 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     className={`${inputClassName('age')} bg-gray-100 cursor-not-allowed`}
                   />
                 </div>
+                <div>
+                  <label htmlFor="role" className={labelClassName}>
+                    Role <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    className={inputClassName('role')}
+                  >
+                    <option value="1">Member</option>
+                    <option value="2">Admin</option>
+                  </select>
+                  {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role}</p>}
+                </div>
               </div>
             </div>
 
@@ -659,6 +702,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     Mobile Number <span className="text-red-500">*</span>
                   </label>
                   <PhoneInput
+                    inputClass={errors.mobile ? 'border border-red-500 focus:border-red-500' : 'border border-gray-300'}
                     country={'in'}
                     value={`${formData.countryCode}${formData.mobile}`}
                     onChange={(value, data) => {
@@ -735,6 +779,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     </button>
                   </div>
                 )}
+                
               </div>
             </div>
 
@@ -888,10 +933,11 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                       id="familyCode"
                       name="familyCode"
                       type="text"
-                      value={formData.familyCode}
+                      value={formData.familyCode || userInfo?.familyCode || ''}
                       onChange={handleChange}
                       className={inputClassName('familyCode')}
                       placeholder="FAM000123"
+                      readOnly
                     />
                   </div>
                 )}

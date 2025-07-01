@@ -37,9 +37,9 @@ const FamilyMemberCard = ({ familyCode, token }) => {
           name: item.user.fullName,
           gender: item.user.userProfile?.gender || 'N/A',
           role: roleMapping[item.user.role] || 'Member',
-          contact: item.user.mobile,
-          address: item.user.address || '',
-          dob: item.user.dob || '',
+          contact: item.user.userProfile?.contactNumber,
+          address: item.user.userProfile?.address || '',
+          dob: item.user.userProfile?.dob || '',
           profilePic: item.user.profileImage,
           isAdmin: item.user.role > 1,
           lastUpdated: new Date(item.updatedAt).toLocaleDateString('en-IN'),
@@ -96,11 +96,11 @@ const FamilyMemberCard = ({ familyCode, token }) => {
               e.target.src = 'https://placehold.co/96x96/e2e8f0/64748b?text=👤';
             }}
           />
-          {member.isAdmin && (
+          {/* {member.isAdmin && (
             <span className="absolute bottom-0 right-0 -mr-1 -mb-1 px-2 py-0.5 bg-primary-DEFAULT text-white text-xs font-bold rounded-full border-2 border-white shadow">
               Admin
             </span>
-          )}
+          )} */}
         </div>
 
         <div className="ml-4 flex-1 min-w-0">
