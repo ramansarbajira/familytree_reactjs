@@ -92,7 +92,7 @@ const ViewProductModal = ({ isOpen, onClose, gift, onBuyNow }) => {
                 <div className="lg:w-1/2 p-8 flex flex-col justify-between">
                     <div>
                         {/* Rating Display */}
-                        <div className="flex items-center mb-2">
+                        {/* <div className="flex items-center mb-2">
                             {[...Array(5)].map((_, i) => (
                                 <FiStar
                                     key={i}
@@ -101,7 +101,7 @@ const ViewProductModal = ({ isOpen, onClose, gift, onBuyNow }) => {
                                 />
                             ))}
                             <span className="text-sm text-gray-600 ml-2 font-medium">({gift.rating})</span>
-                        </div>
+                        </div> */}
 
                         {/* Product Title */}
                         <h2 className="text-3xl font-extrabold text-gray-900 mb-4 leading-tight">

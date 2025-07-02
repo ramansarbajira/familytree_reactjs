@@ -9,7 +9,7 @@ const BuyConfirmationModal = ({
   userId,
   familyCode,
   from = "Chennai",
-  apiBaseUrl = "https://familytree-backend-trs6.onrender.com"
+  apiBaseUrl = import.meta.env.VITE_API_BASE_URL,
 }) => {
   const [quantity, setQuantity] = useState(1);
   const [receiverId, setReceiverId] = useState(null);
@@ -345,8 +345,8 @@ const BuyConfirmationModal = ({
               <button
                 type="submit"
                 disabled={!receiverId || !deliveryAddress.trim() || isLoading || filteredFamilyMembers.length === 0}
-                className="w-full bg-blue-600 text-white rounded-lg px-6 py-4 font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center"
-              >
+                className="w-full bg-primary-600 text-white rounded-lg px-6 py-4 font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center"
+              >                         
                 {isLoading ? (
                   <>
                     <FiLoader className="animate-spin mr-2" />
