@@ -9,40 +9,52 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
   
   // Define initial form data structure
   const initialFormData = {
+    // Account Information
     email: '',
-    countryCode: '+91', // Default for India
-    mobile: '',
+    mobile: '', // For login (separate from contact number)
+    countryCode: '+91', // For login mobile
     password: '', // Only for user creation/password change
+    status: '1', // Default to Active (1)
+    role: '1', // Default to Member (1)
+    
+    // Personal Information
     firstName: '',
     lastName: '',
-    profileImageUrl: '', // For displaying existing image
-    profileImageFile: null, // For new image upload
+    profileImageUrl: '',
+    profileImageFile: null,
     gender: '',
-    dob: '', // YYYY-MM-DD format
+    dob: '',
+    
+    // Contact Information
+    address: '',
+    
+    // Family Information
     maritalStatus: '',
     marriageDate: '',
     spouseName: '',
-    childrenNames: '', // Comma separated string
+    childrenCount: 0,
+    childrenNames: [],
     fatherName: '',
     motherName: '',
+    familyCode: '',
+    
+    // Cultural Information
     religionId: '',
     languageId: '',
     caste: '',
     gothramId: '',
     kuladevata: '',
     region: '',
+    
+    // Additional Information
     hobbies: '',
-    likes: '', // Separate field for likes
-    dislikes: '', // Separate field for dislikes
+    likes: '',
+    dislikes: '',
     favoriteFoods: '',
-    contactNumber: '', // This will be derived from countryCode and mobile for API submission
-    countryId: '', // Changed to empty string to allow initial selection or default
-    address: '',
-    bio: '', // Detailed bio
-    familyCode: '',
-    age: '', // Auto-populated and read-only
-    childrenCount: 0,
-    childrenNames: [],
+    bio: '',
+    
+    // Calculated fields
+    age: '',
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -56,7 +68,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
   const [apiError, setApiError] = useState(null);
   const errorRef = useRef(null);
 
-   // State for dropdown data
+  // State for dropdown data
   const [dropdownData, setDropdownData] = useState({
     languages: [],
     religions: [],
@@ -76,11 +88,22 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     if (isOpen) {
       if (!hasInitializedForm.current) {
         if (mode === 'edit-profile' || mode === 'edit-member') {
-          const sourceData = mode === 'edit-profile' ? userInfo : memberData;
-          const currentMemberDataKey = sourceData?.email || sourceData?.id || JSON.stringify(sourceData);
-          const lastProcessedKey = lastMemberDataRef.current?.email || lastMemberDataRef.current?.id || JSON.stringify(lastMemberDataRef.current);
+          const sourceDataRaw = mode === 'edit-profile' ? userInfo : memberData;
 
-          if (currentMemberDataKey !== lastProcessedKey && sourceData) {
+          if (!sourceDataRaw) return;
+          console.log(sourceDataRaw);
+          
+          const sourceData = {
+            ...sourceDataRaw,
+            ...sourceDataRaw.userProfile, // Flatten userProfile
+          };
+
+          const currentMemberDataKey =
+            sourceData?.email || sourceData?.id || JSON.stringify(sourceData);
+          const lastProcessedKey =
+            lastMemberDataRef.current?.email || lastMemberDataRef.current?.id || JSON.stringify(lastMemberDataRef.current);
+
+          if (currentMemberDataKey !== lastProcessedKey) {
             // Handle children names
             let childrenNames = [];
             if (sourceData.childrenNames) {
@@ -93,40 +116,45 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   childrenNames = [];
                 }
               }
-            } else if (sourceData.childrenCount > 0) {
-              childrenNames = Array.from({ length: sourceData.childrenCount }, (_, i) =>
-                sourceData[`childName${i}`] || ''
-              );
             }
-
+            
             // Parse contact number
             let countryCode = '+91';
             let mobile = '';
-            if (sourceData.contactNumber) {
-              if (sourceData.contactNumber.startsWith('+')) {
-                const parts = sourceData.contactNumber.split('-');
-                countryCode = parts[0] || '+91';
-                mobile = parts.slice(1).join('') || '';
-              } else {
-                mobile = sourceData.contactNumber.replace(/^\+\d+[-]?/, '');
-              }
+
+            if (sourceData.countryCode) {
+              countryCode = sourceData.countryCode;
+            }
+            if (sourceData.mobile) {
+              mobile = sourceData.mobile;
             }
 
             const newFormData = {
               ...initialFormData,
               ...sourceData,
               dob: sourceData.dob ? new Date(sourceData.dob).toISOString().split('T')[0] : '',
-              marriageDate: sourceData.marriageDate ? new Date(sourceData.marriageDate).toISOString().split('T')[0] : '',
+              marriageDate: sourceData.marriageDate
+                ? new Date(sourceData.marriageDate).toISOString().split('T')[0]
+                : '',
               childrenNames,
               childrenCount: sourceData.childrenCount || childrenNames.length,
-              profileImageUrl: sourceData.profileUrl || sourceData.profile || '',
+              profileImageUrl: sourceData.profile || '',
               profileImageFile: null,
-              familyCode: sourceData.familyCode || (sourceData.raw?.familyMember?.familyCode || ''),
+              familyCode: sourceData.familyCode || sourceData.familyMember?.familyCode || '',
               countryCode,
               mobile,
+              status: sourceData.status ? String(sourceData.status) : '1',
               religionId: sourceData.religionId ? String(sourceData.religionId) : '',
-              languageId: sourceData.languageId ? String(sourceData.languageId) : (sourceData.motherTongue ? String(sourceData.motherTongue) : ''),
-              gothramId: sourceData.gothramId ? String(sourceData.gothramId) : (sourceData.gothram ? String(sourceData.gothram) : ''),
+              languageId: sourceData.languageId
+                ? String(sourceData.languageId)
+                : sourceData.motherTongue
+                ? String(sourceData.motherTongue)
+                : '',
+              gothramId: sourceData.gothramId
+                ? String(sourceData.gothramId)
+                : sourceData.gothram
+                ? String(sourceData.gothram)
+                : '',
             };
 
             setFormData(newFormData);
@@ -149,7 +177,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       // Reset on modal close
       hasInitializedForm.current = false;
     }
-  }, [isOpen, mode, memberData, userInfo]); // Added userInfo to dependencies
+  }, [isOpen, mode, memberData, userInfo]);
 
   // Effect to calculate age based on DOB
   useEffect(() => {
@@ -169,7 +197,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     }
   }, [formData.dob, formData.age]);
 
-   // Enhanced fetchDropdownData function with error handling
+  // Enhanced fetchDropdownData function with error handling
   const fetchDropdownData = async () => {
     try {
       setDropdownData(prev => ({ ...prev, loading: true, error: null }));
@@ -215,33 +243,29 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     }
   }, [isOpen]);
 
-    
-  // Rest of the component code remains the same...
-  // [Previous validate, handleChange, handleMobileChange, handleCountryCodeChange, handleFileChange, handleSubmit functions]
-
   const validate = () => {
     const newErrors = {};
 
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-    
+    // Account Information Validation
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Invalid email address';
     }
 
-    if (!formData.mobile.trim()) {
-      newErrors.mobile = 'Mobile number is required';
-    } else if (!/^\d+$/.test(formData.mobile.trim())) {
-      newErrors.mobile = 'Mobile number must contain only digits';
-    } else if (formData.mobile.length < 6 || formData.mobile.length > 15) {
-      newErrors.mobile = 'Mobile number must be between 6 and 15 digits';
+    
+    if (mode === 'add' && !formData.password.trim()) {
+      newErrors.password = 'Password is required';
     }
 
-    if (mode === 'add' && !formData.password.trim()) newErrors.password = 'Password is required';
+    // Personal Information Validation
+    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.gender) newErrors.gender = 'Gender is required';
     if (!formData.dob) newErrors.dob = 'Date of birth is required';
+
+
+    // Family Information Validation
     if (!formData.maritalStatus) newErrors.maritalStatus = 'Marital status is required';
 
     if (formData.maritalStatus === 'Married') {
@@ -276,33 +300,30 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     setApiError('');
   };
 
-  const handleMobileChange = (e) => {
-    const { value } = e.target;
-    setFormData((prev) => ({
+  const handleMobileChange = (value, data, fieldName) => {
+    const dialCode = `+${data.dialCode}`;
+    const fullNumber = value.replace(/\D/g, '');
+    const mobile = fullNumber.startsWith(data.dialCode)
+      ? fullNumber.slice(data.dialCode.length)
+      : fullNumber;
+
+    setFormData(prev => ({
       ...prev,
-      mobile: value
+      [fieldName]: mobile,
+      countryCode: dialCode  // store as 'countryCode', not 'mobileCountryCode' or 'loginCountryCode'
     }));
-    setErrors((prev) => {
+
+    setErrors(prev => {
       const newErrors = { ...prev };
-      delete newErrors.mobile;
+      delete newErrors[fieldName];
       return newErrors;
     });
-    setApiError('');
   };
 
-  const handleCountryCodeChange = (e) => {
-    const { value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      countryCode: value
-    }));
-    setErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors.mobile;
-      return newErrors;
-    });
-    setApiError('');
+  const getFullMobile = (countryCode, mobile) => {
+    return `${countryCode.replace('+', '')}${mobile}`;
   };
+
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -357,28 +378,21 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       'likes',
       'dislikes',
       'favoriteFoods',
-      'contactNumber',
       'countryId',
       'address',
       'bio',
       'familyCode',
-
       'email',
-      'countryCode',
       'mobile',
+      'countryCode',
       'password',
       'role',
       'status',
     ];
 
     const formDataToSend = new FormData();
-    
-    //  1. Append profile image (before other fields)
-    if (formData.profileImageFile instanceof File) {
-      formDataToSend.append('profile', formData.profileImageFile);
-    }
 
-    // 2. Prepare childrenNames if needed
+    // Prepare childrenNames if needed
     if (formData.maritalStatus === 'Married' && formData.childrenCount > 0) {
       const childrenNames = [];
       for (let i = 0; i < formData.childrenCount; i++) {
@@ -392,11 +406,11 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       }
     }
 
-    // 3. Append allowed fields
+    // Append allowed fields
     allowedFields.forEach((field) => {
       const value = formData[field];
 
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null && `${value}`.trim() !== '') {
         if (
           ['religionId', 'languageId', 'gothramId', 'countryId', 'age', 'status', 'role'].includes(field)
         ) {
@@ -408,15 +422,17 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
         }
       }
     });
+    
+    if (!formDataToSend.has('familyCode') && userInfo?.familyCode) {
+      formDataToSend.append('familyCode', userInfo.familyCode);
+    }
 
-    // 4. Compose contactNumber if not set
-    if (!formDataToSend.has('contactNumber') && formData.countryCode && formData.mobile) {
-      formDataToSend.append('contactNumber', `${formData.countryCode}-${formData.mobile}`);
+    if (formData.profileImageFile instanceof File) {
+      formDataToSend.append('profile', formData.profileImageFile);
+    } else {
+      formDataToSend.delete('profile');
     }
     
-    formDataToSend.append('familyCode', userInfo?.familyCode);
-
-    // 5. Debug
     for (let [key, value] of formDataToSend.entries()) {
       console.log(`${key}:`, value);
     }
@@ -435,19 +451,14 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     }
 
     try {
-      // Get the access token from cookies
       const token = localStorage.getItem('access_token');
       
       const headers = {};
       
-      // Only add Authorization header if token exists (for authenticated requests)
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
-      // For file uploads, the browser will automatically set the Content-Type header
-      // so we don't manually set it for FormData
-
+     
       const response = await fetch(apiUrl, {
         method: httpMethod,
         body: formDataToSend,
@@ -464,19 +475,19 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       if (mode === 'add' && onAddMember) {
         onAddMember(resultData);
         Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Family member created successfully.',
-        confirmButtonColor: '#3f982c',
-      });
+          icon: 'success',
+          title: 'Success!',
+          text: 'Family member created successfully.',
+          confirmButtonColor: '#3f982c',
+        });
       } else if (onUpdateProfile) {
         onUpdateProfile(resultData);
         Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Profile updated successfully.',
-        confirmButtonColor: '#3f982c',
-      });
+          icon: 'success',
+          title: 'Success!',
+          text: 'Profile updated successfully.',
+          confirmButtonColor: '#3f982c',
+        });
       }
       onClose();
       
@@ -491,7 +502,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     } finally {
       setIsLoading(false);
     }
-
   };
 
   if (!isOpen) return null;
@@ -535,15 +545,15 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
 
           <form onSubmit={handleSubmit} className="space-y-6">
 
-            {/* Profile Image Section - Redesigned */}
+            {/* Profile Image Section */}
             <div className={sectionClassName}>
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Profile Picture</h3>
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative group">
                   <div className="w-32 h-32 rounded-lg border-2 border-gray-200 overflow-hidden shadow-sm flex items-center justify-center bg-gray-100">
-                    {formData.profileImageUrl ? (
+                    {formData.profileImageUrl || formData.profileUrl ? (
                       <img
-                        src={formData.profileImageUrl}
+                        src={formData.profileImageUrl || formData.profileUrl}
                         alt="Profile Preview"
                         className="w-full h-full object-cover"
                         onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/128x128/cccccc/ffffff?text=No+Image'; }}
@@ -580,7 +590,146 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
               </div>
             </div>
 
-            {/* Personal Information Section - Two Column Layout */}
+            {/* Account Information Section */}
+            <div className={sectionClassName}>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Account Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               
+                <div>
+                  <label htmlFor="email" className={labelClassName}>
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={inputClassName('email')}
+                    placeholder="your@email.com"
+                  />
+                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                </div>
+                
+                {/* Login Mobile Number */}
+                <div>
+                  <label htmlFor="mobile" className={labelClassName}>
+                    Login Mobile Number <span className="text-red-500">*</span>
+                  </label>
+                  <PhoneInput
+                    inputClass={errors.mobile ? 'border border-red-500 focus:border-red-500' : 'border border-gray-300'}
+                    country={'in'}
+                    value={getFullMobile(formData.countryCode, formData.mobile)}
+                    onChange={(value, data) => handleMobileChange(value, data, 'mobile')}
+                    inputProps={{
+                      name: 'mobile',
+                      required: true,
+                      id: 'mobile',
+                      ref: mobileRef,
+                    }}
+                    containerStyle={{ width: '100%' }}
+                    inputStyle={{
+                      width: '100%',
+                      height: '42px',
+                      fontSize: '14px',
+                      paddingLeft: '48px',
+                      border: `1px solid ${errors.mobile ? '#ef4444' : '#d1d5db'}`,
+                      borderRadius: '8px',
+                    }}
+                    buttonStyle={{
+                      border: `1px solid ${errors.mobile ? '#ef4444' : '#d1d5db'}`,
+                      borderRight: 'none',
+                      borderRadius: '8px 0 0 8px',
+                      backgroundColor: 'white',
+                    }}
+                    readOnly
+                  />
+                  {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
+                </div>
+                
+                <div>
+                  <label htmlFor="status" className={labelClassName}>
+                    Account Status <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className={inputClassName('status')}
+                  >
+                    <option value="0">Unverified</option>
+                    <option value="1">Active</option>
+                    <option value="2">Inactive</option>
+                    <option value="3">Deleted</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label htmlFor="role" className={labelClassName}>
+                    Role <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    className={inputClassName('role')}
+                  >
+                    <option value="1">Member</option>
+                    <option value="2">Admin</option>
+                  </select>
+                </div>
+
+                {(mode === 'add' || showPasswordField) && (
+                  <div className="relative">
+                    <label htmlFor="password" className={labelClassName}>
+                      Password {mode === 'add' && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={handleChange}
+                      className={inputClassName('password') + ' pr-10'}
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="bg-unset text-primary absolute right-3 top-[34px] hover:text-gray-700"
+                    >
+                      {showPassword ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9.27-3.11-11-7.5a11.05 11.05 0 013.304-4.348M3 3l18 18M16.24 16.24A5 5 0 017.76 7.76" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M1.5 12S5.5 5.5 12 5.5 22.5 12 22.5 12s-4 6.5-10.5 6.5S1.5 12 1.5 12z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                    {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                  </div>
+                )}
+                {mode !== 'add' && !showPasswordField && (
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordField(true)}
+                      className="bg-unset text-sm text-[var(--color-primary)] hover:underline"
+                    >
+                      Change Password
+                    </button>
+                  </div>
+                )}
+
+              </div>
+            </div>
+
+            {/* Personal Information Section */}
             <div className={sectionClassName}>
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -659,133 +808,35 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     className={`${inputClassName('age')} bg-gray-100 cursor-not-allowed`}
                   />
                 </div>
-                <div>
-                  <label htmlFor="role" className={labelClassName}>
-                    Role <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="role"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                    className={inputClassName('role')}
-                  >
-                    <option value="1">Member</option>
-                    <option value="2">Admin</option>
-                  </select>
-                  {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role}</p>}
-                </div>
               </div>
             </div>
 
-            {/* Contact Information Section - Two Column Layout */}
+            {/* Contact Information Section */}
             <div className={sectionClassName}>
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Contact Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="email" className={labelClassName}>
-                    Email Address <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className={inputClassName('email')}
-                    placeholder="your@email.com"
-                  />
-                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-                </div>
-                <div>
-                  <label htmlFor="mobile" className={labelClassName}>
-                    Mobile Number <span className="text-red-500">*</span>
-                  </label>
-                  <PhoneInput
-                    inputClass={errors.mobile ? 'border border-red-500 focus:border-red-500' : 'border border-gray-300'}
-                    country={'in'}
-                    value={`${formData.countryCode}${formData.mobile}`}
-                    onChange={(value, data) => {
-                      const dialCode = `+${data.dialCode}`;
-                      const mobileNumber = value.replace(data.dialCode, '').replace(/\D/g, '');
-                      setFormData(prev => ({ ...prev, countryCode: dialCode, mobile: mobileNumber }));
-                      setErrors(prev => ({ ...prev, mobile: undefined }));
-                    }}
-                    inputProps={{
-                      name: 'mobile',
-                      required: true,
-                      id: 'mobile',
-                      ref: mobileRef,
-                    }}
-                    containerStyle={{ width: '100%' }}
-                    inputStyle={{
-                      width: '100%',
-                      height: '42px',
-                      fontSize: '14px',
-                      paddingLeft: '48px',
-                      border: `1px solid ${errors.mobile ? '#ef4444' : '#d1d5db'}`,
-                      borderRadius: '8px',
-                    }}
-                    buttonStyle={{
-                      border: `1px solid ${errors.mobile ? '#ef4444' : '#d1d5db'}`,
-                      borderRight: 'none',
-                      borderRadius: '8px 0 0 8px',
-                      backgroundColor: 'white',
-                    }}
-                  />
-                  {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
-                </div>
-                {(mode === 'add' || showPasswordField) && (
-                  <div className="relative">
-                    <label htmlFor="password" className={labelClassName}>
-                      Password {mode === 'add' && <span className="text-red-500">*</span>}
-                    </label>
-                    <input
-                      id="password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={formData.password}
-                      onChange={handleChange}
-                      className={inputClassName('password') + ' pr-10'}
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="bg-unset text-primary absolute right-3 top-[34px] hover:text-gray-700"
-                    >
-                      {showPassword ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9.27-3.11-11-7.5a11.05 11.05 0 013.304-4.348M3 3l18 18M16.24 16.24A5 5 0 017.76 7.76" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M1.5 12S5.5 5.5 12 5.5 22.5 12 22.5 12s-4 6.5-10.5 6.5S1.5 12 1.5 12z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      )}
-                    </button>
-                    {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-                  </div>
-                )}
-                {mode !== 'add' && !showPasswordField && (
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() => setShowPasswordField(true)}
-                      className="bg-unset text-sm text-[var(--color-primary)] hover:underline"
-                    >
-                      Change Password
-                    </button>
-                  </div>
-                )}
+                {/* Contact Mobile Number */}
                 
+                <div className="md:col-span-2">
+                  <label htmlFor="address" className={labelClassName}>
+                    Address
+                  </label>
+                  <textarea
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    className={inputClassName('address')}
+                    placeholder="Full address"
+                    rows="2"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Marital & Family Details Section - Two Column Layout */}
+            {/* Family Information Section */}
             <div className={sectionClassName}>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Marital & Family Details</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Family Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="maritalStatus" className={labelClassName}>
@@ -849,7 +900,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                         min="0"
                         value={formData.childrenCount || 0}
                         onChange={(e) => {
-                          const count = Math.max(0, parseInt(e.target.value) || 0); // Prevent negative or NaN
+                          const count = Math.max(0, parseInt(e.target.value) || 0);
                           setFormData(prev => ({
                             ...prev,
                             childrenCount: count,
@@ -944,7 +995,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
               </div>
             </div>
 
-            {/* Cultural & Background Section - Updated with dynamic dropdowns */}
+            {/* Cultural & Background Section */}
             <div className={sectionClassName}>
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Cultural & Background</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1039,7 +1090,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   )}
                 </div>
 
-                {/* Kuladevata and Region inputs remain the same */}
                 <div>
                   <label htmlFor="kuladevata" className={labelClassName}>
                     Kuladevata
@@ -1071,25 +1121,11 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
               </div>
             </div>
 
-            {/* Location & Bio Section */}
+            {/* Additional Information Section */}
             <div className={sectionClassName}>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Location & Bio</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label htmlFor="address" className={labelClassName}>
-                    Address
-                  </label>
-                  <textarea
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    className={inputClassName('address')}
-                    placeholder="Full address"
-                    rows="2"
-                  />
-                </div>
-                <div className="md:col-span-2">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Additional Information</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
                   <label htmlFor="bio" className={labelClassName}>
                     Bio
                   </label>
@@ -1103,13 +1139,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     rows="3"
                   />
                 </div>
-              </div>
-            </div>
-
-            {/* Interests & Preferences Section */}
-            <div className={sectionClassName}>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Interests & Preferences</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="hobbies" className={labelClassName}>
                     Hobbies
@@ -1199,7 +1228,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       </div>
     </div>
   );
-
 };
 
 export default ProfileFormModal;

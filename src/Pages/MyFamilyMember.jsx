@@ -3,23 +3,73 @@ import Layout from '../Components/Layout';
 import { useUser } from '../Contexts/UserContext';
 import FamilyOverView from '../Components/FamilyOverView';
 import ProfileFormModal from '../Components/ProfileFormModal';
-import FamilyMemberCard from '../Components/FamilyMemberCard'; // just import & use
+import FamilyMemberCard from '../Components/FamilyMemberCard';
+import ViewFamilyMemberModal from '../Components/ViewMemberModal';
 import { FiPlus } from 'react-icons/fi';
 
 const FamilyMemberListing = () => {
   const { userInfo } = useUser();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editMemberData, setEditMemberData] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [token, setToken] = useState(null);
+  const [viewMember, setViewMember] = useState(null);
+  const [familyMembers, setFamilyMembers] = useState([]);
+  
+  useEffect(() => {
+    const storedToken = localStorage.getItem('access_token');
+    if (storedToken) {
+      setToken(storedToken);
+    }
+  }, []);
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
 
-  useEffect(() => {
-        const storedToken = localStorage.getItem('access_token');
-        if (storedToken) {
-            setToken(storedToken);
-        }
-    }, []);
+  const handleEditMember = async (memberUserId) => {
+    if (!memberUserId) return;
+
+    const fullDetails = await fetchMemberDetails(memberUserId);
+    if (fullDetails) {
+      setEditMemberData(fullDetails);
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setEditMemberData(null);
+    setIsEditModalOpen(false);
+  };
+
+   const handleViewMember = async (memberId) => {
+    if (!memberId) return;
+    const fullDetails = await fetchMemberDetails(memberId);
+    if (fullDetails) {
+      console.log(fullDetails);
+      
+      setViewMember(fullDetails);
+    }
+  };
+
+  const fetchMemberDetails = async (userId) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch member details');
+       const resJson = await response.json();
+       //console.log(resJson.data);
+       
+      return resJson.data; 
+    } catch (error) {
+      console.error('Error fetching member details:', error);
+      return null;
+    }
+  };
+
 
   return (
     <Layout>
@@ -37,7 +87,12 @@ const FamilyMemberListing = () => {
           </button>
         </div>
 
-        <FamilyMemberCard familyCode={userInfo?.familyCode} token={token} />
+        <FamilyMemberCard 
+          familyCode={userInfo?.familyCode} 
+          token={token} 
+          onEditMember={handleEditMember}
+          onViewMember={handleViewMember}
+        />
 
         <ProfileFormModal
           isOpen={isModalOpen}
@@ -47,6 +102,21 @@ const FamilyMemberListing = () => {
           }}
           mode="add"
         />
+         {/* Edit Member Modal */}
+          <ProfileFormModal
+            isOpen={isEditModalOpen}
+            onClose={handleCloseEditModal}
+            mode="edit-member"
+            memberData={editMemberData}
+          />
+
+          {viewMember && (
+          <ViewFamilyMemberModal
+            isOpen={!!viewMember}
+            onClose={() => setViewMember(null)}
+            member={viewMember}
+          />
+        )}
       </div>
     </Layout>
   );
