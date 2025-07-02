@@ -38,15 +38,16 @@ if (!userId && token) {
 console.log('✅ userId:', userId);
 console.log('✅ familyCode:', familyCode);
 
-    const BASE_URL = 'https://familytree-backend-trs6.onrender.com';
+    const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
     // Function to transform API data to match component structure
     const transformApiData = (apiData) => {
         return apiData.map(item => ({
             id: item.id.toString(),
-            images: item.image && item.image !== 'string' && item.image !== '' 
-                ? [`${BASE_URL}/uploads/${item.image}`] 
-                : ['https://via.placeholder.com/400x300?text=No+Image'],
+            images: Array.isArray(item.images) && item.images.length > 0
+             ? item.images
+             : ['https://via.placeholder.com/400x300?text=No+Image'],
+
             title: item.name,
             description: item.description,
             price: parseFloat(item.price),
@@ -305,14 +306,15 @@ console.log('✅ familyCode:', familyCode);
     className="relative w-full h-60 bg-gray-100 overflow-hidden cursor-pointer"
     onClick={() => handleViewProduct(gift)}
 >
-    <img
-        src={gift.image && gift.image !== "string" ? gift.image : 'https://placehold.co/400x300?text=No+Image'}
-        alt={gift.name}
-        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-        onError={(e) => {
-            e.target.src = 'https://placehold.co/400x300?text=No+Image';
-        }}
-    />
+ <img
+  src={gift.images && gift.images.length > 0 ? gift.images[0] : 'https://placehold.co/400x300?text=No+Image'}
+  alt={gift.title}
+  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+  onError={(e) => {
+    e.target.src = 'https://placehold.co/400x300?text=No+Image';
+  }}
+/>
+
     {/* Stock Indicator */}
     <span className={`absolute bottom-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${gift.stock > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
         {gift.stock > 0 ? `${gift.stock} In Stock` : 'Out of Stock'}
@@ -326,7 +328,7 @@ console.log('✅ familyCode:', familyCode);
                                 </h3>
 
                                 {/* Rating */}
-                                <div className="flex items-center justify-center mb-3">
+                                {/* <div className="flex items-center justify-center mb-3">
                                     {[...Array(5)].map((_, i) => (
                                         <FiStar
                                             key={i}
@@ -335,7 +337,7 @@ console.log('✅ familyCode:', familyCode);
                                         />
                                     ))}
                                     <span className="text-sm text-gray-600 ml-2 font-medium">({gift.rating})</span>
-                                </div>
+                                </div> */}
 
                                 <p className="text-3xl font-extrabold text-gray-900 mb-4 text-center tracking-tight">
                                     ₹{gift.price.toLocaleString('en-IN')}
