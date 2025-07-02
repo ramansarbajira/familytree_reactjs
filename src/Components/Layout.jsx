@@ -43,7 +43,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
 
   //user info
   const { userInfo, userLoading } = useUser();
-  console.log(userInfo); // This will log the user info to the console
+  //console.log(userInfo); // This will log the user info to the console
 
   // Responsive handling
   useEffect(() => {
@@ -403,8 +403,6 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
         onClose={closeAddMemberModal}
         mode="edit-profile"
       />
-
-
 
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiEdit2, FiTrash2, FiEye } from 'react-icons/fi';
 import { FaBirthdayCake, FaPhone, FaHome, FaMale, FaFemale } from 'react-icons/fa';
+import Swal from 'sweetalert2';
 
 const roleMapping = {
   1: 'Member',
@@ -14,46 +15,50 @@ const relationColors = {
   Superadmin: 'bg-green-100 text-green-800',
 };
 
-const FamilyMemberCard = ({ familyCode, token }) => {
+const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [familyMembers, setFamilyMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      try {
+  const fetchMembers = async () => {
+    try {
         const res = await fetch(`${BASE_URL}/family/member/${familyCode}`, {
-          headers: {
+        headers: {
             Authorization: `Bearer ${token}`,
-          },
+        },
         });
         if (!res.ok) throw new Error('Failed to fetch members');
         const json = await res.json();
         const members = json.data.map((item) => ({
-          id: item.id,
-          userId: item.user.id,
-          name: item.user.fullName,
-          gender: item.user.userProfile?.gender || 'N/A',
-          role: roleMapping[item.user.role] || 'Member',
-          contact: item.user.userProfile?.contactNumber,
-          address: item.user.userProfile?.address || '',
-          dob: item.user.userProfile?.dob || '',
-          profilePic: item.user.profileImage,
-          isAdmin: item.user.role > 1,
-          lastUpdated: new Date(item.updatedAt).toLocaleDateString('en-IN'),
+        id: item.id,
+        memberId: item.memberId,
+        userId: item.user.id,
+        name: item.user.fullName,
+        gender: item.user.userProfile?.gender || 'N/A',
+        role: roleMapping[item.user.role] || 'Member',
+        contact: item.user.userProfile?.contactNumber,
+        address: item.user.userProfile?.address || '',
+        dob: item.user.userProfile?.dob || '',
+        profilePic: item.user.profileImage,
+        isAdmin: item.user.role > 1,
+        lastUpdated: new Date(item.updatedAt).toLocaleDateString('en-IN'),
         }));
         setFamilyMembers(members);
-      } catch (err) {
+    } catch (err) {
         console.error('Error loading family members:', err);
-      } finally {
+    } finally {
         setLoading(false);
-      }
+    }
     };
 
-    if (familyCode && token) fetchMembers();
-  }, [familyCode, token]);
+    useEffect(() => {
+  if (familyCode && token) {
+    setLoading(true);
+    fetchMembers();
+  }
+}, [familyCode, token]);
 
   const calculateAge = (dob) => {
     if (!dob) return 'N/A';
@@ -65,17 +70,48 @@ const FamilyMemberCard = ({ familyCode, token }) => {
     return age;
   };
 
-  const handleViewMember = (id) => alert(`View details for member ID: ${id}`);
-  const handleEditMember = (id, e) => {
-    e.stopPropagation();
-    alert(`Edit member with ID: ${id}`);
-  };
-  const handleDeleteMember = (id, e) => {
-    e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this family member?')) {
-      setFamilyMembers((prev) => prev.filter((member) => member.id !== id));
+
+  
+    const handleDeleteMember = async (userId, familyCode, e) => {
+  e.stopPropagation();
+
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: 'This member will be removed permanently from the family!',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#e53e3e',
+    cancelButtonColor: '#a0aec0',
+    confirmButtonText: 'Yes, delete it!',
+  });
+
+  if (result.isConfirmed) {
+    try {
+      const response = await fetch(
+        `${BASE_URL}/family/member/delete/${userId}/${familyCode}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete member');
+      }
+
+      Swal.fire('Deleted!', 'The family member has been removed.', 'success');
+
+      // Refetch members
+      fetchMembers();
+    } catch (err) {
+      Swal.fire('Error!', err.message, 'error');
     }
-  };
+  }
+};
 
   const filteredMembers = familyMembers.filter((member) =>
     member.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -146,14 +182,17 @@ const FamilyMemberCard = ({ familyCode, token }) => {
         <span className="text-xs text-gray-500">Last updated: {member.lastUpdated}</span>
         <div className="flex space-x-2">
           <button
-            onClick={(e) => handleEditMember(member.id, e)}
+            onClick={(e) => {
+            e.stopPropagation();
+            onEditMember?.(member.userId);
+            }}
             className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700 transition-colors tooltip"
             title="Edit Member"
           >
             <FiEdit2 size={18} />
           </button>
           <button
-            onClick={(e) => handleDeleteMember(member.id, e)}
+            onClick={(e) => handleDeleteMember(member.memberId, familyCode, e)}
             className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700 transition-colors tooltip"
             title="Delete Member"
           >
@@ -162,7 +201,7 @@ const FamilyMemberCard = ({ familyCode, token }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              handleViewMember(member.id);
+              onViewMember(member.id);
             }}
             className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700 transition-colors tooltip"
             title="View Member"
@@ -185,7 +224,10 @@ const FamilyMemberCard = ({ familyCode, token }) => {
       />
 
       {loading ? (
-        <div className="text-center text-gray-500">Loading members...</div>
+        <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-primary-600 border-solid">
+            </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {filteredMembers.length ? (
