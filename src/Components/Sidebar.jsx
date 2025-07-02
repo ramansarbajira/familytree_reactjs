@@ -17,7 +17,7 @@ import { FaTimes } from 'react-icons/fa';
 const menuItems = [
   { id: 'home', label: 'Home', route: '/dashboard', icon: <FiHome size={19} /> },
   { id: 'events', label: 'Events', route: '/events', icon: <FiCalendar size={19} /> },
-  { id: 'familyTree', label: 'Family Tree', route: '/familytree', icon: <RiGitMergeLine size={19} /> },
+  { id: 'familyTree', label: 'Family Tree', route: '/family-tree', icon: <RiGitMergeLine size={19} /> },
   {
     id: 'familyManagement',
     label: 'Family Management',

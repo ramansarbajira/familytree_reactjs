@@ -11,11 +11,13 @@ import Dashboard from './Pages/Dashboard';
 import MyProfile from './Pages/MyProfile';
 import MyFamilyMember from './Pages/MyFamilyMember';
 import MyFamily from './Pages/MyFamily';
+import FamilyTreePage from './Pages/FamilyTreePage'; 
 import PendingFamilyRequests from './Pages/PendingFamilyRequests';
 import PostsAndFeedsPage from './Pages/PostsAndFeedsPage'; 
 import FamilyGalleryPage from './Pages/FamilyGalleryPage'; 
 import GiftListingPage from './Pages/GiftListingPage'; 
 import EventsPage from './Pages/EventsPage'; 
+
 
 import { UserProvider } from './Contexts/UserContext';
 import PrivateRoute from './Routes/PrivateRoute';
@@ -41,6 +43,7 @@ function App() {
         <Route path="/myprofile" element={<PrivateRoute><UserProvider><MyProfile /></UserProvider></PrivateRoute>} />
         <Route path="/my-family-member" element={<PrivateRoute><UserProvider><MyFamilyMember /></UserProvider></PrivateRoute>  } />
         <Route path="/my-family" element={<PrivateRoute><UserProvider><MyFamily /></UserProvider></PrivateRoute>  } />
+        <Route path="/family-tree" element={<PrivateRoute><UserProvider><FamilyTreePage /></UserProvider></PrivateRoute>  } />
 
         <Route path ="/pending-request" element={<PrivateRoute><UserProvider><PendingFamilyRequests /> </UserProvider> </PrivateRoute>} />
         <Route path="/posts-and-feeds" element={<PrivateRoute><UserProvider><PostsAndFeedsPage /></UserProvider></PrivateRoute>} />
