@@ -1,308 +1,500 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/FamilyTreePage.jsx
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../Components/Layout';
-import { FaEdit, FaPlus, FaUser, FaUserFriends, FaVenus, FaMars } from 'react-icons/fa';
-import { useUser } from '../Contexts/UserContext';
+import FamilyTreeDisplay from '../Components/FamilyTreeDisplay';
+import FamilyMemberModal from '../Components/FamilyMemberModal';
+import { v4 as uuidv4 } from 'uuid'; // npm install uuid
 
-const ProfessionalFamilyTree = () => {
-  const { userInfo } = useUser();
-  const [treeData, setTreeData] = useState(null);
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    gender: 'male',
-    relation: 'self'
-  });
+// *** IMPORTANT: REPLACE THESE WITH YOUR ACTUAL IMAGE IMPORTS ***
+// Example:
+// import grandfatherImage from '../assets/family-avatars/grandfather.png';
+// import grandmotherImage from '../assets/family-avatars/grandmother.png';
+// import fatherImage from '../assets/family-avatars/father.png';
+// import motherImage from '../assets/family-avatars/mother.png';
+// import uncleImage from '../assets/family-avatars/uncle.png';
+// import auntImage from '../assets/family-avatars/aunt.png';
+// import brotherImage from '../assets/family-avatars/brother.png';
+// import sisterImage from '../assets/family-avatars/sister.png';
+// import meImage from '../assets/family-avatars/me.png';
+// import cousin1Image from '../assets/family-avatars/cousin1.png';
+// import cousin2Image from '../assets/family-avatars/cousin2.png';
+// import cousin3Image from '../assets/family-avatars/cousin3.png';
+// import sonImage from '../assets/family-avatars/son.png'; // Example for children
+// import daughterImage from '../assets/family-avatars/daughter.png';
+// import spouseImage from '../assets/family-avatars/spouse.png';
 
-  // Initialize tree with current user
-  useEffect(() => {
-    if (!treeData && userInfo) {
-      setTreeData({
-        id: 1,
-        name: userInfo.name || 'You',
-        gender: userInfo.gender || 'male',
-        relation: 'self',
-        image: userInfo.profileImage || `https://randomuser.me/api/portraits/${userInfo.gender === 'female' ? 'women' : 'men'}/1.jpg`,
-        spouse: null,
-        parents: [],
-        children: []
-      });
-    }
-  }, [userInfo, treeData]);
 
-  const handleNodeClick = (node) => {
-    setSelectedNode(node);
-    setIsEditMode(false);
-    setFormData({
-      name: node.name,
-      gender: node.gender,
-      relation: node.relation
-    });
-  };
+// Helper to generate placeholder image URLs that mimic the cartoon style
+// YOU WILL REMOVE THIS FUNCTION ONCE YOU HAVE YOUR ACTUAL IMAGE IMPORTS
+const getPlaceholderImg = (text, hexColor) => `https://placehold.co/100x100/${hexColor}/FFFFFF?text=${text}`;
 
-  const handleAddRelative = (relation) => {
-    setFormData({
-      name: '',
-      gender: relation === 'spouse' 
-        ? (selectedNode.gender === 'male' ? 'female' : 'male')
-        : 'male',
-      relation
-    });
-    setIsEditMode(true);
-  };
+// --- FamilyTreePage Component ---
+const FamilyTreePage = () => {
+    const [treeData, setTreeData] = useState([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedNodeData, setSelectedNodeData] = useState(null);
+    const [modalMode, setModalMode] = useState('add-self');
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    const newMember = {
-      id: Date.now(),
-      name: formData.name,
-      gender: formData.gender,
-      relation: formData.relation,
-      image: `https://randomuser.me/api/portraits/${formData.gender === 'female' ? 'women' : 'men'}/${Math.floor(Math.random() * 100)}.jpg`,
-      spouse: null,
-      parents: [],
-      children: []
-    };
+    const nodeRefs = useRef({});
 
-    let updatedTree;
-    if (formData.relation === 'spouse') {
-      updatedTree = {
-        ...selectedNode,
-        spouse: newMember
-      };
-    } else if (formData.relation === 'child') {
-      updatedTree = {
-        ...selectedNode,
-        children: [...(selectedNode.children || []), newMember]
-      };
-    } else if (formData.relation === 'parent') {
-      updatedTree = {
-        ...newMember,
-        children: [selectedNode]
-      };
-    }
+    // --- Initial Load: Set up the "Me" node and open modal ---
+    useEffect(() => {
+        if (treeData.length === 0) {
+            const initialSelfNode = {
+                id: uuidv4(),
+                name: 'ME',
+                photo: getPlaceholderImg('Me', '40B4D1'), // Replace with meImage
+                relationToSelf: 'Self',
+                gender: 'Unknown',
+                attributes: { isSelf: true },
+                // Initial position for 'ME' in the grid (these will be adjusted by layout logic)
+                row: 0, col: 0, // Placeholder, actual position determined by layout
+                parentIds: [],
+                childrenIds: [],
+                spouseId: null,
+            };
+            setTreeData([initialSelfNode]);
+            setSelectedNodeData(initialSelfNode);
+            setModalMode('add-family');
+            setIsModalOpen(true);
+        }
+    }, [treeData.length]);
 
-    setTreeData(updatedTree);
-    setSelectedNode(null);
-  };
+    // --- Helper to find a node by ID in the flat array ---
+    const findNodeById = useCallback((nodes, id) => {
+        return nodes.find(node => node.id === id);
+    }, []);
 
-  const renderNode = (node, isRoot = false) => {
+    // --- Helper to update a node in the flat array ---
+    const updateNodeInFlatArray = useCallback((nodes, targetId, updateFn) => {
+        return nodes.map(node => {
+            if (node.id === targetId) {
+                return updateFn(node);
+            }
+            return node;
+        });
+    }, []);
+
+    // --- LAYOUT LOGIC: Assigns row/col based on relationships ---
+    // This is a simplified layout engine. For complex trees, a dedicated layout algorithm is needed.
+    const assignLayoutPositions = useCallback((nodes) => {
+        const newNodes = JSON.parse(JSON.stringify(nodes)); // Deep copy to avoid direct mutation
+        const visited = new Set();
+        const queue = [];
+        let maxRow = 0;
+        let minRow = 0;
+
+        // Find the "highest" nodes (those without parents or whose parents are not yet in the tree)
+        let rootNodes = newNodes.filter(node => !node.parentIds || node.parentIds.length === 0 || !node.parentIds.some(pId => newNodes.some(n => n.id === pId)));
+        // If 'ME' is the only node, it's the root.
+        if (rootNodes.length === 0 && newNodes.length > 0) {
+            rootNodes = [newNodes.find(n => n.attributes?.isSelf) || newNodes[0]];
+        }
+
+        // Initialize roots
+        rootNodes.forEach((root, index) => {
+            root.row = 0; // Top row
+            root.col = 2 + index * 2; // Spread out roots
+            queue.push(root);
+            visited.add(root.id);
+        });
+
+        let head = 0;
+        while (head < queue.length) {
+            const currentNode = queue[head++];
+
+            // Layout children
+            const childrenToProcess = newNodes.filter(n => currentNode.childrenIds.includes(n.id) && !visited.has(n.id));
+            if (childrenToProcess.length > 0) {
+                const childRow = currentNode.row + 1;
+                maxRow = Math.max(maxRow, childRow);
+
+                // Calculate starting column for children to center them under parents
+                let startCol = currentNode.col;
+                if (currentNode.spouseId) {
+                    const spouse = findNodeById(newNodes, currentNode.spouseId);
+                    if (spouse) {
+                        startCol = Math.min(currentNode.col, spouse.col);
+                    }
+                }
+
+                const totalWidth = childrenToProcess.length * 2; // Each child takes 2 columns (node + gap)
+                let currentChildCol = startCol + Math.floor((currentNode.spouseId ? 2 : 1) / 2) - Math.floor(totalWidth / 2); // Adjust to center under parent(s)
+
+                childrenToProcess.forEach(child => {
+                    child.row = childRow;
+                    child.col = currentChildCol;
+                    currentChildCol += 2; // Move to next available column
+
+                    queue.push(child);
+                    visited.add(child.id);
+                });
+            }
+
+            // Layout spouse (if not already visited and exists)
+            if (currentNode.spouseId && !visited.has(currentNode.spouseId)) {
+                const spouse = findNodeById(newNodes, currentNode.spouseId);
+                if (spouse) {
+                    spouse.row = currentNode.row;
+                    spouse.col = currentNode.col - 1; // Spouse to the left
+                    queue.push(spouse);
+                    visited.add(spouse.id);
+                }
+            }
+
+            // Layout parents (if not already visited and exists)
+            const parentsToProcess = newNodes.filter(n => currentNode.parentIds.includes(n.id) && !visited.has(n.id));
+            if (parentsToProcess.length > 0) {
+                const parentRow = currentNode.row - 1;
+                minRow = Math.min(minRow, parentRow);
+
+                let currentParentCol = currentNode.col; // Simple placement for now
+                parentsToProcess.forEach(parent => {
+                    parent.row = parentRow;
+                    parent.col = currentParentCol;
+                    currentParentCol += 1; // Simple increment
+
+                    queue.push(parent);
+                    visited.add(parent.id);
+                });
+            }
+
+            // Layout siblings (if not already visited and exist)
+            // Siblings share parents, so find parents and then their other children
+            if (currentNode.parentIds && currentNode.parentIds.length > 0) {
+                const commonParents = newNodes.filter(n => currentNode.parentIds.includes(n.id));
+                if (commonParents.length > 0) {
+                    const siblingCandidates = newNodes.filter(n =>
+                        n.id !== currentNode.id &&
+                        !visited.has(n.id) &&
+                        n.parentIds.some(pId => commonParents.map(cp => cp.id).includes(pId))
+                    );
+
+                    if (siblingCandidates.length > 0) {
+                        const siblingRow = currentNode.row;
+                        let currentSiblingCol = currentNode.col; // Start near current node
+
+                        siblingCandidates.forEach((sibling, idx) => {
+                            // Simple spread for siblings
+                            sibling.row = siblingRow;
+                            sibling.col = currentNode.col + (idx % 2 === 0 ? (idx / 2 + 1) : -(idx / 2 + 1));
+                            queue.push(sibling);
+                            visited.add(sibling.id);
+                        });
+                    }
+                }
+            }
+        }
+
+        // Normalize rows so the top-most row is 0 or 1
+        const rowOffset = Math.abs(minRow);
+        newNodes.forEach(node => {
+            node.row += rowOffset;
+        });
+
+        // Normalize columns (optional, to shift everything to the left if too much empty space)
+        // const minCol = Math.min(...newNodes.map(n => n.col));
+        // if (minCol < 0) {
+        //     newNodes.forEach(node => node.col -= minCol);
+        // }
+
+        return newNodes;
+    }, [findNodeById]);
+
+
+    // --- Handle saving data from the modal ---
+    const handleSaveFamilyMember = useCallback((formData) => {
+        setTreeData(prevTreeData => {
+            let newTree = JSON.parse(JSON.stringify(prevTreeData)); // Deep copy for safe mutation
+
+            // --- Logic for 'add-self' (initial setup) or 'add-family' (for 'ME' node) ---
+            if (modalMode === 'add-self' || (modalMode === 'add-family' && selectedNodeData?.attributes?.isSelf)) {
+                const selfNode = findNodeById(newTree, selectedNodeData.id);
+                if (!selfNode) return newTree;
+
+                // 1. Add Parents
+                let fatherNode = null;
+                let motherNode = null;
+
+                if (formData.fatherName) {
+                    fatherNode = {
+                        id: uuidv4(),
+                        name: formData.fatherName,
+                        photo: formData.fatherPhoto || getPlaceholderImg(formData.fatherName.charAt(0), '40B4D1'),
+                        relationToSelf: 'Father',
+                        gender: 'Male',
+                        parentIds: [], childrenIds: [], spouseId: null,
+                    };
+                    newTree.push(fatherNode);
+                }
+                if (formData.motherName) {
+                    motherNode = {
+                        id: uuidv4(),
+                        name: formData.motherName,
+                        photo: formData.motherPhoto || getPlaceholderImg(formData.motherName.charAt(0), 'E8BE4D'),
+                        relationToSelf: 'Mother',
+                        gender: 'Female',
+                        parentIds: [], childrenIds: [], spouseId: null,
+                    };
+                    newTree.push(motherNode);
+                }
+
+                // Link parents as spouse
+                if (fatherNode && motherNode) {
+                    fatherNode.spouseId = motherNode.id;
+                    motherNode.spouseId = fatherNode.id;
+                }
+
+                // Link 'Self' to new parents
+                if (fatherNode || motherNode) {
+                    selfNode.parentIds = [];
+                    if (fatherNode) selfNode.parentIds.push(fatherNode.id);
+                    if (motherNode) selfNode.parentIds.push(motherNode.id);
+
+                    // Add 'Self' to parents' childrenIds
+                    if (fatherNode) fatherNode.childrenIds.push(selfNode.id);
+                    if (motherNode) motherNode.childrenIds.push(selfNode.id);
+                }
+
+                // 2. Add Spouse for 'Self'
+                if (formData.spouseName) {
+                    const spouseNode = {
+                        id: uuidv4(),
+                        name: formData.spouseName,
+                        photo: formData.spousePhoto || getPlaceholderImg(formData.spouseName.charAt(0), 'EA68A0'),
+                        relationToSelf: 'Spouse',
+                        gender: formData.spouseGender,
+                        parentIds: selfNode.parentIds,
+                        childrenIds: [],
+                        spouseId: selfNode.id,
+                    };
+                    newTree.push(spouseNode);
+                    selfNode.spouseId = spouseNode.id;
+                }
+
+                // 3. Add Siblings for 'Self'
+                if (formData.siblings && formData.siblings.length > 0) {
+                    formData.siblings.forEach((sibling) => {
+                        const siblingNode = {
+                            id: uuidv4(),
+                            name: sibling.name,
+                            photo: sibling.photo || getPlaceholderImg(sibling.name.charAt(0), sibling.gender === 'Male' ? '40B4D1' : 'EA68A0'),
+                            relationToSelf: sibling.gender === 'Male' ? 'Brother' : 'Sister',
+                            gender: sibling.gender,
+                            parentIds: selfNode.parentIds,
+                            childrenIds: [],
+                            spouseId: null,
+                        };
+                        newTree.push(siblingNode);
+                        // Add sibling to parents' childrenIds
+                        selfNode.parentIds.forEach(parentId => {
+                            const parent = findNodeById(newTree, parentId);
+                            if (parent && !parent.childrenIds.includes(siblingNode.id)) {
+                                parent.childrenIds.push(siblingNode.id);
+                            }
+                        });
+                    });
+                }
+
+                // 4. Add Children for 'Self'
+                if (formData.children && formData.children.length > 0) {
+                    formData.children.forEach((child) => {
+                        const childNode = {
+                            id: uuidv4(),
+                            name: child.name,
+                            photo: child.photo || getPlaceholderImg(child.name.charAt(0), child.gender === 'Male' ? '40B4D1' : 'EA68A0'),
+                            relationToSelf: child.gender === 'Male' ? 'Son' : 'Daughter',
+                            gender: child.gender,
+                            parentIds: [selfNode.id, selfNode.spouseId].filter(Boolean),
+                            childrenIds: [],
+                            spouseId: null,
+                        };
+                        newTree.push(childNode);
+                        selfNode.childrenIds.push(childNode.id);
+                        if (selfNode.spouseId) {
+                            const spouse = findNodeById(newTree, selfNode.spouseId);
+                            if (spouse) spouse.childrenIds.push(childNode.id);
+                        }
+                    });
+                }
+
+            } else if (modalMode === 'edit') {
+                // Logic for editing an existing node
+                newTree = updateNodeInFlatArray(newTree, selectedNodeData.id, (node) => {
+                    const updatedNode = {
+                        ...node,
+                        name: formData.name,
+                        photo: formData.photo,
+                        gender: formData.gender,
+                    };
+                    // Update spouse if applicable
+                    if (node.spouseId) {
+                        newTree = updateNodeInFlatArray(newTree, node.spouseId, (spouse) => ({
+                            ...spouse,
+                            name: formData.spouseName || spouse.name,
+                            photo: formData.spousePhoto || spouse.photo,
+                            gender: formData.spouseGender || spouse.gender,
+                        }));
+                    }
+                    return updatedNode;
+                });
+
+            } else if (modalMode === 'add-child-or-partner') {
+                // Logic for adding children/partner to a specific node (not 'Self')
+                const targetNode = findNodeById(newTree, selectedNodeData.id);
+                if (!targetNode) return newTree;
+
+                // Add partner if provided
+                if (formData.spouseName && !targetNode.spouseId) {
+                    const spouseNode = {
+                        id: uuidv4(),
+                        name: formData.spouseName,
+                        photo: formData.spousePhoto || getPlaceholderImg(formData.spouseName.charAt(0), 'EA68A0'),
+                        relationToSelf: 'Spouse',
+                        gender: formData.spouseGender,
+                        parentIds: targetNode.parentIds,
+                        childrenIds: [],
+                        spouseId: targetNode.id,
+                    };
+                    newTree.push(spouseNode);
+                    targetNode.spouseId = spouseNode.id;
+                }
+
+                // Add children if provided
+                if (formData.children && formData.children.length > 0) {
+                    formData.children.forEach((child) => {
+                        const childNode = {
+                            id: uuidv4(),
+                            name: child.name,
+                            photo: child.photo || getPlaceholderImg(child.name.charAt(0), child.gender === 'Male' ? '40B4D1' : 'EA68A0'),
+                            relationToSelf: child.gender === 'Male' ? 'Son' : 'Daughter',
+                            gender: child.gender,
+                            parentIds: [targetNode.id, targetNode.spouseId].filter(Boolean),
+                            childrenIds: [],
+                            spouseId: null,
+                        };
+                        newTree.push(childNode);
+                        targetNode.childrenIds.push(childNode.id);
+                        if (targetNode.spouseId) {
+                            const spouse = findNodeById(newTree, targetNode.spouseId);
+                            if (spouse) spouse.childrenIds.push(childNode.id);
+                        }
+                    });
+                }
+
+            } else if (modalMode === 'add-parents') {
+                // Logic for adding parents to a clicked node (e.g., Grandparents for Father/Mother)
+                const targetNode = findNodeById(newTree, selectedNodeData.id);
+                if (!targetNode) return newTree;
+
+                let newFatherNode = null;
+                let newMotherNode = null;
+
+                if (formData.fatherName) {
+                    newFatherNode = {
+                        id: uuidv4(),
+                        name: formData.fatherName,
+                        photo: formData.fatherPhoto || getPlaceholderImg(formData.fatherName.charAt(0), '40B4D1'),
+                        relationToSelf: 'Father',
+                        gender: 'Male',
+                        parentIds: [], childrenIds: [], spouseId: null,
+                    };
+                    newTree.push(newFatherNode);
+                }
+                if (formData.motherName) {
+                    newMotherNode = {
+                        id: uuidv4(),
+                        name: formData.motherName,
+                        photo: formData.motherPhoto || getPlaceholderImg(formData.motherName.charAt(0), 'E8BE4D'),
+                        relationToSelf: 'Mother',
+                        gender: 'Female',
+                        parentIds: [], childrenIds: [], spouseId: null,
+                    };
+                    newTree.push(newMotherNode);
+                }
+
+                // Link new parents as spouse
+                if (newFatherNode && newMotherNode) {
+                    newFatherNode.spouseId = newMotherNode.id;
+                    newMotherNode.spouseId = newFatherNode.id;
+                }
+
+                // Link targetNode to new parents
+                targetNode.parentIds = [];
+                if (newFatherNode) targetNode.parentIds.push(newFatherNode.id);
+                if (newMotherNode) targetNode.parentIds.push(newMotherNode.id);
+
+                // Add targetNode to new parents' childrenIds
+                if (newFatherNode) newFatherNode.childrenIds.push(targetNode.id);
+                if (newMotherNode) newMotherNode.childrenIds.push(targetNode.id);
+            }
+
+            // After all updates, re-assign layout positions
+            return assignLayoutPositions(newTree);
+        }); // End setTreeData
+
+        setIsModalOpen(false);
+        setSelectedNodeData(null);
+    }, [modalMode, selectedNodeData, findNodeById, updateNodeInFlatArray, assignLayoutPositions]);
+
+    // --- Handle node clicks to open modal ---
+    const handleNodeClick = useCallback((nodeDatum) => {
+        setSelectedNodeData(nodeDatum);
+        // Determine modal mode based on clicked node
+        if (nodeDatum.attributes?.isSelf) {
+            setModalMode('add-family'); // For 'Me' node, add parents/spouse/children/siblings
+        } else if (nodeDatum.relationToSelf === 'Father' || nodeDatum.relationToSelf === 'Mother' || nodeDatum.relationToSelf === 'Grandfather' || nodeDatum.relationToSelf === 'Grandmother' || nodeDatum.relationToSelf === 'Uncle' || nodeDatum.relationToSelf === 'Aunt') {
+            setModalMode('add-parents'); // For parents/grandparents/aunts/uncles, add their parents
+        } else {
+            setModalMode('add-child-or-partner'); // For any other node, add their children/partner
+        }
+        setIsModalOpen(true);
+    }, []);
+
+    // Find the current 'Self' node for initial modal data
+    const findSelfNode = useCallback((nodes) => {
+        for (const node of nodes) {
+            if (node.attributes?.isSelf) {
+                return node;
+            }
+        }
+        return null;
+    }, []);
+
     return (
-      <div className={`flex flex-col items-center ${isRoot ? 'mt-8' : ''}`}>
-        {/* Node Card */}
-        <div 
-          className={`relative p-4 rounded-lg shadow-md w-40 text-center cursor-pointer
-            ${node.gender === 'male' ? 'bg-blue-50 border-blue-200' : 'bg-pink-50 border-pink-200'}
-            ${node.relation === 'self' ? 'border-2 border-yellow-400' : 'border'}
-            hover:shadow-lg transition-shadow`}
-          onClick={() => handleNodeClick(node)}
-        >
-          <img 
-            src={node.image} 
-            alt={node.name}
-            className="w-16 h-16 rounded-full mx-auto mb-2 object-cover border-2 border-white shadow-sm"
-          />
-          <h3 className="font-medium text-sm truncate">{node.name}</h3>
-          <div className="flex justify-center mt-1">
-            {node.gender === 'male' ? (
-              <FaMars className="text-blue-500" />
-            ) : (
-              <FaVenus className="text-pink-500" />
+        <Layout>
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8">
+                <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h1 className="text-4xl font-extrabold text-gray-900 mb-8 text-center text-gray-800">My Family Tree</h1>
+                    <div className="bg-white p-6 rounded-lg shadow-xl overflow-auto min-h-[600px] flex justify-center items-center">
+                        {treeData.length > 0 ? (
+                            <FamilyTreeDisplay
+                                data={treeData}
+                                onNodeClick={handleNodeClick}
+                                nodeRefs={nodeRefs} // Pass nodeRefs down
+                            />
+                        ) : (
+                            <div className="text-center text-gray-600 py-20">
+                                Loading your family tree...
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {isModalOpen && (
+                <FamilyMemberModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    onSave={handleSaveFamilyMember}
+                    mode={modalMode}
+                    initialNodeData={selectedNodeData}
+                    // Pass current 'Self' node if adding parents to it
+                    selfNode={findSelfNode(treeData)}
+                />
             )}
-          </div>
-        </div>
-
-        {/* Spouse */}
-        {node.spouse && (
-          <div className="flex items-center justify-center my-2">
-            <div className="h-px w-8 bg-gray-300 relative">
-              <div className="absolute -right-1 -top-1 text-xs text-pink-500">❤</div>
-            </div>
-            <div 
-              className={`ml-4 p-3 rounded-lg shadow-md w-36 text-center cursor-pointer
-                ${node.spouse.gender === 'male' ? 'bg-blue-50 border-blue-200' : 'bg-pink-50 border-pink-200'}
-                border hover:shadow-lg transition-shadow`}
-              onClick={() => handleNodeClick(node.spouse)}
-            >
-              <img 
-                src={node.spouse.image} 
-                alt={node.spouse.name}
-                className="w-12 h-12 rounded-full mx-auto mb-1 object-cover border-2 border-white shadow-sm"
-              />
-              <h3 className="font-medium text-xs truncate">{node.spouse.name}</h3>
-            </div>
-          </div>
-        )}
-
-        {/* Children */}
-        {node.children && node.children.length > 0 && (
-          <div className="mt-4">
-            <div className="h-6 w-px bg-gray-400 mx-auto"></div>
-            <div className="flex justify-center space-x-4 pt-4">
-              {node.children.map((child, index) => (
-                <div key={index} className="flex flex-col items-center">
-                  {renderNode(child)}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+        </Layout>
     );
-  };
-
-  return (
-    <Layout activeTab="familyTree">
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-4">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">Family Tree</h1>
-          
-          {treeData ? (
-            <div className="bg-white rounded-xl shadow-lg p-6 overflow-x-auto">
-              <div className="min-w-max mx-auto">
-                {renderNode(treeData, true)}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-              <p className="text-gray-600 mb-4">No family tree created yet</p>
-              <button
-                onClick={() => setTreeData({
-                  id: 1,
-                  name: userInfo.name || 'You',
-                  gender: userInfo.gender || 'male',
-                  relation: 'self',
-                  image: userInfo.profileImage || `https://randomuser.me/api/portraits/${userInfo.gender === 'female' ? 'women' : 'men'}/1.jpg`,
-                  spouse: null,
-                  parents: [],
-                  children: []
-                })}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Start Your Family Tree
-              </button>
-            </div>
-          )}
-
-          {/* Node Details Modal */}
-          {selectedNode && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-gray-800">
-                    {isEditMode ? 'Add Family Member' : selectedNode.name}
-                  </h2>
-                  <button
-                    onClick={() => setSelectedNode(null)}
-                    className="text-gray-500 hover:text-gray-700 text-xl"
-                  >
-                    &times;
-                  </button>
-                </div>
-
-                {isEditMode ? (
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className="w-full p-2 border rounded-md"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                      <select
-                        value={formData.gender}
-                        onChange={(e) => setFormData({...formData, gender: e.target.value})}
-                        className="w-full p-2 border rounded-md"
-                      >
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                      </select>
-                    </div>
-
-                    <div className="flex justify-end space-x-3 pt-4">
-                      <button
-                        type="button"
-                        onClick={() => setIsEditMode(false)}
-                        className="px-4 py-2 border rounded-md"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <>
-                    <div className="flex justify-center mb-4">
-                      <img 
-                        src={selectedNode.image} 
-                        alt={selectedNode.name}
-                        className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-sm text-gray-500">Relationship</p>
-                        <p className="font-medium capitalize">{selectedNode.relation}</p>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-sm text-gray-500">Gender</p>
-                        <p className="font-medium capitalize">{selectedNode.gender}</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <button
-                        onClick={() => handleAddRelative('spouse')}
-                        disabled={selectedNode.spouse}
-                        className={`flex items-center justify-center p-3 rounded-lg ${selectedNode.spouse ? 'bg-gray-100 text-gray-400' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
-                      >
-                        <FaUserFriends className="mr-2" />
-                        Add Spouse
-                      </button>
-                      <button
-                        onClick={() => handleAddRelative('child')}
-                        className="flex items-center justify-center p-3 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
-                      >
-                        <FaPlus className="mr-2" />
-                        Add Child
-                      </button>
-                      <button
-                        onClick={() => handleAddRelative('parent')}
-                        className="flex items-center justify-center p-3 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100"
-                      >
-                        <FaUser className="mr-2" />
-                        Add Parent
-                      </button>
-                      <button
-                        onClick={() => setIsEditMode(true)}
-                        className="flex items-center justify-center p-3 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100"
-                      >
-                        <FaEdit className="mr-2" />
-                        Edit
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </Layout>
-  );
 };
 
-export default ProfessionalFamilyTree;
+export default FamilyTreePage;

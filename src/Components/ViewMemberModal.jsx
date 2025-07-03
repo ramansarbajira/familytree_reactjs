@@ -5,26 +5,36 @@ const ViewFamilyMemberModal = ({ isOpen, onClose, member }) => {
   if (!isOpen || !member) return null;
 
   const normalized = useMemo(() => {
-    const profile = member.userProfile || {};
+    const profile = member.raw?.userProfile || member || {};
     const roleMap = { 1: 'Member', 2: 'Admin', 3: 'Superadmin' };
+
+    // Handle childrenNames parsing
+    let parsedChildren = [];
+    const childrenRaw = profile.childrenNames;
+
+    if (typeof childrenRaw === 'string') {
+      try {
+        parsedChildren = JSON.parse(childrenRaw);
+      } catch {
+        parsedChildren = childrenRaw.split(',').map((c) => c.trim());
+      }
+    } else if (Array.isArray(childrenRaw)) {
+      parsedChildren = childrenRaw;
+    }
 
     return {
       fullName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'N/A',
-      email: member.email || 'N/A',
+      email: member.email || profile.email || 'N/A',
       countryCode: member.countryCode || '',
-      mobile: member.mobile || 'N/A',
-      profileImage: profile.profile || 'https://placehold.co/96x96/e2e8f0/64748b?text=👤',
+      mobile: member.mobile || profile.contactNumber || 'N/A',
+      profileImage: profile.profile || member.profileUrl || 'https://placehold.co/96x96/e2e8f0/64748b?text=👤',
       gender: profile.gender || 'N/A',
       dob: profile.dob || null,
       maritalStatus: profile.maritalStatus || 'N/A',
       marriageDate: profile.marriageDate || null,
       spouseName: profile.spouseName || 'N/A',
-      childrenNames: profile.childrenNames || 'N/A',
-      childrenCount: Array.isArray(profile.childrenNames)
-        ? profile.childrenNames.length
-        : profile.childrenNames
-        ? 1
-        : 0,
+      childrenNames: parsedChildren,
+      childrenCount: parsedChildren.length,
       fatherName: profile.fatherName || 'N/A',
       motherName: profile.motherName || 'N/A',
       religion: profile.religionId || 'N/A',
@@ -92,9 +102,9 @@ const ViewFamilyMemberModal = ({ isOpen, onClose, member }) => {
               <Detail
                 label="Children Names"
                 value={
-                  Array.isArray(normalized.childrenNames)
+                  normalized.childrenNames.length > 0
                     ? normalized.childrenNames.join(', ')
-                    : normalized.childrenNames || 'N/A'
+                    : 'N/A'
                 }
               />
             </>

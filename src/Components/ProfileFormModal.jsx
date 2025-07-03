@@ -91,78 +91,84 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
           const sourceDataRaw = mode === 'edit-profile' ? userInfo : memberData;
 
           if (!sourceDataRaw) return;
-          console.log(sourceDataRaw);
           
-          const sourceData = {
-            ...sourceDataRaw,
-            ...sourceDataRaw.userProfile, // Flatten userProfile
-          };
-
-          const currentMemberDataKey =
-            sourceData?.email || sourceData?.id || JSON.stringify(sourceData);
-          const lastProcessedKey =
-            lastMemberDataRef.current?.email || lastMemberDataRef.current?.id || JSON.stringify(lastMemberDataRef.current);
-
-          if (currentMemberDataKey !== lastProcessedKey) {
-            // Handle children names
-            let childrenNames = [];
-            if (sourceData.childrenNames) {
-              if (Array.isArray(sourceData.childrenNames)) {
-                childrenNames = [...sourceData.childrenNames];
-              } else if (typeof sourceData.childrenNames === 'string') {
-                try {
-                  childrenNames = JSON.parse(sourceData.childrenNames);
-                } catch {
-                  childrenNames = [];
-                }
+          // Handle children names from either raw.childrenNames or individual childName fields
+          let childrenNames = [];
+          if (sourceDataRaw.childrenNames) {
+            if (Array.isArray(sourceDataRaw.childrenNames)) {
+              childrenNames = [...sourceDataRaw.childrenNames];
+            } else if (typeof sourceDataRaw.childrenNames === 'string') {
+              try {
+                childrenNames = JSON.parse(sourceDataRaw.childrenNames);
+              } catch {
+                childrenNames = [];
               }
             }
-            
-            // Parse contact number
-            let countryCode = '+91';
-            let mobile = '';
-
-            if (sourceData.countryCode) {
-              countryCode = sourceData.countryCode;
+          } else if (sourceDataRaw.childName0) {
+            // Handle case where children are stored as individual fields (childName0, etc.)
+            const childCount = sourceDataRaw.childrenCount || 1;
+            for (let i = 0; i < childCount; i++) {
+              if (sourceDataRaw[`childName${i}`]) {
+                childrenNames.push(sourceDataRaw[`childName${i}`]);
+              }
             }
-            if (sourceData.mobile) {
-              mobile = sourceData.mobile;
-            }
-
-            const newFormData = {
-              ...initialFormData,
-              ...sourceData,
-              dob: sourceData.dob ? new Date(sourceData.dob).toISOString().split('T')[0] : '',
-              marriageDate: sourceData.marriageDate
-                ? new Date(sourceData.marriageDate).toISOString().split('T')[0]
-                : '',
-              childrenNames,
-              childrenCount: sourceData.childrenCount || childrenNames.length,
-              profileImageUrl: sourceData.profile || '',
-              profileImageFile: null,
-              familyCode: sourceData.familyCode || sourceData.familyMember?.familyCode || '',
-              countryCode,
-              mobile,
-              status: sourceData.status ? String(sourceData.status) : '1',
-              religionId: sourceData.religionId ? String(sourceData.religionId) : '',
-              languageId: sourceData.languageId
-                ? String(sourceData.languageId)
-                : sourceData.motherTongue
-                ? String(sourceData.motherTongue)
-                : '',
-              gothramId: sourceData.gothramId
-                ? String(sourceData.gothramId)
-                : sourceData.gothram
-                ? String(sourceData.gothram)
-                : '',
-            };
-
-            setFormData(newFormData);
-            lastMemberDataRef.current = { ...sourceData };
-            setErrors({});
-            setApiError('');
-            setShowPasswordField(false);
           }
+
+          // Parse contact number
+          let countryCode = '+91';
+          let mobile = '';
+
+          if (sourceDataRaw.countryCode) {
+            countryCode = sourceDataRaw.countryCode;
+          }
+          if (sourceDataRaw.mobile) {
+            mobile = sourceDataRaw.mobile;
+          } else if (sourceDataRaw.contactNumber) {
+            // Fallback to contactNumber if mobile not available
+            const contactNum = sourceDataRaw.contactNumber.replace(/\D/g, '');
+            if (contactNum.startsWith(countryCode.replace('+', ''))) {
+              mobile = contactNum.slice(countryCode.replace('+', '').length);
+            } else {
+              mobile = contactNum;
+            }
+          }
+
+          const newFormData = {
+            ...initialFormData,
+            ...sourceDataRaw,
+            // Handle raw nested data if it exists
+            ...(sourceDataRaw.raw || {}),
+            dob: sourceDataRaw.dob ? new Date(sourceDataRaw.dob).toISOString().split('T')[0] : '',
+            marriageDate: sourceDataRaw.marriageDate
+              ? new Date(sourceDataRaw.marriageDate).toISOString().split('T')[0]
+              : '',
+            childrenNames,
+            childrenCount: sourceDataRaw.childrenCount || childrenNames.length,
+            profileImageUrl: sourceDataRaw.profileUrl || sourceDataRaw.profile || '',
+            profileImageFile: null,
+            familyCode: sourceDataRaw.familyCode || (sourceDataRaw.raw?.familyMember?.familyCode || ''),
+            countryCode,
+            mobile,
+            status: sourceDataRaw.status ? String(sourceDataRaw.status) : '1',
+            role: sourceDataRaw.role ? String(sourceDataRaw.role) : '1',
+            religionId: sourceDataRaw.religionId ? String(sourceDataRaw.religionId) : '',
+            languageId: sourceDataRaw.languageId
+              ? String(sourceDataRaw.languageId)
+              : sourceDataRaw.motherTongue
+              ? String(sourceDataRaw.motherTongue)
+              : '',
+            gothramId: sourceDataRaw.gothramId
+              ? String(sourceDataRaw.gothramId)
+              : sourceDataRaw.gothram
+              ? String(sourceDataRaw.gothram)
+              : '',
+          };
+
+          setFormData(newFormData);
+          lastMemberDataRef.current = { ...sourceDataRaw };
+          setErrors({});
+          setApiError('');
+          setShowPasswordField(false);
         } else {
           setFormData(initialFormData);
           lastMemberDataRef.current = {};
@@ -178,6 +184,8 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       hasInitializedForm.current = false;
     }
   }, [isOpen, mode, memberData, userInfo]);
+
+  //console.log(formData);
 
   // Effect to calculate age based on DOB
   useEffect(() => {
@@ -392,20 +400,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
 
     const formDataToSend = new FormData();
 
-    // Prepare childrenNames if needed
-    if (formData.maritalStatus === 'Married' && formData.childrenCount > 0) {
-      const childrenNames = [];
-      for (let i = 0; i < formData.childrenCount; i++) {
-        const name = formData[`childName${i}`];
-        if (name) {
-          childrenNames.push(name);
-        }
-      }
-      if (childrenNames.length > 0) {
-        formData.childrenNames = childrenNames;
-      }
-    }
-
     // Append allowed fields
     allowedFields.forEach((field) => {
       const value = formData[field];
@@ -422,6 +416,18 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
         }
       }
     });
+
+    // if (formData.maritalStatus === 'Married' && formData.childrenCount > 0) {
+    //   const childrenNames = [];
+    //   for (let i = 0; i < formData.childrenCount; i++) {
+    //     if (formData[`childName${i}`]) {
+    //       childrenNames.push(formData[`childName${i}`]);
+    //     }
+    //   }
+    //   if (childrenNames.length > 0) {
+    //     formDataToSend.append('childrenNames', JSON.stringify(childrenNames));
+    //   }
+    // }
     
     if (!formDataToSend.has('familyCode') && userInfo?.familyCode) {
       formDataToSend.append('familyCode', userInfo.familyCode);
@@ -433,11 +439,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       formDataToSend.delete('profile');
     }
     
-    for (let [key, value] of formDataToSend.entries()) {
-      console.log(`${key}:`, value);
-    }
-
-
     let apiUrl = '';
     let httpMethod = '';
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNavBar from './BottomNavBar';
@@ -30,7 +30,9 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [notifications, setNotifications] = useState([]); // store list
+  const sidebarRef = useRef(null);
+  const searchRef = useRef(null);
+  const profileRef = useRef(null);
   
   const navigate = useNavigate();
 
@@ -60,30 +62,29 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Close all overlays when clicking outside
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (sidebarOpen || searchOpen || profileOpen || notificationOpen) {
-        const sidebar = document.querySelector('.sidebar-container');
-        const searchBar = document.querySelector('.search-container');
-        const profileMenu = document.querySelector('.profile-menu');
-        const notificationPanel = document.querySelector('.notification-panel');
+  const handleClickOutside = (e) => {
+    const clickedOutsideSidebar = sidebarRef.current && !sidebarRef.current.contains(e.target);
+    const clickedOutsideSearch = searchRef.current && !searchRef.current.contains(e.target);
+    const clickedOutsideProfile = profileRef.current && !profileRef.current.contains(e.target);
+    const clickedOutsideNotification = '';
 
-        if (!sidebar?.contains(e.target) &&
-            !searchBar?.contains(e.target) &&
-            !profileMenu?.contains(e.target) &&
-            !notificationPanel?.contains(e.target)) {
-          setSidebarOpen(false);
-          setSearchOpen(false);
-          setProfileOpen(false);
-          setNotificationOpen(false);
-        }
-      }
-    };
+    if (
+      sidebarOpen && clickedOutsideSidebar ||
+      searchOpen && clickedOutsideSearch ||
+      profileOpen && clickedOutsideProfile ||
+      notificationOpen && clickedOutsideNotification
+    ) {
+      setSidebarOpen(false);
+      setSearchOpen(false);
+      setProfileOpen(false);
+      setNotificationOpen(false);
+    }
+  };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [sidebarOpen, searchOpen, profileOpen, notificationOpen]);
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, [sidebarOpen, searchOpen, profileOpen, notificationOpen]);
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -99,79 +100,11 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
     setIsAddMemberModalOpen(false);
   };
 
-  const fetchNotifications = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      const formatted = data.map((n) => ({
-        id: n.id,
-        type: getNotificationType(n.type), // implement this function
-        title: n.title,
-        message: n.message,
-        time: new Date(n.createdAt).toLocaleString(),
-        read: n.isRead,
-        actions: getNotificationActions(n) // implement this function if needed
-      }));
-
-      setNotifications(formatted);
-    } catch (err) {
-      console.error('Error loading notifications:', err);
-    }
-  };
-
-  const markAsRead = async (id) => {
-    try {
-      await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/${id}/read`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-      );
-      fetchUnreadCount();
-    } catch (err) {
-      console.error('Failed to mark notification as read:', err);
-    }
-  };
-
-  const markAllAsRead = async () => {
-    try {
-      await Promise.all(
-        notifications
-          .filter((n) => !n.read)
-          .map((n) =>
-            fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/${n.id}/read`, {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-            })
-          )
-      );
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      fetchUnreadCount();
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
-    }
-  };
-
   const fetchUnreadCount = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/unread/count`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',
         },
       });
@@ -184,8 +117,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
   };
 
   useEffect(() => {
-    if (token) {
-      fetchNotifications();
+    if (localStorage.getItem('access_token')) {
       fetchUnreadCount();
     }
   }, [userInfo]);
@@ -194,7 +126,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
     <div className="flex h-screen bg-gray-50 text-gray-800">
       {/* Desktop Sidebar */}
       {!isMobile && (
-        <div className="w-74 flex-shrink-0 sidebar-container">
+        <div ref={sidebarRef} className="w-74 flex-shrink-0 sidebar-container">
           <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
       )}
@@ -207,6 +139,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
       {/* Mobile Sidebar */}
       {isMobile && (
         <div
+          ref={sidebarRef}
           className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl rounded-r-2xl transform transition-transform duration-200 sidebar-container ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
@@ -259,7 +192,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
 
               {/* Search Bar (Desktop) */}
               {!isMobile && (
-                <div className="relative search-container">
+                <div ref={searchRef} className="relative search-container">
                   <input
                     type="text"
                     placeholder="Search..."
@@ -288,7 +221,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
               </div>
 
               {/* Profile Dropdown */}
-              <div className="relative profile-menu">
+              <div ref={profileRef} className="relative profile-menu">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -358,7 +291,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
 
           {/* Mobile Search Bar */}
           {isMobile && searchOpen && (
-            <div className="mt-3 search-container">
+            <div ref={searchRef} className="mt-3 search-container">
               <div className="relative">
                 <input
                   type="text"
@@ -390,11 +323,10 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
       </main>
 
       {/* Notification Panel */}
-      <NotificationPanel
-        open={notificationOpen}
-        onClose={() => setNotificationOpen(false)}
-        notifications={notifications}
-        markAsRead={markAsRead}
+      <NotificationPanel 
+        open={notificationOpen} 
+        onClose={() => setNotificationOpen(false)} 
+        onNotificationCountUpdate={fetchUnreadCount}
       />
 
       {/* Add Member Form Modal */}

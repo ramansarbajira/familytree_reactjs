@@ -1,104 +1,99 @@
-// src/Components/FamilyMemberModal.jsx
+// src/components/FamilyMemberModal.jsx
 import React, { useState, useEffect } from 'react';
 
 const FamilyMemberModal = ({ isOpen, onClose, onSave, mode, initialNodeData, selfNode }) => {
     if (!isOpen) return null;
 
     // State for form fields
+    const [name, setName] = useState('');
+    const [photo, setPhoto] = useState('');
+    const [gender, setGender] = useState('Unknown');
+
     const [fatherName, setFatherName] = useState('');
     const [fatherPhoto, setFatherPhoto] = useState('');
     const [motherName, setMotherName] = useState('');
     const [motherPhoto, setMotherPhoto] = useState('');
     const [siblings, setSiblings] = useState([]); // Array of {name, photo, gender}
+
     const [spouseName, setSpouseName] = useState('');
     const [spousePhoto, setSpousePhoto] = useState('');
     const [spouseGender, setSpouseGender] = useState('Female'); // Default for spouse
+
     const [children, setChildren] = useState([]); // Array of {name, photo, gender}
 
-    // For 'edit' mode or 'add-child-or-partner' for existing nodes
-    const [currentName, setCurrentName] = useState('');
-    const [currentPhoto, setCurrentPhoto] = useState('');
-    const [currentGender, setCurrentGender] = useState('Unknown');
-
     useEffect(() => {
-        // Pre-fill fields if editing or adding to an existing node
+        // Reset all fields when modal opens/changes mode
+        setName('');
+        setPhoto('');
+        setGender('Unknown');
+        setFatherName('');
+        setFatherPhoto('');
+        setMotherName('');
+        setMotherPhoto('');
+        setSiblings([]);
+        setSpouseName('');
+        setSpousePhoto('');
+        setSpouseGender('Female');
+        setChildren([]);
+
+        // Pre-fill fields based on mode and initialNodeData
         if (initialNodeData) {
-            setCurrentName(initialNodeData.name || '');
-            setCurrentPhoto(initialNodeData.photo || '');
-            setCurrentGender(initialNodeData.gender || 'Unknown');
+            // For 'edit' mode, pre-fill current node's details
+            if (mode === 'edit') {
+                setName(initialNodeData.name || '');
+                setPhoto(initialNodeData.photo || '');
+                setGender(initialNodeData.gender || 'Unknown');
+            }
 
-            if (initialNodeData.attributes?.partner) {
-                setSpouseName(initialNodeData.attributes.partner.name || '');
-                setSpousePhoto(initialNodeData.attributes.partner.photo || '');
-                setSpouseGender(initialNodeData.attributes.partner.gender || 'Female');
+            // Pre-fill spouse if exists for 'edit' or 'add-child-or-partner'
+            // NOTE: selfNode is the entire treeData array passed from FamilyTreePage
+            const spouse = initialNodeData.spouseId ? selfNode?.find(n => n.id === initialNodeData.spouseId) : null;
+            if (spouse) {
+                setSpouseName(spouse.name || '');
+                setSpousePhoto(spouse.photo || '');
+                setSpouseGender(spouse.gender || 'Female');
             }
-            if (initialNodeData.children) {
-                setChildren(initialNodeData.children.map(child => ({
-                    name: child.name,
-                    photo: child.photo,
-                    gender: child.gender
-                })));
-            }
+
+            // Pre-fill children if exists for 'edit' or 'add-child-or-partner'
+            // This logic assumes children are directly linked via childrenIds in initialNodeData
+            // For this flat structure, you'd need to pass actual child objects or their IDs
+            // For simplicity, we won't pre-fill children for now, only allow adding new ones.
         }
 
-        // If adding parents to 'Self', pre-fill 'Self's' info if needed
-        if (mode === 'add-parents' && selfNode) {
-            // This modal is for adding parents *to* the selfNode, so selfNode is the context
-            // No need to prefill selfNode's parents, but ensure its children/spouse fields are empty
-            setSpouseName('');
-            setSpousePhoto('');
-            setSpouseGender('Female');
-            setChildren([]);
+        // If adding parents to 'Self' or another node, pre-fill 'Self's' info if needed
+        if (mode === 'add-parents' && initialNodeData) {
+            // This modal is for adding parents *to* the initialNodeData (e.g., Father, Mother)
+            // So, we'd show fields for their parents (grandparents)
+            // No need to prefill spouse/children fields here
         }
-    }, [initialNodeData, mode, selfNode]);
 
-    const handleAddSibling = () => {
-        setSiblings([...siblings, { name: '', photo: '', gender: 'Unknown' }]);
-    };
+    }, [isOpen, mode, initialNodeData, selfNode]); // Depend on isOpen and mode to reset/prefill
 
+    const handleAddSibling = () => setSiblings([...siblings, { name: '', photo: '', gender: 'Unknown' }]);
     const handleSiblingChange = (index, field, value) => {
-        const newSiblings = [...siblings];
-        newSiblings[index][field] = value;
-        setSiblings(newSiblings);
+        const newSiblings = [...siblings]; newSiblings[index][field] = value; setSiblings(newSiblings);
     };
-
     const handleRemoveSibling = (index) => {
-        const newSiblings = [...siblings];
-        newSiblings.splice(index, 1);
-        setSiblings(newSiblings);
+        const newSiblings = [...siblings]; newSiblings.splice(index, 1); setSiblings(newSiblings);
     };
 
-    const handleAddChild = () => {
-        setChildren([...children, { name: '', photo: '', gender: 'Unknown' }]);
-    };
-
+    const handleAddChild = () => setChildren([...children, { name: '', photo: '', gender: 'Unknown' }]);
     const handleChildChange = (index, field, value) => {
-        const newChildren = [...children];
-        newChildren[index][field] = value;
-        setChildren(newChildren);
+        const newChildren = [...children]; newChildren[index][field] = value; setChildren(newChildren);
     };
-
     const handleRemoveChild = (index) => {
-        const newChildren = [...children];
-        newChildren.splice(index, 1);
-        setChildren(newChildren);
+        const newChildren = [...children]; newChildren.splice(index, 1); setChildren(newChildren);
     };
-
 
     const handleSubmit = (e) => {
         e.preventDefault();
         const formData = {
-            name: currentName,
-            photo: currentPhoto,
-            gender: currentGender,
-            fatherName,
-            fatherPhoto,
-            motherName,
-            motherPhoto,
+            name: name, // Only used in 'edit' mode
+            photo: photo, // Only used in 'edit' mode
+            gender: gender, // Only used in 'edit' mode
+            fatherName, fatherPhoto, motherName, motherPhoto,
             siblings,
-            spouseName,
-            spousePhoto,
-            spouseGender,
+            spouseName, spousePhoto, spouseGender,
             children,
         };
         onSave(formData);
@@ -113,13 +108,46 @@ const FamilyMemberModal = ({ isOpen, onClose, onSave, mode, initialNodeData, sel
         return 'Family Member Details';
     };
 
-
     return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-hidden">
-            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative animate-fade-in-up overflow-hidden custom-scrollbar">
-                <div className="max-h-[90vh] overflow-y-auto p-6 custom-scrollbar animate-fade-in-up">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative animate-fade-in-up overflow-hidden">
+                 <div className="max-h-[90vh] overflow-y-auto p-6 custom-scrollbar animate-fade-in-up">
                     <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">{getModalTitle()}</h2>
                     <form onSubmit={handleSubmit} className="space-y-4">
+
+                        {/* Section for editing current node's details */}
+                        {mode === 'edit' && (
+                            <div className="border p-4 rounded-md bg-purple-50">
+                                <h3 className="text-lg font-semibold text-gray-700 mb-2">Edit Member Details</h3>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Name</label>
+                                    <input
+                                        type="text"
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        required
+                                    />
+                                    <label className="block text-sm font-medium text-gray-700 mt-2">Photo URL</label>
+                                    <input
+                                        type="text"
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                                        value={photo}
+                                        onChange={(e) => setPhoto(e.target.value)}
+                                    />
+                                    <label className="block text-sm font-medium text-gray-700 mt-2">Gender</label>
+                                    <select
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                                        value={gender}
+                                        onChange={(e) => setGender(e.target.value)}
+                                    >
+                                        <option value="Unknown">Unknown</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Section for adding Parents (Grandparents if clicked on a parent) */}
                         {(mode === 'add-family' && initialNodeData?.attributes?.isSelf) || mode === 'add-parents' ? (
@@ -204,41 +232,6 @@ const FamilyMemberModal = ({ isOpen, onClose, onSave, mode, initialNodeData, sel
                                 )}
                             </div>
                         ) : null}
-
-
-                        {/* Section for editing current node's details (if not adding parents) */}
-                        {mode === 'edit' && (
-                            <div className="border p-4 rounded-md bg-purple-50">
-                                <h3 className="text-lg font-semibold text-gray-700 mb-2">Edit Member Details</h3>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Name</label>
-                                    <input
-                                        type="text"
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                                        value={currentName}
-                                        onChange={(e) => setCurrentName(e.target.value)}
-                                        required
-                                    />
-                                    <label className="block text-sm font-medium text-gray-700 mt-2">Photo URL</label>
-                                    <input
-                                        type="text"
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                                        value={currentPhoto}
-                                        onChange={(e) => setCurrentPhoto(e.target.value)}
-                                    />
-                                    <label className="block text-sm font-medium text-gray-700 mt-2">Gender</label>
-                                    <select
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                                        value={currentGender}
-                                        onChange={(e) => setCurrentGender(e.target.value)}
-                                    >
-                                        <option value="Unknown">Unknown</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                    </select>
-                                </div>
-                            </div>
-                        )}
 
 
                         {/* Section for Spouse (if applicable) */}
@@ -336,6 +329,7 @@ const FamilyMemberModal = ({ isOpen, onClose, onSave, mode, initialNodeData, sel
                         </div>
                     </form>
                 </div>
+
             </div>
         </div>
     );

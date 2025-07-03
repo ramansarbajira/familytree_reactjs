@@ -87,8 +87,6 @@ export const UserProvider = ({ children }) => {
         childrenCount: childrenArray.length || 0,
         ...childFields, // Safe generated fields like childName0, childName1, etc.
 
-        // Explicitly DO NOT add userProfile.childrenNames here to avoid duplication
-
         fatherName: userProfile.fatherName || '',
         motherName: userProfile.motherName || '',
         motherTongue: parseInt(userProfile.languageId) || 0,
@@ -112,7 +110,7 @@ export const UserProvider = ({ children }) => {
         status: status || 0,
         role: role || 0,
 
-        raw: userProfile, // <--- This may contain childrenNames already
+        raw: userProfile,
       });
       
     } catch (err) {

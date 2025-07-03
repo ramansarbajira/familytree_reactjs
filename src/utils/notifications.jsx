@@ -1,5 +1,3 @@
-// src/utils/notifications.jsx
-
 export const getNotificationType = (type) => {
   switch (type) {
     case 'FAMILY_POST_CREATED':

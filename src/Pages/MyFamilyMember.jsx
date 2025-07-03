@@ -59,17 +59,94 @@ const FamilyMemberListing = () => {
           Authorization: `Bearer ${token}`,
         },
       });
+
       if (!response.ok) throw new Error('Failed to fetch member details');
-       const resJson = await response.json();
-       //console.log(resJson.data);
-       
-      return resJson.data; 
+
+      const resJson = await response.json();
+      const user = resJson.data;
+      const profile = user.userProfile;
+
+      if (!profile) throw new Error('No user profile returned');
+
+      // Parse children names
+      let childrenArray = [];
+      if (profile.childrenNames) {
+        try {
+          childrenArray = JSON.parse(profile.childrenNames);
+          if (!Array.isArray(childrenArray)) {
+            childrenArray = profile.childrenNames.split(',').map(c => c.trim());
+          }
+        } catch (err) {
+          childrenArray = profile.childrenNames.split(',').map(c => c.trim());
+        }
+      }
+
+      const childFields = {};
+      childrenArray.forEach((name, index) => {
+        childFields[`childName${index}`] = name;
+      });
+
+      const userInfo = {
+        userId: profile.userId || user.id,
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        dob: profile.dob?.split('T')[0] || '',
+        age: calculateAge(profile.dob),
+        gender: profile.gender || '',
+        email: user.email || '',
+        maritalStatus: profile.maritalStatus || '',
+        marriageDate: profile.marriageDate?.split('T')[0] || '',
+        spouseName: profile.spouseName || '',
+        region: profile.region || '',
+        childrenCount: childrenArray.length || 0,
+        ...childFields,
+
+        fatherName: profile.fatherName || '',
+        motherName: profile.motherName || '',
+        motherTongue: parseInt(profile.languageId) || 0,
+        religionId: parseInt(profile.religionId) || 0,
+        caste: profile.caste || '',
+        gothram: parseInt(profile.gothramId) || 0,
+        kuladevata: profile.kuladevata || '',
+        hobbies: profile.hobbies || '',
+        likes: profile.likes || '',
+        dislikes: profile.dislikes || '',
+        favoriteFoods: profile.favoriteFoods || '',
+        address: profile.address || '',
+        contactNumber: profile.contactNumber || '',
+        bio: profile.bio || '',
+        profileUrl: profile.profile || '',
+        familyCode: profile.familyMember?.familyCode || '',
+        name: `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
+
+        // From main user
+        countryCode: user.countryCode || '',
+        mobile: user.mobile || '',
+        status: user.status || 0,
+        role: user.role || 0,
+
+        raw: user, // full object including both user + userProfile
+      };
+
+      return userInfo;
+
     } catch (error) {
       console.error('Error fetching member details:', error);
       return null;
     }
   };
 
+  const calculateAge = (dob) => {
+    if (!dob) return 0;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   return (
     <Layout>
