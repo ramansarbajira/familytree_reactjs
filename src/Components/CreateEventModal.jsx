@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiCalendar } from 'react-icons/fi';
 import { jwtDecode } from 'jwt-decode';
 
-const CreateEventModal = ({
+export const CreateEventModal = ({
   isOpen,
   onClose,
-  apiBaseUrl = 'https://familytree-backend-trs6.onrender.com',
+  apiBaseUrl = import.meta.env.VITE_API_BASE_URL,
 }) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
@@ -18,12 +18,17 @@ const CreateEventModal = ({
   const [userId, setUserId] = useState(null);
   const [familyCode, setFamilyCode] = useState(null);
 
+  // Add debug logging for API base URL
+  useEffect(() => {
+    // console.log('🔗 API Base URL:', apiBaseUrl);
+    // console.log('🌍 Environment VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+  }, [apiBaseUrl]);
+
   // Fetch userId and familyCode when modal opens
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        // console.log('🔑 Token:', token);
 
         if (!token) {
           alert('No access token found.');
@@ -31,7 +36,6 @@ const CreateEventModal = ({
         }
 
         const decoded = jwtDecode(token);
-        // console.log('🧩 Decoded Token:', decoded);
 
         const uid = decoded.id || decoded.userId;
         if (!uid) {
@@ -40,17 +44,20 @@ const CreateEventModal = ({
         }
         setUserId(uid);
 
-        const res = await fetch(`${apiBaseUrl}/user/${uid}`, {
+        const userEndpoint = `${apiBaseUrl}/user/${uid}`;
+
+        const res = await fetch(userEndpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) {
-          console.error('❌ User API failed:', await res.text());
+          const errorText = await res.text();
+          console.error('❌ User API failed:', errorText);
+          alert(`API Error: ${res.status} - ${errorText}`);
           return;
         }
 
         const userData = await res.json();
-        // console.log('📦 User API data:', userData);
 
         const fc =
           userData?.data?.userProfile?.familyMember?.familyCode ||
@@ -64,6 +71,7 @@ const CreateEventModal = ({
         }
       } catch (err) {
         console.error('💥 Fetch user error:', err);
+        alert(`Error fetching user data: ${err.message}`);
       }
     };
 
@@ -101,10 +109,12 @@ const CreateEventModal = ({
       formData.append('familyCode', familyCode);
 
       images.forEach((img) => {
-        formData.append('eventImages', img);
+        formData.append('eventImages', img);  
       });
 
-      const response = await fetch(`${apiBaseUrl}/event/create`, {
+      const createEndpoint = `${apiBaseUrl}/event/create`;
+
+      const response = await fetch(createEndpoint, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -114,12 +124,12 @@ const CreateEventModal = ({
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error('API error:', errText);
+        console.error('❌ Create event API error:', errText);
+        alert(`Create Event Error: ${response.status} - ${errText}`);
         return;
       }
 
       const resData = await response.json();
-    //   console.log('Event Created:', resData);
 
       // Reset form
       setTitle('');
@@ -131,8 +141,8 @@ const CreateEventModal = ({
       setImagePreviews([]);
       onClose();
     } catch (err) {
-      console.error('Error creating event:', err);
-      alert('Something went wrong.');
+      console.error('💥 Error creating event:', err);
+      alert(`Something went wrong: ${err.message}`);
     }
   };
 
@@ -147,6 +157,13 @@ const CreateEventModal = ({
         </button>
 
         <h2 className="text-2xl font-bold mb-6 text-center">Create New Event</h2>
+
+        {/* Debug info - remove in production */}
+        {/* <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
+          <div>API URL: {apiBaseUrl}</div>
+          <div>User ID: {userId || 'Not set'}</div>
+          <div>Family Code: {familyCode || 'Not set'}</div>
+        </div> */}
 
         <form
           onSubmit={handleSubmit}
@@ -246,7 +263,7 @@ const CreateEventModal = ({
           <div className="pt-4">
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+              className="w-full bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 transition-colors"
             >
               Create Event
             </button>

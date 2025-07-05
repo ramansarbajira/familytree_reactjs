@@ -23,9 +23,8 @@ const EventsPage = () => {
   // ✅ Fetch events whenever the toggle changes
   useEffect(() => {
     const fetchEvents = async () => {
-      const endpoint = showUpcomingEvents
-        ? 'https://familytree-backend-trs6.onrender.com/event/upcoming'
-        : 'https://familytree-backend-trs6.onrender.com/event/all';
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+    const endpoint = `${apiBaseUrl}/event/${showUpcomingEvents ? 'upcoming' : 'all'}`;
 
       try {
         const response = await fetch(endpoint);
@@ -34,16 +33,23 @@ const EventsPage = () => {
         }
         const data = await response.json();
 
-        const formattedEvents = data.map(item => ({
-          id: item.id,
-          title: item.eventTitle,
-          description: item.eventDescription,
-          date: item.eventDate,
-          time: item.eventTime,
-          location: item.location,
-          eventImages: item.eventImages || [], // ✅ KEEP ALL IMAGES!
-          attendeesCount: null, // If you have attendees, map it here
-        }));
+        // Replace this part in your useEffect:
+const formattedEvents = data.map(item => ({
+  id: item.id,
+  title: item.eventTitle,
+  description: item.eventDescription,
+  date: item.eventDate,
+  time: item.eventTime,
+  location: item.location,
+  // ✅ Fixed: Proper image handling with fallback
+  eventImages: 
+    item.eventImages && item.eventImages.length > 0
+      ? item.eventImages  // Already full URLs
+      : item.images && item.images.length > 0
+        ? item.images.map(img => `${apiBaseUrl}/uploads/event/${img.imageUrl}`)
+        : [],
+  attendeesCount: null,
+}));
 
         setAllEvents(formattedEvents);
       } catch (error) {
