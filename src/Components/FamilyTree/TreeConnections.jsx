@@ -1,0 +1,131 @@
+import React, { useEffect, useRef } from 'react';
+
+const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY }) => {
+    const svgRef = useRef(null);
+
+    useEffect(() => {
+        if (!dagreGraph || !svgRef.current) return;
+
+        const svg = svgRef.current;
+        svg.innerHTML = '';
+
+        // Add arrow marker definition
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        marker.setAttribute('id', 'arrowhead');
+        marker.setAttribute('markerWidth', '10');
+        marker.setAttribute('markerHeight', '7');
+        marker.setAttribute('refX', '10');
+        marker.setAttribute('refY', '3.5');
+        marker.setAttribute('orient', 'auto');
+        marker.setAttribute('markerUnits', 'strokeWidth');
+        const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        arrowPath.setAttribute('d', 'M0,0 L10,3.5 L0,7 Z');
+        arrowPath.setAttribute('fill', '#6c757d');
+        marker.appendChild(arrowPath);
+        defs.appendChild(marker);
+        svg.appendChild(defs);
+
+        // Draw family connectors (parent-child)
+        dagreGraph.nodes().forEach(v => {
+            if (v.startsWith('family-')) {
+                const familyNode = dagreGraph.node(v);
+                const parents = dagreGraph.predecessors(v) || [];
+                const children = dagreGraph.successors(v) || [];
+                if (parents.length > 0 && children.length > 0) {
+                    // Get parent and child node positions
+                    const parentPoints = parents.map(pid => dagreGraph.node(pid));
+                    const childPoints = children.map(cid => dagreGraph.node(cid));
+                    // Draw vertical line from each parent to y of family node
+                    parentPoints.forEach(parent => {
+                        if (parent) {
+                            const x = parent.x + dagreLayoutOffsetX;
+                            const y1 = parent.y + dagreLayoutOffsetY + 50;
+                            const y2 = familyNode.y + dagreLayoutOffsetY;
+                            svg.appendChild(svgPath(`M ${x} ${y1} L ${x} ${y2}`, '#6c757d', 2, false));
+                        }
+                    });
+                    // Draw horizontal connector line at y of family node
+                    if (parentPoints.length > 1) {
+                        const minX = Math.min(...parentPoints.map(p => p.x)) + dagreLayoutOffsetX;
+                        const maxX = Math.max(...parentPoints.map(p => p.x)) + dagreLayoutOffsetX;
+                        const y = familyNode.y + dagreLayoutOffsetY;
+                        svg.appendChild(svgPath(`M ${minX} ${y} H ${maxX}`, '#6c757d', 2, false));
+                    }
+                    // --- Children connector logic ---
+                    const connectorX = familyNode.x + dagreLayoutOffsetX;
+                    const connectorY = familyNode.y + dagreLayoutOffsetY;
+                    if (childPoints.length === 1) {
+                        // Single child: straight vertical line
+                        const child = childPoints[0];
+                        if (child) {
+                            const childX = child.x + dagreLayoutOffsetX;
+                            const childY = child.y + dagreLayoutOffsetY - 50;
+                            svg.appendChild(svgPath(`M ${connectorX} ${connectorY} L ${childX} ${childY}`, '#6c757d', 2, false));
+                        }
+                    } else if (childPoints.length > 1) {
+                        // Multiple children: vertical line down to just above children, then horizontal, then short vertical to each child
+                        const childY = Math.min(...childPoints.map(c => c.y)) + dagreLayoutOffsetY - 70; // 70px above children
+                        // Vertical line from connector to horizontal connector
+                        svg.appendChild(svgPath(`M ${connectorX} ${connectorY} L ${connectorX} ${childY}`, '#6c757d', 2, false));
+                        // Horizontal line connecting all children
+                        const minX = Math.min(...childPoints.map(c => c.x)) + dagreLayoutOffsetX;
+                        const maxX = Math.max(...childPoints.map(c => c.x)) + dagreLayoutOffsetX;
+                        svg.appendChild(svgPath(`M ${minX} ${childY} H ${maxX}`, '#6c757d', 2, false));
+                        // Short vertical line from horizontal to each child (no arrow)
+                        childPoints.forEach(child => {
+                            const childX = child.x + dagreLayoutOffsetX;
+                            const childY2 = child.y + dagreLayoutOffsetY - 50;
+                            svg.appendChild(svgPath(`M ${childX} ${childY} L ${childX} ${childY2}`, '#6c757d', 2, false));
+                        });
+                    }
+                }
+            }
+        });
+
+        // Draw spouse lines (horizontal, no arrow)
+        dagreGraph.children().forEach(clusterId => {
+            if (clusterId.startsWith('cluster-')) {
+                const members = dagreGraph.children(clusterId);
+                if (members.length === 2) {
+                    const p1 = dagreGraph.node(members[0]);
+                    const p2 = dagreGraph.node(members[1]);
+                    if (p1 && p2) {
+                        const d = `M ${p1.x + dagreLayoutOffsetX},${p1.y + dagreLayoutOffsetY} H ${p2.x + dagreLayoutOffsetX}`;
+                        svg.appendChild(svgPath(d, '#e83e8c', 3, false));
+                    }
+                }
+            }
+        });
+    }, [dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY]);
+
+    const svgPath = (d, color, width, arrow) => {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('stroke', color);
+        path.setAttribute('stroke-width', width);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        if (arrow) {
+            path.setAttribute('marker-end', 'url(#arrowhead)');
+        }
+        return path;
+    };
+
+    return (
+        <svg
+            ref={svgRef}
+            className="connections"
+            width="15000"
+            height="10000"
+            style={{
+                position: 'absolute',
+                top: '0',
+                left: '0',
+                zIndex: '1'
+            }}
+        />
+    );
+};
+
+export default TreeConnections; 
