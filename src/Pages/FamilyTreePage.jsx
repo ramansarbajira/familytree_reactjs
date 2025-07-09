@@ -11,11 +11,11 @@ import html2canvas from 'html2canvas';
 
 const sampleFamilyData = {
     people: [
-        { id: 1, name: 'John', gender: 'male', age: 60, generation: 1, parents: [], children: [3,4], spouses: [2], siblings: [] },
-        { id: 2, name: 'Mary', gender: 'female', age: 58, generation: 1, parents: [], children: [3,4], spouses: [1], siblings: [] },
-        { id: 3, name: 'Alice', gender: 'female', age: 35, generation: 2, parents: [1,2], children: [5], spouses: [4], siblings: [4] },
-        { id: 4, name: 'Bob', gender: 'male', age: 37, generation: 2, parents: [1,2], children: [5], spouses: [3], siblings: [3] },
-        { id: 5, name: 'Charlie', gender: 'male', age: 10, generation: 3, parents: [3,4], children: [], spouses: [], siblings: [] },
+        { id: 1, name: 'Raman', gender: 'male', age: 60, generation: 1, parents: [], children: [3,4], spouses: [2], siblings: [] },
+        { id: 2, name: 'Divya', gender: 'female', age: 58, generation: 1, parents: [], children: [3,4], spouses: [1], siblings: [] },
+        { id: 3, name: 'Shiro', gender: 'female', age: 35, generation: 2, parents: [1,2], children: [5], spouses: [4], siblings: [4] },
+        { id: 4, name: 'Laksh', gender: 'male', age: 37, generation: 2, parents: [1,2], children: [5], spouses: [3], siblings: [3] },
+        { id: 5, name: 'Dhayan', gender: 'male', age: 10, generation: 3, parents: [3,4], children: [], spouses: [], siblings: [] },
     ]
 };
 
