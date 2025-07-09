@@ -20,6 +20,7 @@ import EventsPage from './Pages/EventsPage';
 
 
 import { UserProvider } from './Contexts/UserContext';
+import { LanguageProvider } from './Contexts/LanguageContext';
 import PrivateRoute from './Routes/PrivateRoute';
 import GuestRoute from './Routes/GuestRoute';
 
@@ -38,17 +39,17 @@ function App() {
 
         {/* Authenticated-only route */}
         <Route path="/on-boarding" element={<PrivateRoute> <OnBoarding /> </PrivateRoute>  } />
-        <Route path="/dashboard" element={<PrivateRoute><UserProvider><Dashboard /></UserProvider></PrivateRoute>} />
-        <Route path="/myprofile" element={<PrivateRoute><UserProvider><MyProfile /></UserProvider></PrivateRoute>} />
-        <Route path="/my-family-member" element={<PrivateRoute><UserProvider><MyFamilyMember /></UserProvider></PrivateRoute>  } />
-        <Route path="/my-family" element={<PrivateRoute><UserProvider><MyFamily /></UserProvider></PrivateRoute>  } />
-        <Route path="/family-tree" element={<PrivateRoute><UserProvider><FamilyTreePage /></UserProvider></PrivateRoute>  } />
+        <Route path="/dashboard" element={<PrivateRoute><UserProvider><LanguageProvider><Dashboard /></LanguageProvider></UserProvider></PrivateRoute>} />
+        <Route path="/myprofile" element={<PrivateRoute><UserProvider><LanguageProvider><MyProfile /></LanguageProvider></UserProvider></PrivateRoute>} />
+        <Route path="/my-family-member" element={<PrivateRoute><UserProvider><LanguageProvider><MyFamilyMember /></LanguageProvider></UserProvider></PrivateRoute>  } />
+        <Route path="/my-family" element={<PrivateRoute><UserProvider><LanguageProvider><MyFamily /></LanguageProvider></UserProvider></PrivateRoute>  } />
+        <Route path="/family-tree" element={<PrivateRoute><UserProvider><LanguageProvider><FamilyTreePage /></LanguageProvider></UserProvider></PrivateRoute>  } />
 
-        <Route path ="/pending-request" element={<PrivateRoute><UserProvider><PendingFamilyRequests /> </UserProvider> </PrivateRoute>} />
-        <Route path="/posts-and-feeds" element={<PrivateRoute><UserProvider><PostsAndFeedsPage /></UserProvider></PrivateRoute>} />
-        <Route path="/family-gallery" element={<PrivateRoute><UserProvider><FamilyGalleryPage /></UserProvider></PrivateRoute>} />
-        <Route path="/gifts-memories" element={<PrivateRoute><UserProvider><GiftListingPage /></UserProvider></PrivateRoute>} />
-         <Route path="/events" element={<PrivateRoute><UserProvider><EventsPage /></UserProvider></PrivateRoute>} />
+        <Route path ="/pending-request" element={<PrivateRoute><UserProvider><LanguageProvider><PendingFamilyRequests /> </LanguageProvider></UserProvider> </PrivateRoute>} />
+        <Route path="/posts-and-feeds" element={<PrivateRoute><UserProvider><LanguageProvider><PostsAndFeedsPage /></LanguageProvider></UserProvider></PrivateRoute>} />
+        <Route path="/family-gallery" element={<PrivateRoute><UserProvider><LanguageProvider><FamilyGalleryPage /></LanguageProvider></UserProvider></PrivateRoute>} />
+        <Route path="/gifts-memories" element={<PrivateRoute><UserProvider><LanguageProvider><GiftListingPage /></LanguageProvider></UserProvider></PrivateRoute>} />
+         <Route path="/events" element={<PrivateRoute><UserProvider><LanguageProvider><EventsPage /></LanguageProvider></UserProvider></PrivateRoute>} />
 
       </Routes>
     </Router>

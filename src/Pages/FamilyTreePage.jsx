@@ -7,6 +7,9 @@ import Person from '../Components/FamilyTree/Person';
 import TreeConnections from '../Components/FamilyTree/TreeConnections';
 import RadialMenu from '../Components/FamilyTree/RadialMenu';
 import AddPersonModal from '../Components/FamilyTree/AddPersonModal';
+import { getTranslation } from '../utils/languageTranslations';
+import { useLanguage } from '../Contexts/LanguageContext';
+import { RelationshipCalculator } from '../utils/relationshipCalculator';
 import html2canvas from 'html2canvas';
 
 const sampleFamilyData = {
@@ -62,6 +65,8 @@ const [tree, setTree] = useState(null);
     const containerRef = useRef(null);
     const [saveStatus, setSaveStatus] = useState('idle'); // idle | loading | success | error
     const [saveMessage, setSaveMessage] = useState('');
+    const [selectedPersonId, setSelectedPersonId] = useState(null);
+    const { language } = useLanguage();
     const { userInfo } = useUser();
 
     // Initialize tree (now with API/sample data support)
@@ -133,50 +138,53 @@ const [tree, setTree] = useState(null);
         const person = tree.people.get(personId);
         if (!person) return;
 
+        // Set selected person for relationship display
+        setSelectedPersonId(personId);
+
         const icons = {
-            'Add Parents': `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zM20 10h-2V8h-2v2h-2v2h2v2h2v-2h2v-2z"/></svg>`,
-            'Add Spouse': `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`,
-            'Add Child': `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`,
-            'Add Sibling': `<svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM12 10h-2v2H8v-2H6V8h2V6h2v2h2v2z"/></svg>`,
-            'Edit': `<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`,
-            'Delete': `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`
+            [getTranslation('addParents', language)]: `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zM20 10h-2V8h-2v2h-2v2h2v2h2v-2h2v-2z"/></svg>`,
+            [getTranslation('addSpouse', language)]: `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`,
+            [getTranslation('addChild', language)]: `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`,
+            [getTranslation('addSibling', language)]: `<svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM12 10h-2v2H8v-2H6V8h2V6h2v2h2v2z"/></svg>`,
+            [getTranslation('edit', language)]: `<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`,
+            [getTranslation('delete', language)]: `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`
         };
 
         const items = [];
         if (person.parents.size === 0) {
             items.push({ 
-                label: 'Add Parents', 
+                label: getTranslation('addParents', language), 
                 action: () => setModal({ isOpen: true, action: { type: 'parents', person } }),
-                icon: icons['Add Parents'] 
+                icon: icons[getTranslation('addParents', language)] 
             });
         }
         items.push({ 
-            label: 'Add Spouse', 
+            label: getTranslation('addSpouse', language), 
             action: () => setModal({ isOpen: true, action: { type: 'spouse', person } }),
-            icon: icons['Add Spouse'] 
+            icon: icons[getTranslation('addSpouse', language)] 
         });
         items.push({ 
-            label: 'Add Child', 
+            label: getTranslation('addChild', language), 
             action: () => setModal({ isOpen: true, action: { type: 'children', person } }),
-            icon: icons['Add Child'] 
+            icon: icons[getTranslation('addChild', language)] 
         });
         if (person.parents.size > 0) {
             items.push({ 
-                label: 'Add Sibling', 
+                label: getTranslation('addSibling', language), 
                 action: () => setModal({ isOpen: true, action: { type: 'siblings', person } }),
-                icon: icons['Add Sibling'] 
+                icon: icons[getTranslation('addSibling', language)] 
             });
         }
         items.push({ 
-            label: 'Edit', 
+            label: getTranslation('edit', language), 
             action: () => setModal({ isOpen: true, action: { type: 'edit', person } }),
-            icon: icons['Edit'] 
+            icon: icons[getTranslation('edit', language)] 
         });
         if (person.id !== tree?.rootId) {
             items.push({ 
-                label: 'Delete', 
+                label: getTranslation('delete', language), 
                 action: () => deletePerson(personId),
-                icon: icons['Delete'] 
+                icon: icons[getTranslation('delete', language)] 
             });
         }
 
@@ -263,11 +271,11 @@ const [tree, setTree] = useState(null);
     const deletePerson = (personId) => {
         if (!tree) return;
         if (personId === tree.rootId) {
-            alert("Cannot delete the root person.");
+            alert(getTranslation('cannotDeleteRoot', language));
             return;
         }
 
-        if (window.confirm("Are you sure you want to delete this person and all their connections? This cannot be undone.")) {
+        if (window.confirm(getTranslation('confirmDelete', language))) {
             const newTree = new FamilyTree();
             newTree.people = new Map(tree.people);
             newTree.nextId = tree.nextId;
@@ -293,11 +301,14 @@ const [tree, setTree] = useState(null);
             setTree(newTree);
             updateStats(newTree);
             arrangeTree(newTree);
+            if (selectedPersonId === personId) {
+                setSelectedPersonId(null);
+            }
         }
     };
 
     const resetTree = () => {
-        if (window.confirm('Are you sure you want to start a new tree? All current data will be lost.')) {
+        if (window.confirm(getTranslation('confirmNewTree', language))) {
             const newTree = new FamilyTree();
             newTree.addPerson({
                 name: userInfo.name,
@@ -310,6 +321,7 @@ const [tree, setTree] = useState(null);
             setTree(newTree);
             updateStats(newTree);
             arrangeTree(newTree);
+            setSelectedPersonId(null);
         }
     };
 
@@ -406,10 +418,10 @@ const [tree, setTree] = useState(null);
             if (!response) return; // Already logged out if 401 or error
             if (!response.ok) throw new Error('Failed to save');
             setSaveStatus('success');
-            setSaveMessage('Family tree saved successfully!');
+            setSaveMessage(getTranslation('familyTreeSaved', language));
         } catch (err) {
             setSaveStatus('error');
-            setSaveMessage('Failed to save family tree.');
+            setSaveMessage(getTranslation('failedToSave', language));
         }
     };
 
@@ -463,7 +475,7 @@ const [tree, setTree] = useState(null);
                 overflow: 'auto',
               }}
             >
-                <div className="tree-canvas" style={{ marginTop: '32px' }}>
+                <div className="tree-canvas" style={{ marginTop: '32px', position: 'relative' }}>
                     <TreeConnections 
                         dagreGraph={dagreGraph}
                         dagreLayoutOffsetX={dagreLayoutOffsetX}
@@ -475,6 +487,9 @@ const [tree, setTree] = useState(null);
                             person={person}
                             isRoot={person.id === tree.rootId}
                             onClick={handlePersonClick}
+                            rootId={tree.rootId}
+                            tree={tree}
+                            language={language}
                         />
                     ))}
                 </div>

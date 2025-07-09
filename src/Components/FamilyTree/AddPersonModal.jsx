@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getTranslation } from '../../utils/languageTranslations';
+import { useLanguage } from '../../Contexts/LanguageContext';
 
 const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, token, existingMemberIds = [] }) => {
     const [count, setCount] = useState(1);
@@ -10,13 +12,14 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
     const [loadingMembers, setLoadingMembers] = useState(false);
     const [parentSelections, setParentSelections] = useState({ father: { selectedMemberId: null, showManualEntry: false }, mother: { selectedMemberId: null, showManualEntry: false } });
     const [formSelections, setFormSelections] = useState({});
-
+    const { language } = useLanguage();
+    
     const titles = {
-        parents: 'Add Parents',
-        spouse: 'Add Spouse',
-        children: 'Add Children',
-        siblings: 'Add Siblings',
-        edit: 'Edit Person'
+        parents: getTranslation('addParents', language),
+        spouse: getTranslation('addSpouse', language),
+        children: getTranslation('addChild', language),
+        siblings: getTranslation('addSibling', language),
+        edit: getTranslation('edit', language)
     };
 
     // Fetch family members when modal opens
@@ -248,7 +251,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                     <h4 style={{ marginBottom: 12, fontWeight: 600, fontSize: 17 }}>{form.type === 'father' ? 'Father' : 'Mother'}</h4>
                                     <div className="form-row" style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
                                         <div className="form-group" style={{ flex: 1 }}>
-                                            <label style={{ fontWeight: 500 }}>Name:</label>
+                                            <label style={{ fontWeight: 500 }}>{getTranslation('name', language)}:</label>
                                             <input 
                                                 type="text" 
                                                 name={`name_${form.index}`}
@@ -259,7 +262,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                     </div>
                                     <div className="form-row" style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
                                         <div className="form-group" style={{ flex: 1 }}>
-                                            <label style={{ fontWeight: 500 }}>Age:</label>
+                                            <label style={{ fontWeight: 500 }}>{getTranslation('age', language)}:</label>
                                             <input 
                                                 type="number" 
                                                 name={`age_${form.index}`}
@@ -293,7 +296,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                         <div key={form.index} style={{ marginBottom: 18 }}>
                             {getEligibleMembers(form).length > 0 && !(formSelections[form.index]?.showManualEntry) && (
                                 <div className="form-group" style={{ marginBottom: 12 }}>
-                                    <label style={{ fontWeight: 500 }}>Select Existing Member:</label>
+                                    <label style={{ fontWeight: 500 }}>{getTranslation('selectExistingMember', language)}:</label>
                                     <select
                                         value={formSelections[form.index]?.selectedMemberId || ''}
                                         onChange={e => handleFormDropdown(form.index, e.target.value)}
@@ -305,7 +308,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                 {member.user.fullName} ({member.user.userProfile.gender}, {member.user.userProfile.dob?.split('T')[0]})
                                             </option>
                                         ))}
-                                        <option value="manual">Add New Member</option>
+                                        <option value="manual">{getTranslation('addNewMember', language)}</option>
                                     </select>
                                 </div>
                             )}
@@ -316,7 +319,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                     {form.type === 'person' && <h4 style={{ marginBottom: 12, fontWeight: 600, fontSize: 17 }}>Person {form.index + 1}</h4>}
                                     <div className="form-row" style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
                                         <div className="form-group" style={{ flex: 1 }}>
-                                            <label style={{ fontWeight: 500 }}>Name:</label>
+                                            <label style={{ fontWeight: 500 }}>{getTranslation('name', language)}:</label>
                                             <input 
                                                 type="text" 
                                                 name={`name_${form.index}`}
@@ -327,17 +330,17 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                         </div>
                                         {form.type !== 'father' && form.type !== 'mother' && (
                                             <div className="form-group" style={{ flex: 1 }}>
-                                                <label style={{ fontWeight: 500 }}>Gender:</label>
+                                                <label style={{ fontWeight: 500 }}>{getTranslation('gender', language)}:</label>
                                                 <select name={`gender_${form.index}`} style={{ width: '100%', borderRadius: 8, border: '1px solid #e5e7eb', padding: '8px 12px', marginTop: 4 }}>
-                                                    <option value="male" selected={action.type === 'spouse' && action.person.gender === 'female'}>Male</option>
-                                                    <option value="female" selected={action.type === 'spouse' && action.person.gender === 'male'}>Female</option>
+                                                    <option value="male" selected={action.type === 'spouse' && action.person.gender === 'female'}>{getTranslation('male', language)}</option>
+                                                    <option value="female" selected={action.type === 'spouse' && action.person.gender === 'male'}>{getTranslation('female', language)}</option>
                                                 </select>
                                             </div>
                                         )}
                                     </div>
                                     <div className="form-row" style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
                                         <div className="form-group" style={{ flex: 1 }}>
-                                            <label style={{ fontWeight: 500 }}>Age:</label>
+                                            <label style={{ fontWeight: 500 }}>{getTranslation('age', language)}:</label>
                                             <input 
                                                 type="number" 
                                                 name={`age_${form.index}`}
