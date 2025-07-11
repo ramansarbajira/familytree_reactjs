@@ -33,7 +33,7 @@ const BuyConfirmationModal = ({
           console.log('🔍 Fetching family members for familyCode:', familyCode);
           console.log('🔑 Token exists:', !!token);
           
-          const response = await fetch(`${apiBaseUrl}/family/member/family-member/${familyCode}`, {
+          const response = await fetch(`${apiBaseUrl}/family/member/${familyCode}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -52,18 +52,23 @@ const BuyConfirmationModal = ({
           const responseData = await response.json();
           console.log('✅ Raw API response:', responseData);
           
-          // FIX: Extract the actual array from the response
+          // FIX: Extract the actual array from the response and map to correct structure
           const membersArray = responseData.data || responseData || [];
           console.log('📊 Family members array:', membersArray);
           console.log('👥 Family members count:', membersArray.length);
-          console.log('👥 Family members structure:', membersArray.map(member => ({
-            userId: member.userId,
-            firstName: member.firstName,
-            lastName: member.lastName,
-            address: member.address
-          })));
           
-          setFamilyMembers(membersArray);
+          // Map the nested user data to the expected structure
+          const mappedMembers = membersArray.map(member => ({
+            userId: member.user.id,
+            firstName: member.user.userProfile?.firstName || '',
+            lastName: member.user.userProfile?.lastName || '',
+            address: member.user.userProfile?.address || '',
+            fullName: member.user.fullName || ''
+          }));
+          
+          console.log('👥 Mapped family members structure:', mappedMembers);
+          
+          setFamilyMembers(mappedMembers);
           setError('');
         } catch (err) {
           console.error('💥 Error fetching family members:', err);
@@ -273,7 +278,7 @@ const BuyConfirmationModal = ({
                       
                       if (selectedMember) {
                         setReceiverId(selectedId);
-                        setReceiverName(`${selectedMember.firstName || ''} ${selectedMember.lastName || ''}`.trim());
+                        setReceiverName(selectedMember.fullName || `${selectedMember.firstName || ''} ${selectedMember.lastName || ''}`.trim());
                         if (selectedMember.address) {
                           setDeliveryAddress(selectedMember.address);
                         }
@@ -284,7 +289,7 @@ const BuyConfirmationModal = ({
                   >
                     <option value="">-- Select Family Member --</option>
                     {filteredFamilyMembers.map((member) => {
-                      const memberName = `${member.firstName || 'No Name'} ${member.lastName || ''}`.trim();
+                      const memberName = member.fullName || `${member.firstName || 'No Name'} ${member.lastName || ''}`.trim();
                       const cityInfo = member.address ? ` (${extractCityFromAddress(member.address)})` : '';
                       
                       return (
@@ -292,7 +297,7 @@ const BuyConfirmationModal = ({
                           key={member.userId} 
                           value={member.userId}
                         >
-                          {memberName}
+                          {memberName}{cityInfo}
                         </option>
                       );
                     })}

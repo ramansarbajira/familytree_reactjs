@@ -15,7 +15,7 @@ const relationColors = {
   Superadmin: 'bg-green-100 text-green-800',
 };
 
-const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember }) => {
+const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, currentUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [familyMembers, setFamilyMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -181,27 +181,55 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember }) => 
       <div className="flex justify-between items-center px-5 py-4">
         <span className="text-xs text-gray-500">Last updated: {member.lastUpdated}</span>
         <div className="flex space-x-2">
-          <button
-            onClick={(e) => {
-            e.stopPropagation();
-            onEditMember?.(member.userId);
-            }}
-            className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700 transition-colors tooltip"
-            title="Edit Member"
-          >
-            <FiEdit2 size={18} />
-          </button>
-          <button
-            onClick={(e) => handleDeleteMember(member.memberId, familyCode, e)}
-            className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700 transition-colors tooltip"
-            title="Delete Member"
-          >
-            <FiTrash2 size={18} />
-          </button>
+          {/* Admin can edit/delete any member */}
+          {currentUser?.role === 2 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditMember?.(member.userId);
+                }}
+                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700 transition-colors tooltip"
+                title="Edit Member"
+              >
+                <FiEdit2 size={18} />
+              </button>
+              <button
+                onClick={(e) => handleDeleteMember(member.memberId, familyCode, e)}
+                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700 transition-colors tooltip"
+                title="Delete Member"
+              >
+                <FiTrash2 size={18} />
+              </button>
+            </>
+          )}
+          {/* Member can only edit/delete/view their own profile */}
+          {currentUser?.role === 1 && currentUser.userId === member.userId && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditMember?.(member.userId);
+                }}
+                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700 transition-colors tooltip"
+                title="Edit Member"
+              >
+                <FiEdit2 size={18} />
+              </button>
+              <button
+                onClick={(e) => handleDeleteMember(member.memberId, familyCode, e)}
+                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700 transition-colors tooltip"
+                title="Delete Member"
+              >
+                <FiTrash2 size={18} />
+              </button>
+            </>
+          )}
+          {/* Always show view button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onViewMember(member.id);
+              onViewMember(member.userId);
             }}
             className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700 transition-colors tooltip"
             title="View Member"

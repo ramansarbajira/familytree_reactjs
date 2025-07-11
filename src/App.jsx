@@ -17,12 +17,25 @@ import PostsAndFeedsPage from './Pages/PostsAndFeedsPage';
 import FamilyGalleryPage from './Pages/FamilyGalleryPage'; 
 import GiftListingPage from './Pages/GiftListingPage'; 
 import EventsPage from './Pages/EventsPage'; 
+import OrderManagementPage from './Pages/OrderManagementPage'; 
 
 
 import { UserProvider } from './Contexts/UserContext';
 import { LanguageProvider } from './Contexts/LanguageContext';
 import PrivateRoute from './Routes/PrivateRoute';
 import GuestRoute from './Routes/GuestRoute';
+
+// Add a wrapper for admin-only route
+const AdminRoute = ({ children }) => {
+  let userInfo = null;
+  try {
+    userInfo = JSON.parse(localStorage.getItem('userInfo'));
+  } catch {}
+  if (!userInfo || userInfo.role !== 3) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
 
 function App() {
   return (
@@ -49,7 +62,8 @@ function App() {
         <Route path="/posts-and-feeds" element={<PrivateRoute><UserProvider><LanguageProvider><PostsAndFeedsPage /></LanguageProvider></UserProvider></PrivateRoute>} />
         <Route path="/family-gallery" element={<PrivateRoute><UserProvider><LanguageProvider><FamilyGalleryPage /></LanguageProvider></UserProvider></PrivateRoute>} />
         <Route path="/gifts-memories" element={<PrivateRoute><UserProvider><LanguageProvider><GiftListingPage /></LanguageProvider></UserProvider></PrivateRoute>} />
-         <Route path="/events" element={<PrivateRoute><UserProvider><LanguageProvider><EventsPage /></LanguageProvider></UserProvider></PrivateRoute>} />
+        <Route path="/events" element={<PrivateRoute><UserProvider><LanguageProvider><EventsPage /></LanguageProvider></UserProvider></PrivateRoute>} />
+        <Route path="/orders" element={<PrivateRoute><AdminRoute><UserProvider><LanguageProvider><OrderManagementPage /></LanguageProvider></UserProvider></AdminRoute></PrivateRoute>} />
 
       </Routes>
     </Router>

@@ -57,6 +57,17 @@ const CreateFamilyModal = ({ isOpen, onClose, token, onFamilyCreated, mode = "cr
             timer: 1500,
             });
 
+            // If creating (not editing), update localStorage userInfo with new familyCode
+            if (mode !== 'edit' && data && data.familyCode) {
+              let userInfo = null;
+              try {
+                userInfo = JSON.parse(localStorage.getItem('userInfo'));
+              } catch {}
+              if (userInfo) {
+                userInfo.familyCode = data.familyCode;
+                localStorage.setItem('userInfo', JSON.stringify(userInfo));
+              }
+            }
             onFamilyCreated(data);
             onClose();
         } catch (err) {
