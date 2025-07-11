@@ -4,8 +4,8 @@ export function autoArrange(tree) {
     const g = new dagre.graphlib.Graph({ compound: true });
     g.setGraph({
         rankdir: 'TB',
-        nodesep: 60,
-        ranksep: 80,
+        nodesep: 120, // reduced horizontal space between boxes
+        ranksep: 150, // reduced vertical space between boxes
         marginx: 80,
         marginy: 80,
     });
