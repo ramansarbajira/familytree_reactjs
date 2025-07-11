@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { FiX } from 'react-icons/fi';
+import { FiX, FiMail, FiPhone, FiUser, FiCalendar, FiGlobe, FiMapPin, FiHeart, FiBookOpen, FiSmile, FiThumbsUp, FiThumbsDown, FiHome, FiUsers, FiUserCheck, FiUserPlus } from 'react-icons/fi';
 
 const ViewFamilyMemberModal = ({ isOpen, onClose, member }) => {
   if (!isOpen || !member) return null;
@@ -55,79 +55,73 @@ const ViewFamilyMemberModal = ({ isOpen, onClose, member }) => {
   }, [member]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-3xl p-6 relative overflow-y-auto max-h-[90vh]">
-        <button
-          onClick={onClose}
-          className="bg-unset absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-        >
-          <FiX size={22} />
-        </button>
-
-        <div className="flex items-center space-x-5 mb-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style={{ fontFamily: 'Poppins, Arial, sans-serif' }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl p-0 relative overflow-y-auto max-h-[92vh] glassy-menu" style={{ border: '2.5px solid #e0f3dd', boxShadow: '0 12px 32px rgba(63,152,44,0.18)' }}>
+        {/* Gradient Header */}
+        <div style={{ background: 'linear-gradient(90deg, #3f982c 0%, #38f9d7 100%)', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: '32px 0 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
           <img
             src={normalized.profileImage}
             alt={normalized.fullName}
-            className="w-24 h-24 rounded-full object-cover border-2 border-primary-500"
+            className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-lg"
+            style={{ boxShadow: '0 4px 16px rgba(63,152,44,0.18)' }}
           />
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">{normalized.fullName}</h2>
-            <p className="text-sm text-gray-600">{normalized.roleName}</p>
-          </div>
+          <button
+            onClick={onClose}
+            className="bg-unset absolute top-5 right-6 text-white hover:text-gray-200"
+            style={{ fontSize: 28 }}
+          >
+            <FiX size={28} />
+          </button>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Detail label="Email" value={normalized.email} />
-          <Detail
-            label="Contact Number"
-            value={`${normalized.countryCode} ${normalized.mobile}`}
-          />
-          <Detail label="Gender" value={normalized.gender} />
-          <Detail label="Date of Birth" value={formatDate(normalized.dob)} />
-          <Detail label="Age" value={calculateAge(normalized.dob)} />
-          <Detail label="Religion" value={normalized.religion} />
-          <Detail label="Language" value={normalized.language} />
-          <Detail label="Caste" value={normalized.caste} />
-          <Detail label="Gothram" value={normalized.gothram} />
-          <Detail label="Kuladevata" value={normalized.kuladevata} />
-          <Detail label="Region" value={normalized.region} />
-          <Detail label="Address" value={normalized.address} />
-          <Detail label="Marital Status" value={normalized.maritalStatus} />
-
-          {normalized.maritalStatus === 'Married' && (
-            <>
-              <Detail label="Marriage Date" value={formatDate(normalized.marriageDate)} />
-              <Detail label="Spouse Name" value={normalized.spouseName} />
-              <Detail label="Children Count" value={normalized.childrenCount} />
-              <Detail
-                label="Children Names"
-                value={
-                  normalized.childrenNames.length > 0
-                    ? normalized.childrenNames.join(', ')
-                    : 'N/A'
-                }
-              />
-            </>
-          )}
-
-          <Detail label="Father's Name" value={normalized.fatherName} />
-          <Detail label="Mother's Name" value={normalized.motherName} />
-          <Detail label="Hobbies" value={normalized.hobbies} />
-          <Detail label="Likes" value={normalized.likes} />
-          <Detail label="Dislikes" value={normalized.dislikes} />
-          <Detail label="Favorite Foods" value={normalized.favoriteFoods} />
-          <Detail label="Bio" value={normalized.bio} />
-          <Detail label="Last Updated" value={formatDate(normalized.updatedAt)} />
+        <div style={{ textAlign: 'center', marginTop: -16, marginBottom: 18 }}>
+          <h2 style={{ fontSize: 28, fontWeight: 800, color: '#222', marginBottom: 2 }}>{normalized.fullName}</h2>
+          <span style={{ fontSize: 15, fontWeight: 600, color: '#3f982c', background: '#e0f3dd', borderRadius: 8, padding: '2px 12px', marginRight: 8 }}>{normalized.roleName}</span>
+        </div>
+        <div className="px-8 pb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Detail icon={<FiMail />} label="Email" value={normalized.email} />
+            <Detail icon={<FiPhone />} label="Contact Number" value={`${normalized.countryCode} ${normalized.mobile}`} />
+            <Detail icon={<FiUser />} label="Gender" value={normalized.gender} />
+            <Detail icon={<FiCalendar />} label="Date of Birth" value={formatDate(normalized.dob)} />
+            <Detail icon={<FiCalendar />} label="Age" value={calculateAge(normalized.dob)} />
+            <Detail icon={<FiGlobe />} label="Religion" value={normalized.religion} />
+            <Detail icon={<FiGlobe />} label="Language" value={normalized.language} />
+            <Detail icon={<FiBookOpen />} label="Caste" value={normalized.caste} />
+            <Detail icon={<FiBookOpen />} label="Gothram" value={normalized.gothram} />
+            <Detail icon={<FiBookOpen />} label="Kuladevata" value={normalized.kuladevata} />
+            <Detail icon={<FiMapPin />} label="Region" value={normalized.region} />
+            <Detail icon={<FiHome />} label="Address" value={normalized.address} />
+            <Detail icon={<FiHeart />} label="Marital Status" value={normalized.maritalStatus} />
+            {normalized.maritalStatus === 'Married' && (
+              <>
+                <Detail icon={<FiCalendar />} label="Marriage Date" value={formatDate(normalized.marriageDate)} />
+                <Detail icon={<FiUserCheck />} label="Spouse Name" value={normalized.spouseName} />
+                <Detail icon={<FiUsers />} label="Children Count" value={normalized.childrenCount} />
+                <Detail icon={<FiUserPlus />} label="Children Names" value={normalized.childrenNames.length > 0 ? normalized.childrenNames.join(', ') : 'N/A'} />
+              </>
+            )}
+            <Detail icon={<FiUser />} label="Father's Name" value={normalized.fatherName} />
+            <Detail icon={<FiUser />} label="Mother's Name" value={normalized.motherName} />
+            <Detail icon={<FiSmile />} label="Hobbies" value={normalized.hobbies} />
+            <Detail icon={<FiThumbsUp />} label="Likes" value={normalized.likes} />
+            <Detail icon={<FiThumbsDown />} label="Dislikes" value={normalized.dislikes} />
+            <Detail icon={<FiBookOpen />} label="Favorite Foods" value={normalized.favoriteFoods} />
+            <Detail icon={<FiBookOpen />} label="Bio" value={normalized.bio} />
+            <Detail icon={<FiCalendar />} label="Last Updated" value={formatDate(normalized.updatedAt)} />
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-const Detail = ({ label, value }) => (
-  <div>
-    <p className="text-sm text-gray-500">{label}</p>
-    <p className="text-base font-medium text-gray-800">{value || 'N/A'}</p>
+const Detail = ({ icon, label, value }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f8fafc', borderRadius: 10, padding: '10px 16px', marginBottom: 2, boxShadow: '0 1px 4px rgba(60,60,90,0.06)' }}>
+    <span style={{ color: '#3f982c', fontSize: 18, flexShrink: 0 }}>{icon}</span>
+    <div>
+      <p style={{ fontSize: 13, color: '#888', margin: 0, fontWeight: 600 }}>{label}</p>
+      <p style={{ fontSize: 15, fontWeight: 600, color: '#222', margin: 0 }}>{value || 'N/A'}</p>
+    </div>
   </div>
 );
 

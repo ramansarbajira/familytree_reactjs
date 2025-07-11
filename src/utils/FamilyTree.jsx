@@ -6,6 +6,15 @@ export class FamilyTree {
     }
 
     addPerson(data) {
+        // Prevent duplicate memberId
+        if (data.memberId) {
+            for (let person of this.people.values()) {
+                if (person.memberId && person.memberId === data.memberId) {
+                    // Already exists, do not add
+                    return null;
+                }
+            }
+        }
         const person = {
             id: this.nextId++,
             name: data.name || 'Unknown',
@@ -19,9 +28,9 @@ export class FamilyTree {
             children: new Set(),
             spouses: new Set(),
             siblings: new Set(),
-            img: data.img || ''
+            img: data.img || '',
+            memberId: data.memberId || null,
         };
-        
         this.people.set(person.id, person);
         if (!this.rootId) {
             this.rootId = person.id;

@@ -11,14 +11,31 @@ import { getTranslation } from '../utils/languageTranslations';
 import { useLanguage } from '../Contexts/LanguageContext';
 import { RelationshipCalculator } from '../utils/relationshipCalculator';
 import html2canvas from 'html2canvas';
+import LanguageSwitcher from '../Components/LanguageSwitcher';
 
 const sampleFamilyData = {
     people: [
-        { id: 1, name: 'Raman', gender: 'male', age: 60, generation: 1, parents: [], children: [3,4], spouses: [2], siblings: [] },
-        { id: 2, name: 'Divya', gender: 'female', age: 58, generation: 1, parents: [], children: [3,4], spouses: [1], siblings: [] },
-        { id: 3, name: 'Shiro', gender: 'female', age: 35, generation: 2, parents: [1,2], children: [5], spouses: [4], siblings: [4] },
-        { id: 4, name: 'Laksh', gender: 'male', age: 37, generation: 2, parents: [1,2], children: [5], spouses: [3], siblings: [3] },
-        { id: 5, name: 'Dhayan', gender: 'male', age: 10, generation: 3, parents: [3,4], children: [], spouses: [], siblings: [] },
+        // Generation 5 (great-great-great-grandparents)
+        { id: 101, name: 'PeriyaRaman', gender: 'male', age: 110, generation: -4, parents: [], children: [111,112], spouses: [102], siblings: [] },
+        { id: 102, name: 'PeriyaLakshmi', gender: 'female', age: 108, generation: -4, parents: [], children: [111,112, 114], spouses: [101], siblings: [] },
+        // Generation 4 (great-great-grandparents)
+        { id: 111, name: 'RamanAppa', gender: 'male', age: 90, generation: -3, parents: [101,102], children: [121], spouses: [113], siblings: [112] },
+        { id: 112, name: 'LakshmiAmmal', gender: 'female', age: 88, generation: -3, parents: [101,102], children: [121], spouses: [114], siblings: [111] },
+        { id: 113, name: 'Meenakshi', gender: 'female', age: 89, generation: -3, parents: [], children: [121], spouses: [111], siblings: [] },
+        { id: 114, name: 'Sundaram', gender: 'male', age: 91, generation: -3, parents: [101,102], children: [121], spouses: [], siblings: [] },
+        // Generation 3 (great-grandparents)
+        { id: 121, name: 'Appadurai', gender: 'male', age: 70, generation: -2, parents: [111,113], children: [131], spouses: [122], siblings: [] },
+        { id: 122, name: 'Saraswathi', gender: 'female', age: 68, generation: -2, parents: [112,114], children: [131], spouses: [121], siblings: [] },
+        // Generation 2 (grandparents)
+        { id: 131, name: 'Muthuraman', gender: 'male', age: 50, generation: -1, parents: [121,122], children: [1,2], spouses: [132], siblings: [] },
+        { id: 132, name: 'Janaki', gender: 'female', age: 48, generation: -1, parents: [], children: [1,2], spouses: [131], siblings: [] },
+        // Generation 1 (parents)
+        { id: 1, name: 'Raman', gender: 'male', age: 60, generation: 1, parents: [131,132], children: [3,4,5], spouses: [2], siblings: [] },
+        { id: 2, name: 'Divya', gender: 'female', age: 58, generation: 1, parents: [131,132], children: [3,4,5], spouses: [1], siblings: [] },
+        // Generation 0 (children)
+        { id: 3, name: 'Shiro', gender: 'female', age: 35, generation: 2, parents: [1,2], children: [], spouses: [], siblings: [4,5] },
+        { id: 4, name: 'Laksh', gender: 'male', age: 37, generation: 2, parents: [1,2], children: [], spouses: [], siblings: [3,5] },
+        { id: 5, name: 'Dhayan', gender: 'male', age: 10, generation: 3, parents: [1,2], children: [], spouses: [], siblings: [3,4] },
     ]
 };
 
@@ -210,57 +227,140 @@ const [tree, setTree] = useState(null);
 
     const handleAddPersons = (persons) => {
         if (!tree) return;
+        
+        if (!persons || persons.length === 0) {
+            return;
+        }
+        
         const newTree = new FamilyTree();
         newTree.people = new Map(tree.people);
         newTree.nextId = tree.nextId;
         newTree.rootId = tree.rootId;
 
-        const newPersons = [];
-        persons.forEach(personData => {
-            // If personData has memberId or userId, store it in the tree
-            // For dropdown, memberId should be member.user.id
-            const person = newTree.addPerson({
-                ...personData,
-                memberId: personData.memberId || personData.userId || null,
-            });
-            newPersons.push(person);
-        });
-
-        // Add relationships based on action type
+        // Map to hold the correct personId for each personData (existing or new)
+        const personIdMap = new Map();
+        let duplicateFound = false;
         const { type, person: basePerson } = modal.action;
-        
-        if (type === 'parents') {
-            newPersons.forEach(person => {
-                newTree.addRelation(person.id, basePerson.id, 'parent-child');
-            });
-            if (newPersons.length === 2) {
-                newTree.addRelation(newPersons[0].id, newPersons[1].id, 'spouse');
-            }
-        } else if (type === 'children') {
-            newPersons.forEach(person => {
-                newTree.addRelation(basePerson.id, person.id, 'parent-child');
-                basePerson.spouses.forEach(spouseId => {
-                    newTree.addRelation(spouseId, person.id, 'parent-child');
-                });
-            });
-        } else if (type === 'spouse') {
-            newTree.addRelation(basePerson.id, newPersons[0].id, 'spouse');
-        } else if (type === 'siblings') {
-            newPersons.forEach(person => {
-                basePerson.parents.forEach(parentId => {
-                    newTree.addRelation(parentId, person.id, 'parent-child');
-                });
-            });
-        } else if (type === 'edit') {
-            // Update existing person
+
+        // Special handling for edit: only update, never create
+        if (type === 'edit' && basePerson) {
             const existingPerson = newTree.people.get(basePerson.id);
-            if (existingPerson) {
+            if (existingPerson && persons.length > 0) {
                 existingPerson.name = persons[0].name;
                 existingPerson.gender = persons[0].gender;
                 existingPerson.age = persons[0].age;
                 existingPerson.img = persons[0].img;
                 existingPerson.memberId = persons[0].memberId || persons[0].userId || null;
             }
+            setTree(newTree);
+            updateStats(newTree);
+            arrangeTree(newTree);
+            return;
+        }
+
+        persons.forEach(personData => {
+            // Try to find an existing person by memberId or userId
+            let existing = null;
+            if (personData.memberId || personData.userId) {
+                for (let p of newTree.people.values()) {
+                    if (
+                        (personData.memberId && p.memberId === personData.memberId) ||
+                        (personData.userId && p.memberId === personData.userId)
+                    ) {
+                        existing = p;
+                        break;
+                    }
+                }
+            }
+            if (existing) {
+                // Use existing person's id
+                personIdMap.set(personData, existing.id);
+            } else {
+                // Create new person
+                const person = newTree.addPerson({
+                    ...personData,
+                    memberId: personData.memberId || personData.userId || null,
+                });
+                if (!person) {
+                    // Only set duplicate if it's an existing member (has memberId)
+                    if (personData.memberId || personData.userId) {
+                        duplicateFound = true;
+                    }
+                } else {
+                    personIdMap.set(personData, person.id);
+                }
+            }
+        });
+        if (duplicateFound) {
+            alert(getTranslation('duplicateUserError', language));
+            return;
+        }
+
+        // Add relationships based on action type
+        // If basePerson is undefined (new tree), just add the persons without relationships
+        if (!basePerson) {
+            setTree(newTree);
+            updateStats(newTree);
+            arrangeTree(newTree);
+            return;
+        }
+        
+        // Make sure basePerson exists in the new tree
+        const basePersonInNewTree = newTree.people.get(basePerson.id);
+        if (!basePersonInNewTree) {
+            console.error('Base person not found in tree');
+            setTree(newTree);
+            updateStats(newTree);
+            arrangeTree(newTree);
+            return;
+        }
+        
+        if (type === 'parents') {
+            persons.forEach(personData => {
+                const parentId = personIdMap.get(personData);
+                if (parentId) {
+                    newTree.addRelation(parentId, basePersonInNewTree.id, 'parent-child');
+                }
+            });
+            // If two parents, add spouse relation
+            if (persons.length === 2) {
+                const parent1 = personIdMap.get(persons[0]);
+                const parent2 = personIdMap.get(persons[1]);
+                if (parent1 && parent2) {
+                    newTree.addRelation(parent1, parent2, 'spouse');
+                }
+            }
+        } else if (type === 'children') {
+            persons.forEach(personData => {
+                const childId = personIdMap.get(personData);
+                if (childId) {
+                    newTree.addRelation(basePersonInNewTree.id, childId, 'parent-child');
+                    // Add to all spouses of the base person
+                    basePersonInNewTree.spouses.forEach(spouseId => {
+                        const spouse = newTree.people.get(spouseId);
+                        if (spouse) {
+                            newTree.addRelation(spouseId, childId, 'parent-child');
+                        }
+                    });
+                }
+            });
+        } else if (type === 'spouse') {
+            const spouseId = personIdMap.get(persons[0]);
+            if (spouseId) {
+                newTree.addRelation(basePersonInNewTree.id, spouseId, 'spouse');
+            }
+        } else if (type === 'siblings') {
+            persons.forEach(personData => {
+                const siblingId = personIdMap.get(personData);
+                if (siblingId) {
+                    basePersonInNewTree.parents.forEach(parentId => {
+                        const parent = newTree.people.get(parentId);
+                        if (parent) {
+                            newTree.addRelation(parentId, siblingId, 'parent-child');
+                        }
+                    });
+                }
+            });
         }
 
         setTree(newTree);
@@ -411,10 +511,12 @@ const [tree, setTree] = useState(null);
                 siblings: Array.from(person.siblings),
                 userId: person.memberId || null,
             }));
-            const response = await authFetch('/api/family-tree/save', {
+            
+            const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/family/tree/create`, {
                 method: 'POST',
-                body: JSON.stringify({ people })
+                body: JSON.stringify({ people }),
             });
+            
             if (!response) return; // Already logged out if 401 or error
             if (!response.ok) throw new Error('Failed to save');
             setSaveStatus('success');
@@ -451,6 +553,8 @@ const [tree, setTree] = useState(null);
                     <button className="bg-green-600 text-white rounded-xl px-5 py-2.5 shadow-lg hover:bg-green-700 transition font-semibold" onClick={saveTreeToApi} disabled={saveStatus === 'loading'}>
                         {saveStatus === 'loading' ? 'Saving...' : 'Save Family Tree'}
                     </button>
+                    {/* Language Switcher */}
+                    <LanguageSwitcher />
                 </div>
                 <div className="flex gap-4 text-sm font-medium mr-3">
                     <span>Total: <span className="font-bold">{stats.total}</span></span>

@@ -23,6 +23,13 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
   };
 
   const getRelationshipText = (relationship) => {
+    // Use detailed Tamil relationship if available
+    if (relationship.relationshipCode && language === 'tamil') {
+      const calculator = new RelationshipCalculator(tree);
+      return calculator.getDetailedTamilRelationship(relationship.relationshipCode, language);
+    }
+    
+    // Fallback to basic relationship types
     const relationshipKey = `relationships.${relationship.type}`;
     return getTranslation(relationshipKey, language);
   };
