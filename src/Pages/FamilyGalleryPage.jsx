@@ -5,10 +5,46 @@ import { FiSearch, FiPlusCircle } from 'react-icons/fi';
 import { MdPublic, MdPeople } from 'react-icons/md';
 import CreateAlbumModal from '../Components/CreateAlbumModal';
 import { useUser } from '../Contexts/UserContext'; // Import useUser context
+import { jwtDecode } from 'jwt-decode';
+
+// Custom hook to get familyCode
+function useUserFamilyCode() {
+  const [familyCode, setFamilyCode] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    let userId;
+    try {
+      const decoded = jwtDecode(token);
+      userId = decoded.id || decoded.userId || decoded.sub;
+    } catch {
+      setLoading(false);
+      return;
+    }
+    fetch(`${import.meta.env.VITE_API_BASE_URL}/family/member/member/${userId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        setFamilyCode(data.familyCode || '');
+      })
+      .catch(() => setFamilyCode(''))
+      .finally(() => setLoading(false));
+  }, []);
+  return { familyCode, loading };
+}
 
 const FamilyGalleryPage = () => {
     const { userInfo, userLoading } = useUser(); // Get user info from context
     const [token, setToken] = useState(null); // State to store the token
+    const { familyCode, loading: familyCodeLoading } = useUserFamilyCode();
 
     const [activeFeed, setActiveFeed] = useState('family'); // 'family' or 'public'
     const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
@@ -129,12 +165,14 @@ const FamilyGalleryPage = () => {
                         <div className="flex items-center gap-3 mt-4 sm:mt-0">
                             {/* Feed Switcher - Modern Segmented Control */}
                             <div className="relative inline-flex rounded-full p-1">
-                                <button
-                                    onClick={() => setActiveFeed('family')}
-                                    className={`flex items-center gap-1.5 py-2 px-4 mr-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeFeed === 'family' ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg' : 'text-gray-700 hover:text-primary-600 hover:bg-gray-200'}`}
-                                >
-                                    <MdPeople size={18} /> Family
-                                </button>
+                                {familyCode && (
+                                    <button
+                                        onClick={() => setActiveFeed('family')}
+                                        className={`flex items-center gap-1.5 py-2 px-4 mr-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeFeed === 'family' ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg' : 'text-gray-700 hover:text-primary-600 hover:bg-gray-200'}`}
+                                    >
+                                        <MdPeople size={18} /> Family
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => setActiveFeed('public')}
                                     className={`flex items-center gap-1.5 py-2 px-4 rounded-full text-sm font-semibold transition-all duration-300 ${activeFeed === 'public' ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg' : 'text-gray-700 hover:text-primary-600 hover:bg-gray-200'}`}

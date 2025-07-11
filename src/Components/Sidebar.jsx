@@ -9,10 +9,18 @@ import {
   FiUsers,
   FiClock,
   FiChevronDown,
-  FiCalendar
+  FiCalendar,
+  FiPackage
 } from 'react-icons/fi';
 import { RiGitMergeLine } from 'react-icons/ri';
 import { FaTimes } from 'react-icons/fa';
+
+let userInfo = null;
+try {
+  userInfo = JSON.parse(localStorage.getItem('userInfo'));
+} catch {}
+
+const hasFamilyCode = userInfo && userInfo.familyCode;
 
 const menuItems = [
   { id: 'home', label: 'Home', route: '/dashboard', icon: <FiHome size={19} /> },
@@ -31,16 +39,23 @@ const menuItems = [
   { id: 'posts', label: 'Posts & Stories', route: '/posts-and-feeds', icon: <FiShare2 size={19} /> },
   { id: 'gallery', label: 'Family Gallery', route: '/family-gallery', icon: <FiImage size={19} /> },
   { id: 'gifts', label: 'Gifts & Memories', route: '/gifts-memories', icon: <FiGift size={19} /> },
+  { id: 'orders', label: 'Order Management', route: '/orders', icon: <FiPackage size={19} /> },
 ];
 
 const Sidebar = ({ isMobile, onCloseMobile }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedParents, setExpandedParents] = useState({});
+  // Get user info from localStorage
+  const isAdmin = userInfo && userInfo.role === 3;
+
+  const filteredMenuItems = isAdmin
+    ? menuItems
+    : menuItems.filter(item => item.id !== 'orders');
 
   useEffect(() => {
     const newExpandedParents = {};
-    menuItems.forEach(item => {
+    filteredMenuItems.forEach(item => {
       if (item.children) {
         // Expand parent if any child route starts with the current path
         newExpandedParents[item.id] = item.children.some(
@@ -103,7 +118,7 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
 
       <div className="flex-1 overflow-y-auto py-5 px-4 custom-scrollbar">
         <nav className="space-y-1.5">
-          {menuItems.map((item) => (
+          {filteredMenuItems.map((item) => (
             <div key={item.id}>
               {item.children ? (
                 <div>

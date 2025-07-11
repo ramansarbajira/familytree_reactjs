@@ -3,6 +3,7 @@ import Layout from '../Components/Layout';
 import CreatePostModal from '../Components/CreatePostModal';
 import PostViewerModal from '../Components/PostViewerModal';
 import { UserProvider, useUser } from '../Contexts/UserContext';
+import { jwtDecode } from 'jwt-decode';
 
 import {
     FiImage, FiEdit3, FiTrash2, FiGlobe, FiUsers, FiPlusCircle, FiFeather, FiSearch, FiBell,
@@ -11,6 +12,40 @@ import {
 import { FaRegHeart, FaHeart, FaCommentDots, FaShareAlt } from 'react-icons/fa';
 import { MdPublic, MdPeople } from 'react-icons/md';
 import { caption } from 'framer-motion/client';
+
+// Custom hook to get familyCode
+function useUserFamilyCode() {
+  const [familyCode, setFamilyCode] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    let userId;
+    try {
+      const decoded = jwtDecode(token);
+      userId = decoded.id || decoded.userId || decoded.sub;
+    } catch {
+      setLoading(false);
+      return;
+    }
+    fetch(`${import.meta.env.VITE_API_BASE_URL}/family/member/member/${userId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        setFamilyCode(data.familyCode || '');
+      })
+      .catch(() => setFamilyCode(''))
+      .finally(() => setLoading(false));
+  }, []);
+  return { familyCode, loading };
+}
 
 const PostsAndFeedsPage = () => {
     const [token, setToken] = useState(null);
@@ -27,6 +62,7 @@ const PostsAndFeedsPage = () => {
     const [showSearchInput, setShowSearchInput] = useState(false);
     const [searchCaption, setSearchCaption] = useState('');
     const searchTimeoutRef = useRef(null);
+    const { familyCode, loading: familyCodeLoading } = useUserFamilyCode();
 
     useEffect(() => {
         const storedToken = localStorage.getItem('access_token');
@@ -187,16 +223,18 @@ const PostsAndFeedsPage = () => {
                         <div className="flex items-center gap-3">
                             {/* Feed Switcher - Modern Segmented Control */}
                             <div className="relative inline-flex rounded-full p-1">
-                                <button
+                                {familyCode && (
+                                  <button
                                     onClick={() => setActiveFeed('family')}
                                     className={`flex items-center gap-1.5 py-2 px-3 mr-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                                         activeFeed === 'family'
                                             ? 'bg-primary-600 text-white shadow-md'
                                             : 'text-gray-700 hover:text-primary-600 hover:bg-gray-50'
                                     }`}
-                                >
+                                  >
                                     <MdPeople size={18} /> Family
-                                </button>
+                                  </button>
+                                )}
                                 <button
                                     onClick={() => setActiveFeed('public')}
                                     className={`flex items-center gap-1.5 py-2 px-3 rounded-full text-sm font-semibold transition-all duration-200 ${

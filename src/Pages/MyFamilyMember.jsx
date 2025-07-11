@@ -6,6 +6,7 @@ import ProfileFormModal from '../Components/ProfileFormModal';
 import FamilyMemberCard from '../Components/FamilyMemberCard';
 import ViewFamilyMemberModal from '../Components/ViewMemberModal';
 import { FiPlus } from 'react-icons/fi';
+import { jwtDecode } from 'jwt-decode';
 
 const FamilyMemberListing = () => {
   const { userInfo } = useUser();
@@ -16,12 +17,31 @@ const FamilyMemberListing = () => {
   const [token, setToken] = useState(null);
   const [viewMember, setViewMember] = useState(null);
   const [familyMembers, setFamilyMembers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   
   useEffect(() => {
     const storedToken = localStorage.getItem('access_token');
     if (storedToken) {
       setToken(storedToken);
     }
+  }, []);
+
+  useEffect(() => {
+    // Get userId from token
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    let userId;
+    try {
+      const decoded = jwtDecode(token);
+      userId = decoded.id || decoded.userId || decoded.sub;
+    } catch {
+      return;
+    }
+    fetch(`${import.meta.env.VITE_API_BASE_URL}/user/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => setCurrentUser(data.data));
   }, []);
 
   const handleOpenModal = () => setIsModalOpen(true);
@@ -169,6 +189,7 @@ const FamilyMemberListing = () => {
           token={token} 
           onEditMember={handleEditMember}
           onViewMember={handleViewMember}
+          currentUser={currentUser}
         />
 
         <ProfileFormModal

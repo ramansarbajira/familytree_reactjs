@@ -14,42 +14,47 @@ import CreateEventModal from '../Components/CreateEventModal';
 import EventViewerModal from '../Components/EventViewerModal';
 
 const EventsPage = () => {
-  const [showUpcomingEvents, setShowUpcomingEvents] = useState(true); // true = upcoming, false = all
+  // true = upcoming, false = my-events
+  const [showUpcomingEvents, setShowUpcomingEvents] = useState(true);
   const [allEvents, setAllEvents] = useState([]);
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
   const [isEventViewerOpen, setIsEventViewerOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
-  // ✅ Fetch events whenever the toggle changes
+  // Fetch events whenever the toggle changes
   useEffect(() => {
     const fetchEvents = async () => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-    const endpoint = `${apiBaseUrl}/event/${showUpcomingEvents ? 'upcoming' : 'all'}`;
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const endpoint = `${apiBaseUrl}/event/${showUpcomingEvents ? 'upcoming' : 'my-events'}`;
 
       try {
-        const response = await fetch(endpoint);
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(endpoint, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
         if (!response.ok) {
           throw new Error('Failed to fetch events');
         }
         const data = await response.json();
 
-        // Replace this part in your useEffect:
-const formattedEvents = data.map(item => ({
-  id: item.id,
-  title: item.eventTitle,
-  description: item.eventDescription,
-  date: item.eventDate,
-  time: item.eventTime,
-  location: item.location,
-  // ✅ Fixed: Proper image handling with fallback
-  eventImages: 
-    item.eventImages && item.eventImages.length > 0
-      ? item.eventImages  // Already full URLs
-      : item.images && item.images.length > 0
-        ? item.images.map(img => `${apiBaseUrl}/uploads/event/${img.imageUrl}`)
-        : [],
-  attendeesCount: null,
-}));
+        const formattedEvents = data.map(item => ({
+          id: item.id,
+          title: item.eventTitle,
+          description: item.eventDescription,
+          date: item.eventDate,
+          time: item.eventTime,
+          location: item.location,
+          eventImages: 
+            item.eventImages && item.eventImages.length > 0
+              ? item.eventImages
+              : item.images && item.images.length > 0
+                ? item.images.map(img => `${apiBaseUrl}/uploads/event/${img.imageUrl}`)
+                : [],
+          attendeesCount: null,
+        }));
 
         setAllEvents(formattedEvents);
       } catch (error) {
@@ -114,7 +119,7 @@ const formattedEvents = data.map(item => ({
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
-            <FiList size={20} /> All Events
+            <FiList size={20} /> My Events
           </button>
         </div>
 

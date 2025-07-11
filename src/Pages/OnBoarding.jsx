@@ -281,9 +281,14 @@ const OnBoarding = () => {
         formDataToSend.append('profile', formData.profile); 
       }
       
-      if(formData.familyCode == '' || formData.familyCode == null){
-        formDataToSend.delete('familyCode');
+      // Always send familyCode, even if empty
+      formDataToSend.set('familyCode', formData.familyCode || '');
+
+      // Only send marriageDate if married
+      if (formData.maritalStatus !== 'Married') {
+        formDataToSend.delete('marriageDate');
       }
+
       formDataToSend.delete('motherTongue');
       formDataToSend.delete('gothram');
       formDataToSend.delete('childrenCount');
