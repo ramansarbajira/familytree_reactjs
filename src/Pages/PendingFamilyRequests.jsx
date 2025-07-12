@@ -4,6 +4,7 @@ import { FaUserPlus, FaCheckCircle, FaTimesCircle, FaSearch } from 'react-icons/
 import { FiPlus } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import InviteFamilyMemberModal from '../Components/InviteFamilyMemberModal';
+import { useUser } from '../Contexts/UserContext';
 
 const PendingRequestCard = ({ request, onAccept, onReject }) => {
   return (
@@ -65,6 +66,7 @@ const PendingFamilyRequests = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const { userInfo } = useUser();
 
   const fetchRequests = async () => {
     try {
@@ -242,7 +244,7 @@ const PendingFamilyRequests = () => {
         )}
       </div>
 
-      {showInviteModal && <InviteFamilyMemberModal onClose={() => setShowInviteModal(false)} />}
+      {showInviteModal && <InviteFamilyMemberModal onClose={() => setShowInviteModal(false)} familyCode={userInfo?.familyCode} />}
     </Layout>
   );
 };

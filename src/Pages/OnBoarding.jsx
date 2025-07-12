@@ -5,10 +5,13 @@ import FamilyCodeAutocomplete  from '../Components/SuggestFamily';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import { jwtDecode } from 'jwt-decode';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const OnBoarding = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const urlFamilyCode = params.get('familyCode');
   const [userId, setUserId] = useState(null);
   const [token, setToken] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -70,7 +73,7 @@ const OnBoarding = () => {
     address: '',
     contactNumber: '',
     bio: '',
-    familyCode: ''
+    familyCode: urlFamilyCode || ''
   });
 
   const [dropdownData, setDropdownData] = useState({
@@ -414,7 +417,7 @@ const OnBoarding = () => {
             bio: userProfile.bio || '',
             profile: userProfile.profile || '',
             profileUrl: userProfile.profile || '',
-            familyCode: userProfile.familyCode || ''
+            familyCode: prev.familyCode || userProfile.familyCode || ''
           };
         });
         // Parse response body

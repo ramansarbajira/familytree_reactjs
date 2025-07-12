@@ -41,7 +41,13 @@ const FamilyMemberListing = () => {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
-      .then(data => setCurrentUser(data.data));
+      .then(data => {
+        const user = data.data;
+        setCurrentUser({
+          ...user,
+          userId: user.id // Ensures userId is always present
+        });
+      });
   }, []);
 
   const handleOpenModal = () => setIsModalOpen(true);

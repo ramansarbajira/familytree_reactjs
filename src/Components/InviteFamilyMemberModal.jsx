@@ -1,46 +1,29 @@
 import React, { useState } from 'react';
 import { Link, Mail, Copy, Share2, Check, UserPlus, X } from 'lucide-react';
 
-const InviteFamilyMemberModal = ({ onClose }) => {
-  const [inviteLink, setInviteLink] = useState('');
-  const [email, setEmail] = useState('');
+const InviteFamilyMemberModal = ({ onClose, familyCode }) => {
+  const baseUrl = import.meta.env.VITE_BASE_URL || window.location.origin;
+  const inviteLink = `${baseUrl}/register?familyCode=${familyCode}`;
   const [isCopied, setIsCopied] = useState(false);
+  const [email, setEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [activeTab, setActiveTab] = useState('link');
 
-  // Function to generate a dummy invite link
-  const generateInviteLink = () => {
-    const newLink = `https://familytree.app/join?code=${Math.random().toString(36).substring(2, 15)}`;
-    setInviteLink(newLink);
-    setIsCopied(false); // Reset copied status
+  // Function to copy the invite link to clipboard
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   // Function to simulate sending an email
   const sendInviteByEmail = async (e) => {
-    e.preventDefault(); // Prevent default form submission
-    if (!email) return; // Do nothing if email is empty
-
-    console.log(`Sending invite to ${email}...`);
-    setEmailSent(true); // Show success message
-    setEmail(''); // Clear the email input
-    setTimeout(() => setEmailSent(false), 3000); // Hide success message after 3 seconds
-  };
-
-  // Function to copy the invite link to clipboard
-  const copyToClipboard = () => {
-    const tempInput = document.createElement('input');
-    tempInput.value = inviteLink;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    try {
-      document.execCommand('copy');
-      setIsCopied(true); // Indicate success
-      setTimeout(() => setIsCopied(false), 2000); // Reset copied status after 2 seconds
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
-      // Optionally, show a user-friendly message that copying failed
-    }
-    document.body.removeChild(tempInput);
+    e.preventDefault();
+    if (!email) return;
+    // Here you would send the inviteLink by email
+    setEmailSent(true);
+    setEmail('');
+    setTimeout(() => setEmailSent(false), 3000);
   };
 
   return (
@@ -114,27 +97,25 @@ const InviteFamilyMemberModal = ({ onClose }) => {
                       placeholder="Generate a link to share"
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent transition-all pr-12"
                     />
-                    {inviteLink && (
-                      <button
-                        onClick={copyToClipboard}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-600 hover:text-primary-700 transition-colors"
-                        title="Copy to clipboard"
-                        aria-label="Copy invitation link"
-                      >
-                        {isCopied ? <Check size={18} /> : <Copy size={18} />} {/* Using Lucide React Check/Copy icons */}
-                      </button>
-                    )}
+                    <button
+                      onClick={copyToClipboard}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-600 hover:text-primary-700 transition-colors"
+                      title="Copy to clipboard"
+                      aria-label="Copy invitation link"
+                    >
+                      {isCopied ? <Check size={18} /> : <Copy size={18} />}
+                    </button>
                   </div>
-                  <button
-                    onClick={generateInviteLink}
-                    className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm transition-all whitespace-nowrap text-sm"
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent('Join our family! Register here: ' + inviteLink)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg shadow-sm transition-all whitespace-nowrap text-sm flex items-center gap-2"
                   >
-                    Generate
-                  </button>
+                    <Share2 size={16} /> WhatsApp
+                  </a>
                 </div>
               </div>
-              
-              {/* Note about link expiration */}
               <div className="bg-primary-50 p-3 rounded-lg">
                 <p className="text-xs text-primary-800">
                   <span className="font-medium">Note:</span> This link will expire in 7 days. Anyone with the link can request to join your family tree.

@@ -1,10 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PhoneInput from 'react-phone-input-2';
 import AuthLogo from '../Components/AuthLogo';
 
 const Register = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const familyCode = params.get('familyCode');
   const firstNameRef = useRef(null);
   const mobileRef = useRef(null);
   
@@ -77,8 +80,12 @@ const Register = () => {
       }
       
       const data = await response.json();
-      // Navigate to OTP verification page with email
-      navigate('/verify-otp', { state: { email: data.email, mobile: data.mobile  } });
+      // Navigate to OTP verification page with email and familyCode in URL if present
+      if (familyCode) {
+        navigate(`/verify-otp?familyCode=${familyCode}`, { state: { email: data.email, mobile: data.mobile } });
+      } else {
+        navigate('/verify-otp', { state: { email: data.email, mobile: data.mobile } });
+      }
     } catch (error) {
       setApiError('Registration failed. Please check your network and try again.');
     } finally {

@@ -5,6 +5,8 @@ import AuthLogo from '../Components/AuthLogo';
 const VerifyOtp = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const familyCode = params.get('familyCode');
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -82,7 +84,11 @@ const VerifyOtp = () => {
       const data = await response.json();
       
       localStorage.setItem('access_token', data.accessToken);
-      navigate('/on-boarding');
+      if (familyCode) {
+        navigate(`/on-boarding?familyCode=${familyCode}`);
+      } else {
+        navigate('/on-boarding');
+      }
     } catch (err) {
       console.log(err);
       
