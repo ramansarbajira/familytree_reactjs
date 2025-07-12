@@ -12,32 +12,7 @@ import { useLanguage } from '../Contexts/LanguageContext';
 import { RelationshipCalculator } from '../utils/relationshipCalculator';
 import html2canvas from 'html2canvas';
 import LanguageSwitcher from '../Components/LanguageSwitcher';
-
-const sampleFamilyData = {
-    people: [
-        // Generation 5 (great-great-great-grandparents)
-        { id: 101, name: 'PeriyaRaman', gender: 'male', age: 110, generation: -4, parents: [], children: [111,112], spouses: [102], siblings: [] },
-        { id: 102, name: 'PeriyaLakshmi', gender: 'female', age: 108, generation: -4, parents: [], children: [111,112, 114], spouses: [101], siblings: [] },
-        // Generation 4 (great-great-grandparents)
-        { id: 111, name: 'RamanAppa', gender: 'male', age: 90, generation: -3, parents: [101,102], children: [121], spouses: [113], siblings: [112] },
-        { id: 112, name: 'LakshmiAmmal', gender: 'female', age: 88, generation: -3, parents: [101,102], children: [121], spouses: [114], siblings: [111] },
-        { id: 113, name: 'Meenakshi', gender: 'female', age: 89, generation: -3, parents: [], children: [121], spouses: [111], siblings: [] },
-        { id: 114, name: 'Sundaram', gender: 'male', age: 91, generation: -3, parents: [101,102], children: [121], spouses: [], siblings: [] },
-        // Generation 3 (great-grandparents)
-        { id: 121, name: 'Appadurai', gender: 'male', age: 70, generation: -2, parents: [111,113], children: [131], spouses: [122], siblings: [] },
-        { id: 122, name: 'Saraswathi', gender: 'female', age: 68, generation: -2, parents: [112,114], children: [131], spouses: [121], siblings: [] },
-        // Generation 2 (grandparents)
-        { id: 131, name: 'Muthuraman', gender: 'male', age: 50, generation: -1, parents: [121,122], children: [1,2], spouses: [132], siblings: [] },
-        { id: 132, name: 'Janaki', gender: 'female', age: 48, generation: -1, parents: [], children: [1,2], spouses: [131], siblings: [] },
-        // Generation 1 (parents)
-        { id: 1, name: 'Raman', gender: 'male', age: 60, generation: 1, parents: [131,132], children: [3,4,5], spouses: [2], siblings: [] },
-        { id: 2, name: 'Divya', gender: 'female', age: 58, generation: 1, parents: [131,132], children: [3,4,5], spouses: [1], siblings: [] },
-        // Generation 0 (children)
-        { id: 3, name: 'Shiro', gender: 'female', age: 35, generation: 2, parents: [1,2], children: [], spouses: [], siblings: [4,5] },
-        { id: 4, name: 'Laksh', gender: 'male', age: 37, generation: 2, parents: [1,2], children: [], spouses: [], siblings: [3,5] },
-        { id: 5, name: 'Dhayan', gender: 'male', age: 10, generation: 3, parents: [1,2], children: [], spouses: [], siblings: [3,4] },
-    ]
-};
+import Swal from 'sweetalert2';
 
 // Utility for authenticated fetch with logout on 401 or error
 const authFetch = async (url, options = {}) => {
@@ -45,8 +20,11 @@ const authFetch = async (url, options = {}) => {
     const headers = {
         ...options.headers,
         Authorization: token ? `Bearer ${token}` : undefined,
-        'Content-Type': 'application/json',
+        // Do not set Content-Type for FormData
     };
+    // Debug: log token and headers
+    console.log('authFetch token:', token);
+    console.log('authFetch headers:', headers);
     try {
         const response = await fetch(url, { ...options, headers });
         if (response.status === 401) {
@@ -56,14 +34,18 @@ const authFetch = async (url, options = {}) => {
         }
         return response;
     } catch (err) {
-        localStorage.removeItem('access_token');
-        window.location.href = '/login';
+        // Only logout on 401, not on network error
+        Swal.fire({
+            icon: 'error',
+            title: 'Network Error',
+            text: 'Network error or server error. Please try again.',
+        });
         return null;
     }
 };
 
 const FamilyTreePage = () => {
-const [tree, setTree] = useState(null);
+    const [tree, setTree] = useState(null);
     const [stats, setStats] = useState({ total: 1, male: 1, female: 0, generations: 1 });
     const [dagreGraph, setDagreGraph] = useState(null);
     const [dagreLayoutOffsetX, setDagreLayoutOffsetX] = useState(0);
@@ -89,15 +71,19 @@ const [tree, setTree] = useState(null);
     // Initialize tree (now with API/sample data support)
     useEffect(() => {
         const initializeTree = async () => {
-            // For now, load sample data. In future, this will be replaced with API call
-            const fetchFamilyDataFromApi = async () => {
-                // Simulate API delay
-                await new Promise(resolve => setTimeout(resolve, 100));
-                // Return sample data for now
-                return sampleFamilyData;
-            };
-
-            let data = await fetchFamilyDataFromApi();
+            // Fetch family data from API using familyCode
+            if (!userInfo || !userInfo.familyCode) return;
+            let data = null;
+            try {
+                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/family/tree/${userInfo.familyCode}`, {
+                    headers: { 'accept': '*/*' }
+                });
+                if (response.ok) {
+                    data = await response.json();
+                }
+            } catch (err) {
+                data = null;
+            }
             if (!data || !data.people || data.people.length === 0) {
                 // No data, create new tree with logged-in user as root
                 if (!userInfo) return; // Wait for userInfo to load
@@ -120,14 +106,38 @@ const [tree, setTree] = useState(null);
                 data.people.forEach(person => {
                     newTree.people.set(person.id, {
                         ...person,
-                        parents: new Set(person.parents),
-                        children: new Set(person.children),
-                        spouses: new Set(person.spouses),
-                        siblings: new Set(person.siblings)
+                        memberId: person.memberId !== undefined ? person.memberId : null,
+                        parents: new Set((person.parents || []).map(id => Number(id))),
+                        children: new Set((person.children || []).map(id => Number(id))),
+                        spouses: new Set((person.spouses || []).map(id => Number(id))),
+                        siblings: new Set((person.siblings || []).map(id => Number(id)))
                     });
                 });
-                newTree.nextId = Math.max(...data.people.map(p => p.id)) + 1;
-                newTree.rootId = data.people[0].id;
+                newTree.nextId = Math.max(...data.people.map(p => parseInt(p.id))) + 1;
+                // Set rootId to the person whose memberId matches the logged-in user's userId (robust string comparison)
+                let rootPersonId = null;
+                const userIdStr = String(userInfo.userId);
+                for (const [personId, personObj] of newTree.people.entries()) {
+                    if (personObj.memberId && String(personObj.memberId) === userIdStr) {
+                        rootPersonId = personId;
+                        break;
+                    }
+                }
+                // Fallback: match by name if memberId is missing or not matched
+                if (rootPersonId === null) {
+                    for (const [personId, personObj] of newTree.people.entries()) {
+                        if (personObj.name && personObj.name === userInfo.name) {
+                            rootPersonId = personId;
+                            break;
+                        }
+                    }
+                }
+                // Final fallback: use the first person in the data
+                if (rootPersonId !== null) {
+                    newTree.rootId = rootPersonId;
+                } else {
+                    newTree.rootId = data.people[0].id;
+                }
                 setTree(newTree);
                 updateStats(newTree);
                 arrangeTree(newTree);
@@ -147,6 +157,10 @@ const [tree, setTree] = useState(null);
             setDagreLayoutOffsetX(layout.dagreLayoutOffsetX);
             setDagreLayoutOffsetY(layout.dagreLayoutOffsetY);
         }
+        // Debug: Log positions of each person
+        if (treeInstance && treeInstance.people) {
+            console.log('Person positions:', Array.from(treeInstance.people.values()).map(p => ({ id: p.id, name: p.name, x: p.x, y: p.y })));
+        }
         setTree(treeInstance);
     };
 
@@ -158,50 +172,51 @@ const [tree, setTree] = useState(null);
         // Set selected person for relationship display
         setSelectedPersonId(personId);
 
+        // Set up icons with English labels (no translation except for relationships)
         const icons = {
-            [getTranslation('addParents', language)]: `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zM20 10h-2V8h-2v2h-2v2h2v2h2v-2h2v-2z"/></svg>`,
-            [getTranslation('addSpouse', language)]: `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`,
-            [getTranslation('addChild', language)]: `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`,
-            [getTranslation('addSibling', language)]: `<svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM12 10h-2v2H8v-2H6V8h2V6h2v2h2v2z"/></svg>`,
-            [getTranslation('edit', language)]: `<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`,
-            [getTranslation('delete', language)]: `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`
+            'Add Parents': `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zM20 10h-2V8h-2v2h-2v2h2v2h2v-2h2v-2z"/></svg>`,
+            'Add Spouse': `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`,
+            'Add Child': `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`,
+            'Add Sibling': `<svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM12 10h-2v2H8v-2H6V8h2V6h2v2h2v2z"/></svg>`,
+            'Edit': `<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`,
+            'Delete': `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`
         };
 
         const items = [];
         if (person.parents.size === 0) {
             items.push({ 
-                label: getTranslation('addParents', language), 
+                label: 'Add Parents',
                 action: () => setModal({ isOpen: true, action: { type: 'parents', person } }),
-                icon: icons[getTranslation('addParents', language)] 
+                icon: icons['Add Parents']
             });
         }
         items.push({ 
-            label: getTranslation('addSpouse', language), 
+            label: 'Add Spouse',
             action: () => setModal({ isOpen: true, action: { type: 'spouse', person } }),
-            icon: icons[getTranslation('addSpouse', language)] 
+            icon: icons['Add Spouse']
         });
         items.push({ 
-            label: getTranslation('addChild', language), 
+            label: 'Add Child',
             action: () => setModal({ isOpen: true, action: { type: 'children', person } }),
-            icon: icons[getTranslation('addChild', language)] 
+            icon: icons['Add Child']
         });
         if (person.parents.size > 0) {
             items.push({ 
-                label: getTranslation('addSibling', language), 
+                label: 'Add Sibling',
                 action: () => setModal({ isOpen: true, action: { type: 'siblings', person } }),
-                icon: icons[getTranslation('addSibling', language)] 
+                icon: icons['Add Sibling']
             });
         }
         items.push({ 
-            label: getTranslation('edit', language), 
+            label: 'Edit',
             action: () => setModal({ isOpen: true, action: { type: 'edit', person } }),
-            icon: icons[getTranslation('edit', language)] 
+            icon: icons['Edit']
         });
         if (person.id !== tree?.rootId) {
             items.push({ 
-                label: getTranslation('delete', language), 
+                label: 'Delete',
                 action: () => deletePerson(personId),
-                icon: icons[getTranslation('delete', language)] 
+                icon: icons['Delete']
             });
         }
 
@@ -281,6 +296,10 @@ const [tree, setTree] = useState(null);
                     ...personData,
                     memberId: personData.memberId || personData.userId || null,
                 });
+                // PATCH: preserve imgPreview for preview in tree
+                if (person && personData.imgPreview) {
+                    person.imgPreview = personData.imgPreview;
+                }
                 if (!person) {
                     // Only set duplicate if it's an existing member (has memberId)
                     if (personData.memberId || personData.userId) {
@@ -292,7 +311,11 @@ const [tree, setTree] = useState(null);
             }
         });
         if (duplicateFound) {
-            alert(getTranslation('duplicateUserError', language));
+            Swal.fire({
+                icon: 'info',
+                title: 'Duplicate Member',
+                text: 'This member already exists in the tree.',
+            });
             return;
         }
 
@@ -368,14 +391,27 @@ const [tree, setTree] = useState(null);
         arrangeTree(newTree);
     };
 
-    const deletePerson = (personId) => {
+    const deletePerson = async (personId) => {
         if (!tree) return;
         if (personId === tree.rootId) {
-            alert(getTranslation('cannotDeleteRoot', language));
+            Swal.fire({
+                icon: 'info',
+                title: 'Cannot Delete Root',
+                text: 'Cannot delete the root person.',
+            });
             return;
         }
 
-        if (window.confirm(getTranslation('confirmDelete', language))) {
+        const result = await Swal.fire({
+            icon: 'warning',
+            title: 'Are you sure?',
+            text: 'You are about to delete this person. This action cannot be undone.',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'No, cancel!',
+        });
+
+        if (result.isConfirmed) {
             const newTree = new FamilyTree();
             newTree.people = new Map(tree.people);
             newTree.nextId = tree.nextId;
@@ -407,8 +443,17 @@ const [tree, setTree] = useState(null);
         }
     };
 
-    const resetTree = () => {
-        if (window.confirm(getTranslation('confirmNewTree', language))) {
+    const resetTree = async () => {
+        const result = await Swal.fire({
+            icon: 'warning',
+            title: 'Create New Tree',
+            text: 'Are you sure you want to create a new tree? This will overwrite your current tree.',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, create new tree!',
+            cancelButtonText: 'No, keep current tree!',
+        });
+
+        if (result.isConfirmed) {
             const newTree = new FamilyTree();
             newTree.addPerson({
                 name: userInfo.name,
@@ -429,18 +474,78 @@ const [tree, setTree] = useState(null);
         // Download the tree as an image (PNG)
         const treeCanvas = document.querySelector('.tree-canvas');
         if (!treeCanvas) return;
-        const canvas = await html2canvas(treeCanvas, { backgroundColor: null });
-        const image = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = image;
-        a.download = 'family-tree.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+
+        // Step 1: Replace all images in the tree with a local image to avoid CORS issues
+        const allImgs = treeCanvas.querySelectorAll('img');
+        const originalSrcs = [];
+        const localImg = '/public/assets/user.png'; // Adjust path if needed
+        allImgs.forEach(img => {
+            originalSrcs.push(img.src);
+            img.src = localImg;
+        });
+
+        // Save original styles
+        const originalOverflow = treeCanvas.style.overflow;
+        const originalWidth = treeCanvas.style.width;
+        const originalHeight = treeCanvas.style.height;
+
+        // Expand to fit content
+        treeCanvas.style.overflow = 'visible';
+        treeCanvas.style.width = 'auto';
+        treeCanvas.style.height = 'auto';
+
+        try {
+            // Use html2canvas with higher scale for better quality
+            const canvas = await html2canvas(treeCanvas, {
+                backgroundColor: '#fff', // Set a white background
+                scale: 2, // Higher scale for better resolution
+                useCORS: true,
+                allowTaint: true,
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: document.body.scrollWidth,
+                windowHeight: document.body.scrollHeight,
+            });
+
+            // Restore original images
+            allImgs.forEach((img, i) => {
+                img.src = originalSrcs[i];
+            });
+
+            // Restore original styles
+            treeCanvas.style.overflow = originalOverflow;
+            treeCanvas.style.width = originalWidth;
+            treeCanvas.style.height = originalHeight;
+
+            const image = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = image;
+            a.download = 'family-tree.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (err) {
+            // Restore original images and styles on error
+            allImgs.forEach((img, i) => {
+                img.src = originalSrcs[i];
+            });
+            treeCanvas.style.overflow = originalOverflow;
+            treeCanvas.style.width = originalWidth;
+            treeCanvas.style.height = originalHeight;
+            Swal.fire({
+                icon: 'error',
+                title: 'Export Failed',
+                text: 'Could not generate image. Try again or check for CORS issues.'
+            });
+        }
     };
 
     const useAdvancedAlgorithms = () => {
-        alert('Advanced algorithms feature is available in the React version!');
+        Swal.fire({
+            icon: 'info',
+            title: 'Advanced Algorithms',
+            text: 'Advanced algorithms feature is available in the React version!',
+        });
     };
 
     const centerTreeInView = () => {
@@ -498,32 +603,48 @@ const [tree, setTree] = useState(null);
         setSaveStatus('loading');
         setSaveMessage('');
         try {
-            const people = Array.from(tree.people.values()).map(person => ({
-                id: person.id,
-                name: person.name,
-                gender: person.gender,
-                age: person.age,
-                img: person.img,
-                generation: person.generation,
-                parents: Array.from(person.parents),
-                children: Array.from(person.children),
-                spouses: Array.from(person.spouses),
-                siblings: Array.from(person.siblings),
-                userId: person.memberId || null,
-            }));
-            
+            const formData = new FormData();
+            let index = 0;
+            for (const person of tree.people.values()) {
+                // Remove person_{index}_personId, only send person_{index}_id
+                formData.append(`person_${index}_id`, person.id);
+                formData.append(`person_${index}_name`, person.name);
+                formData.append(`person_${index}_gender`, person.gender);
+                formData.append(`person_${index}_age`, person.age);
+                formData.append(`person_${index}_generation`, person.generation);
+                formData.append(`person_${index}_birthOrder`, person.birthOrder || 0);
+                formData.append(`person_${index}_memberId`, person.memberId || '');
+                formData.append(`person_${index}_parents`, person.parents ? Array.from(person.parents).join(',') : '');
+                formData.append(`person_${index}_children`, person.children ? Array.from(person.children).join(',') : '');
+                formData.append(`person_${index}_spouses`, person.spouses ? Array.from(person.spouses).join(',') : '');
+                formData.append(`person_${index}_siblings`, person.siblings ? Array.from(person.siblings).join(',') : '');
+                // For image
+                if (person.img instanceof File) {
+                    formData.append(`person_${index}_img`, person.img);
+                } else if (typeof person.img === 'string') {
+                    formData.append(`person_${index}_img`, person.img);
+                }
+                index++;
+            }
+            formData.append('person_count', index);
+            // Add familyCode to payload if available
+            if (userInfo && userInfo.familyCode) {
+                formData.append('familyCode', userInfo.familyCode);
+            }
             const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/family/tree/create`, {
                 method: 'POST',
-                body: JSON.stringify({ people }),
+                body: formData,
+                headers: {
+                    // Authorization header will be set in authFetch
+                },
             });
-            
-            if (!response) return; // Already logged out if 401 or error
+            if (!response) return;
             if (!response.ok) throw new Error('Failed to save');
             setSaveStatus('success');
-            setSaveMessage(getTranslation('familyTreeSaved', language));
+            setSaveMessage('Family tree saved successfully!');
         } catch (err) {
             setSaveStatus('error');
-            setSaveMessage(getTranslation('failedToSave', language));
+            setSaveMessage('Failed to save family tree.');
         }
     };
 
@@ -651,3 +772,4 @@ const [tree, setTree] = useState(null);
     );
 }
 export default FamilyTreePage;
+

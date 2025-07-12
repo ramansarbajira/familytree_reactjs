@@ -9,6 +9,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
     const [count, setCount] = useState(1);
     const [forms, setForms] = useState([]);
     const [imageData, setImageData] = useState({});
+    const [imagePreview, setImagePreview] = useState({});
     const [familyMembers, setFamilyMembers] = useState([]);
     const [selectedMemberId, setSelectedMemberId] = useState(null);
     const [showManualEntry, setShowManualEntry] = useState(false);
@@ -18,11 +19,11 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
     const { language } = useLanguage();
     
     const titles = {
-        parents: getTranslation('addParents', language),
-        spouse: getTranslation('addSpouse', language),
-        children: getTranslation('addChild', language),
-        siblings: getTranslation('addSibling', language),
-        edit: getTranslation('edit', language)
+        parents: 'Add Parents',
+        spouse: 'Add Spouse',
+        children: 'Add Child',
+        siblings: 'Add Sibling',
+        edit: 'Edit'
     };
 
     // Add tab state for each form
@@ -117,16 +118,27 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
     const handleImageUpload = (event, index) => {
         const file = event.target.files[0];
         if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            setImageData(prev => ({
-                ...prev,
-                [index]: e.target.result
-            }));
-        };
-        reader.readAsDataURL(file);
+        // Store the File object directly for binary upload
+        setImageData(prev => ({
+            ...prev,
+            [index]: file
+        }));
+        // Generate preview URL
+        const url = URL.createObjectURL(file);
+        setImagePreview(prev => ({
+            ...prev,
+            [index]: url
+        }));
     };
+
+    // Clean up object URLs when modal closes or image changes
+    useEffect(() => {
+        return () => {
+            Object.values(imagePreview).forEach(url => {
+                if (url) URL.revokeObjectURL(url);
+            });
+        };
+    }, [isOpen]);
 
     const handleParentDropdown = (type, value) => {
         setParentSelections(prev => ({
@@ -185,6 +197,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                 gender: member.user.userProfile.gender === 'Male' ? 'male' : 'female',
                                 age: member.user.userProfile.dob ? (new Date().getFullYear() - new Date(member.user.userProfile.dob).getFullYear()) : '',
                                 img: member.user.profileImage,
+                                imgPreview: imagePreview[form.index] || '',
                                 dob: member.user.userProfile.dob,
                                 memberId: member.user.id,
                                 birthOrder: 1, // Default birth order for parents
@@ -192,15 +205,14 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                             hasValidParent = true;
                         }
                     } else if (sel.showManualEntry) {
-                        // Manual entry selected
-                        const formData = new FormData(e.target);
                         const name = formData.get(`name_${form.index}`);
                         if (name && name.trim() !== '') {
                             parentPersons.push({
                                 name: name.trim(),
                                 gender: form.gender,
                                 age: formData.get(`age_${form.index}`),
-                                img: imageData[form.index] || '',
+                                img: imageData[form.index] || '', // File object or empty string
+                                imgPreview: imagePreview[form.index] || '',
                                 generation: action.person ? action.person.generation - 1 : 0,
                                 birthOrder: 1, // Default birth order for parents
                             });
@@ -209,13 +221,11 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                     }
                 }
             });
-            
             // Only proceed if we have at least one valid parent
             if (!hasValidParent) {
                 alert('Please fill in at least one parent\'s details. Select an existing member or add a new person.');
                 return;
             }
-            
             onAddPersons(parentPersons);
             onClose();
             return;
@@ -223,10 +233,8 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
         // For other types: spouse, child, sibling, etc.
         const persons = [];
         let hasValidPerson = false;
-        
         forms.forEach(form => {
             const sel = formSelections[form.index] || {};
-            
             // Check if user has made a selection for this person
             if (sel.selectedMemberId && !sel.showManualEntry) {
                 // Existing member selected
@@ -237,6 +245,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                         gender: member.user.userProfile.gender === 'Male' ? 'male' : 'female',
                         age: member.user.userProfile.dob ? (new Date().getFullYear() - new Date(member.user.userProfile.dob).getFullYear()) : '',
                         img: member.user.profileImage,
+                        imgPreview: imagePreview[form.index] || '',
                         dob: member.user.userProfile.dob,
                         memberId: member.user.id,
                         birthOrder: parseInt(formData.get(`birthOrder_${form.index}`)) || 1,
@@ -244,7 +253,6 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                     hasValidPerson = true;
                 }
             } else if (sel.showManualEntry) {
-                // Manual entry selected
                 const name = formData.get(`name_${form.index}`);
                 if (name && name.trim() !== '') {
                     let generation, gender;
@@ -266,20 +274,19 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                         gender: gender || 'male',
                         age: formData.get(`age_${form.index}`),
                         generation,
-                        img: imageData[form.index] || '',
+                        img: imageData[form.index] || '', // File object or empty string
+                        imgPreview: imagePreview[form.index] || '',
                         birthOrder: parseInt(formData.get(`birthOrder_${form.index}`)) || 1,
                     });
                     hasValidPerson = true;
                 }
             }
         });
-        
         // Only proceed if we have at least one valid person
         if (!hasValidPerson) {
             alert('Please fill in at least one person\'s details. Select an existing member or add a new person.');
             return;
         }
-        
         onAddPersons(persons);
         onClose();
     };
@@ -514,7 +521,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                         <option value="">-- Select --</option>
                                         {eligible.map(member => (
                                             <option key={member.user.id} value={member.user.id} disabled={existingMemberIds.includes(member.user.id)}>
-                                                {member.user.fullName} ({member.user.userProfile.gender}, {member.user.userProfile.dob?.split('T')[0]}) {existingMemberIds.includes(member.user.id) ? '(Already in tree)' : ''}
+                                                {member.user.fullName} {member.user.userProfile && member.user.userProfile.gender ? `(${member.user.userProfile.gender}${member.user.userProfile.dob ? ', ' + member.user.userProfile.dob.split('T')[0] : ''})` : ''} {existingMemberIds.includes(member.user.id) ? '(Already in tree)' : ''}
                                             </option>
                                         ))}
                                         <option value="manual">Add New Member</option>
@@ -551,7 +558,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                 marginBottom: 8,
                                                 display: 'block'
                                             }}>
-                                                {getTranslation('name', language)}:
+                                                Name:
                                             </label>
                                             <input 
                                                 type="text" 
@@ -587,7 +594,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                 marginBottom: 8,
                                                 display: 'block'
                                             }}>
-                                                {getTranslation('age', language)}:
+                                                Age:
                                             </label>
                                             <input 
                                                 type="number" 
@@ -745,7 +752,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                         marginBottom: 8,
                                         display: 'block'
                                     }}>
-                                        {getTranslation('selectExistingMember', language)}:
+                                        Select Existing Member:
                                     </label>
                                     <select
                                         value={formSelections[form.index]?.selectedMemberId || ''}
@@ -773,10 +780,10 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                         <option value="">-- Select --</option>
                                         {eligible.map(member => (
                                             <option key={member.user.id} value={member.user.id} disabled={existingMemberIds.includes(member.user.id)}>
-                                                {member.user.fullName} ({member.user.userProfile.gender}, {member.user.userProfile.dob?.split('T')[0]}) {existingMemberIds.includes(member.user.id) ? '(Already in tree)' : ''}
+                                                {member.user.fullName} {member.user.userProfile && member.user.userProfile.gender ? `(${member.user.userProfile.gender}${member.user.userProfile.dob ? ', ' + member.user.userProfile.dob.split('T')[0] : ''})` : ''} {existingMemberIds.includes(member.user.id) ? '(Already in tree)' : ''}
                                             </option>
                                         ))}
-                                        <option value="manual">{getTranslation('addNewMember', language)}</option>
+                                        <option value="manual">Add New Member</option>
                                     </select>
                                 </div>
                             )}
@@ -825,7 +832,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                 marginBottom: 8,
                                                 display: 'block'
                                             }}>
-                                                {getTranslation('name', language)}:
+                                                Name:
                                             </label>
                                             <input 
                                                 type="text" 
@@ -861,7 +868,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                     marginBottom: 8,
                                                     display: 'block'
                                                 }}>
-                                                    {getTranslation('gender', language)}:
+                                                    Gender:
                                                 </label>
                                                 <select 
                                                     name={`gender_${form.index}`} 
@@ -886,8 +893,8 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                         e.target.style.boxShadow = 'none';
                                                     }}
                                                 >
-                                                    <option value="male">{getTranslation('male', language)}</option>
-                                                    <option value="female">{getTranslation('female', language)}</option>
+                                                    <option value="male">Male</option>
+                                                    <option value="female">Female</option>
                                                 </select>
                                             </div>
                                         )}
@@ -900,7 +907,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                 marginBottom: 8,
                                                 display: 'block'
                                             }}>
-                                                {getTranslation('age', language)}:
+                                                Age:
                                             </label>
                                             <input 
                                                 type="number" 
@@ -937,7 +944,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                     marginBottom: 8,
                                                     display: 'block'
                                                 }}>
-                                                    பிறப்பு வரிசை (Birth Order):
+                                                    Birth Order:
                                                 </label>
                                                 <input 
                                                     type="number" 
@@ -970,7 +977,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                     marginTop: 4,
                                                     fontStyle: 'italic'
                                                 }}>
-                                                    மூத்தவர் குறைந்த எண், இளையவர் அதிக எண்
+                                                    Older sibling has lower number, younger sibling has higher number
                                                 </p>
                                             </div>
                                         )}
