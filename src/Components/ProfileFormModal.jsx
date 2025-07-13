@@ -62,6 +62,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const firstErrorRef = useRef(null);
   const lastMemberDataRef = useRef({});
   const hasInitializedForm = useRef(false);
@@ -77,9 +78,20 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     error: null
   });
 
+  // Check if current user can edit account settings (role 2 or 3 - Admin/Superadmin)
+  const canEditAccountSettings = userInfo && (userInfo.role === 2 || userInfo.role === 3);
+
+  // Check if this is the current user's profile being edited
+  const isCurrentUserProfile = mode === 'edit-profile' && userInfo && userInfo.userId === (formData.userId || userInfo.userId);
+
   useEffect(() => {
     if (apiError && errorRef.current) {
+      // Focus on error message and scroll to it
       errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Add a small delay to ensure the scroll completes before focusing
+      setTimeout(() => {
+        errorRef.current.focus();
+      }, 300);
     }
   }, [apiError]);
 
@@ -91,6 +103,8 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
           const sourceDataRaw = mode === 'edit-profile' ? userInfo : memberData;
 
           if (!sourceDataRaw) return;
+          
+
           
           // Handle children names from either raw.childrenNames or individual childName fields
           let childrenNames = [];
@@ -151,18 +165,30 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
             mobile,
             status: sourceDataRaw.status ? String(sourceDataRaw.status) : '1',
             role: sourceDataRaw.role ? String(sourceDataRaw.role) : '1',
-            religionId: sourceDataRaw.religionId ? String(sourceDataRaw.religionId) : '',
+            religionId: sourceDataRaw.religionId 
+              ? String(sourceDataRaw.religionId) 
+              : sourceDataRaw.raw?.userProfile?.religionId
+              ? String(sourceDataRaw.raw.userProfile.religionId)
+              : '',
             languageId: sourceDataRaw.languageId
               ? String(sourceDataRaw.languageId)
               : sourceDataRaw.motherTongue
               ? String(sourceDataRaw.motherTongue)
+              : sourceDataRaw.raw?.userProfile?.languageId
+              ? String(sourceDataRaw.raw.userProfile.languageId)
               : '',
             gothramId: sourceDataRaw.gothramId
               ? String(sourceDataRaw.gothramId)
               : sourceDataRaw.gothram
               ? String(sourceDataRaw.gothram)
+              : sourceDataRaw.raw?.userProfile?.gothramId
+              ? String(sourceDataRaw.raw.userProfile.gothramId)
+              : sourceDataRaw.raw?.gothramId
+              ? String(sourceDataRaw.raw.gothramId)
               : '',
           };
+
+
 
           setFormData(newFormData);
           lastMemberDataRef.current = { ...sourceDataRaw };
@@ -250,6 +276,39 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       fetchDropdownData();
     }
   }, [isOpen]);
+
+  // Effect to update form data when dropdown data is loaded
+  useEffect(() => {
+    if (!dropdownData.loading && dropdownData.gothrams.length > 0 && (mode === 'edit-profile' || mode === 'edit-member')) {
+      // Ensure the selected values are properly set once dropdown data is loaded
+      setFormData(prevData => {
+        const updatedData = { ...prevData };
+        
+        // Update gothramId if it exists but might not be properly set
+        if (prevData.gothramId && !dropdownData.gothrams.find(g => String(g.id) === String(prevData.gothramId))) {
+          // If the current gothramId doesn't match any option, try to find it in the member data
+          const sourceDataRaw = mode === 'edit-profile' ? userInfo : memberData;
+          if (sourceDataRaw) {
+            const gothramId = sourceDataRaw.gothramId 
+              ? String(sourceDataRaw.gothramId)
+              : sourceDataRaw.gothram
+              ? String(sourceDataRaw.gothram)
+              : sourceDataRaw.raw?.userProfile?.gothramId
+              ? String(sourceDataRaw.raw.userProfile.gothramId)
+              : sourceDataRaw.raw?.gothramId
+              ? String(sourceDataRaw.raw.gothramId)
+              : '';
+            
+            if (gothramId && dropdownData.gothrams.find(g => String(g.id) === gothramId)) {
+              updatedData.gothramId = gothramId;
+            }
+          }
+        }
+        
+        return updatedData;
+      });
+    }
+  }, [dropdownData.loading, dropdownData.gothrams, mode, userInfo, memberData, formData.gothramId]);
 
   const validate = () => {
     const newErrors = {};
@@ -446,7 +505,33 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       apiUrl = `${import.meta.env.VITE_API_BASE_URL}/family/member/register-and-join-family`;
       httpMethod = 'POST';
     } else {
-      const userId = memberData.id || userInfo?.userId || '';
+      // For edit-profile mode: use logged user's ID
+      // For edit-member mode: use member's ID
+      let userId;
+      
+      if (mode === 'edit-profile') {
+        // Try multiple possible ID fields for user profile
+        userId = userInfo?.userId || userInfo?.id || formData.userId || formData.id;
+      } else {
+        // Try multiple possible ID fields for member data
+        userId = memberData.id || memberData.userId || formData.userId || formData.id;
+      }
+      
+      // Debug logging to see what ID fields are available
+      console.log('ProfileFormModal Debug:', {
+        mode,
+        userInfo: { userId: userInfo?.userId, id: userInfo?.id },
+        memberData: { id: memberData?.id, userId: memberData?.userId },
+        formData: { userId: formData?.userId, id: formData?.id },
+        finalUserId: userId
+      });
+      
+      // Validate that we have a valid userId
+      if (!userId) {
+        setApiError('User ID not found. Please refresh the page and try again.');
+        return;
+      }
+      
       apiUrl = `${import.meta.env.VITE_API_BASE_URL}/user/profile/update/${userId}`;
       httpMethod = 'PUT';
     }
@@ -468,32 +553,66 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
 
       if (!response.ok) {
         const errorData = await response.json();
-        setApiError(errorData.message || 'Operation failed. Please try again.');
+        const errorMessage = errorData.message || 'Operation failed. Please try again.';
+        setApiError(errorMessage);
         return;
       }
 
       const resultData = await response.json();
-      if (mode === 'add' && onAddMember) {
-        onAddMember(resultData);
+      
+      // Always show success alert for add mode
+      if (mode === 'add') {
+        if (onAddMember) {
+          onAddMember(resultData);
+        }
         Swal.fire({
           icon: 'success',
           title: 'Success!',
           text: 'Family member created successfully.',
           confirmButtonColor: '#3f982c',
+        }).then(() => {
+          window.location.reload();
         });
-      } else if (onUpdateProfile) {
-        onUpdateProfile(resultData);
-        Swal.fire({
-          icon: 'success',
-          title: 'Success!',
-          text: 'Profile updated successfully.',
-          confirmButtonColor: '#3f982c',
-        });
+      } else {
+        // For edit modes, always show alert regardless of callback
+        if (onUpdateProfile) {
+          onUpdateProfile(resultData);
+        }
+        
+        // Check if family code was updated (joining new family)
+        const originalFamilyCode = lastMemberDataRef.current.familyCode || userInfo?.familyCode || '';
+        const newFamilyCode = formData.familyCode || '';
+        
+        if (originalFamilyCode !== newFamilyCode && newFamilyCode) {
+          // Family code changed - show approval pending message
+          Swal.fire({
+            icon: 'info',
+            title: 'Family Join Request Sent!',
+            text: 'Your request to join the family has been sent. Please wait for the family admin to approve your request.',
+            confirmButtonColor: '#3f982c',
+          }).then(() => {
+            window.location.reload();
+          });
+        } else {
+          // Regular profile update
+          const alertTitle = mode === 'edit-profile' ? 'Profile Updated!' : 'Member Updated!';
+          const alertText = mode === 'edit-profile' ? 'Your profile has been updated successfully.' : 'Family member has been updated successfully.';
+          
+          Swal.fire({
+            icon: 'success',
+            title: alertTitle,
+            text: alertText,
+            confirmButtonColor: '#3f982c',
+          }).then(() => {
+            window.location.reload();
+          });
+        }
       }
       onClose();
       
     } catch (error) {
-      setApiError('Network error or server unreachable. Please try again.');
+      const errorMessage = 'Network error or server unreachable. Please try again.';
+      setApiError(errorMessage);
       Swal.fire({
         icon: 'error',
         title: 'Oops...',
@@ -502,6 +621,71 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteProfile = async () => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "This action cannot be undone. Your profile will be permanently deleted!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete my profile!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      setIsDeleting(true);
+      
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          throw new Error('Authentication token not found');
+        }
+
+        const userId = userInfo?.userId;
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/${userId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'accept': '*/*'
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          const errorMessage = errorData.message || 'Failed to delete profile';
+          throw new Error(errorMessage);
+        }
+
+        // Clear local storage and redirect to login
+        localStorage.removeItem('access_token');
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Profile Deleted!',
+          text: 'Your profile has been successfully deleted.',
+          confirmButtonColor: '#10b981',
+        }).then(() => {
+          window.location.href = '/login';
+        });
+        
+      } catch (error) {
+        console.error('Error deleting profile:', error);
+        const errorMessage = error.message || 'Failed to delete profile. Please try again.';
+        setApiError(errorMessage);
+        
+        Swal.fire({
+          icon: 'error',
+          title: 'Error!',
+          text: errorMessage,
+          confirmButtonColor: '#d33',
+        });
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -536,9 +720,19 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
 
         <div className="p-6">
           {apiError && (
-            <div className="mb-4 p-3 text-sm text-red-700 bg-red-100 rounded border border-red-300 flex justify-between items-center">
-              {apiError}
-              <button onClick={() => setApiError('')} className="bg-unset text-red-700 hover:text-red-900">
+            <div 
+              ref={errorRef}
+              tabIndex="-1"
+              className="mb-4 p-3 text-sm text-red-700 bg-red-100 rounded border border-red-300 flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-red-500"
+              role="alert"
+              aria-live="polite"
+            >
+              <span>{apiError}</span>
+              <button 
+                onClick={() => setApiError('')} 
+                className="bg-unset text-red-700 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
+                aria-label="Close error message"
+              >
                 &times;
               </button>
             </div>
@@ -648,39 +842,44 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
                 </div>
                 
-                <div>
-                  <label htmlFor="status" className={labelClassName}>
-                    Account Status <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="status"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className={inputClassName('status')}
-                  >
-                    <option value="0">Unverified</option>
-                    <option value="1">Active</option>
-                    <option value="2">Inactive</option>
-                    <option value="3">Deleted</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label htmlFor="role" className={labelClassName}>
-                    Role <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="role"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                    className={inputClassName('role')}
-                  >
-                    <option value="1">Member</option>
-                    <option value="2">Admin</option>
-                  </select>
-                </div>
+                {canEditAccountSettings && (
+                  <>
+                    <div>
+                      <label htmlFor="status" className={labelClassName}>
+                        Account Status <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        id="status"
+                        name="status"
+                        value={formData.status}
+                        onChange={handleChange}
+                        className={inputClassName('status')}
+                      >
+                        <option value="0">Unverified</option>
+                        <option value="1">Active</option>
+                        <option value="2">Inactive</option>
+                        <option value="3">Deleted</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="role" className={labelClassName}>
+                        Role <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        id="role"
+                        name="role"
+                        value={formData.role}
+                        onChange={handleChange}
+                        className={inputClassName('role')}
+                      >
+                        <option value="1">Member</option>
+                        <option value="2">Admin</option>
+                        {userInfo?.role === 3 && <option value="3">Superadmin</option>}
+                      </select>
+                    </div>
+                  </>
+                )}
 
                 {(mode === 'add' || showPasswordField) && (
                   <div className="relative">
@@ -976,23 +1175,20 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     placeholder="Mother's name"
                   />
                 </div>
-                {(mode === 'add' || formData.familyCode) && (
-                  <div>
-                    <label htmlFor="familyCode" className={labelClassName}>
-                      Family Code
-                    </label>
-                    <input
-                      id="familyCode"
-                      name="familyCode"
-                      type="text"
-                      value={formData.familyCode || userInfo?.familyCode || ''}
-                      onChange={handleChange}
-                      className={inputClassName('familyCode')}
-                      placeholder="FAM000123"
-                      readOnly
-                    />
-                  </div>
-                )}
+                <div>
+                  <label htmlFor="familyCode" className={labelClassName}>
+                    Family Code
+                  </label>
+                  <input
+                    id="familyCode"
+                    name="familyCode"
+                    type="text"
+                    value={formData.familyCode || userInfo?.familyCode || ''}
+                    onChange={handleChange}
+                    className={inputClassName('familyCode')}
+                    placeholder="FAM000123"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1008,14 +1204,14 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <select
                     id="religionId"
                     name="religionId"
-                    value={formData.religionId}
+                    value={formData.religionId || ''}
                     onChange={handleChange}
                     className={inputClassName('religionId')}
                     disabled={dropdownData.loading}
                   >
                     <option value="">Select Religion</option>
                     {dropdownData.religions.map(religion => (
-                      <option key={religion.id} value={religion.id}>
+                      <option key={religion.id} value={String(religion.id)}>
                         {religion.name}
                       </option>
                     ))}
@@ -1033,14 +1229,14 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <select
                     id="languageId"
                     name="languageId"
-                    value={formData.languageId}
+                    value={formData.languageId || ''}
                     onChange={handleChange}
                     className={inputClassName('languageId')}
                     disabled={dropdownData.loading}
                   >
                     <option value="">Select Language</option>
                     {dropdownData.languages.map(language => (
-                      <option key={language.id} value={language.id}>
+                      <option key={language.id} value={String(language.id)}>
                         {language.name}
                       </option>
                     ))}
@@ -1074,14 +1270,14 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <select
                     id="gothramId"
                     name="gothramId"
-                    value={formData.gothramId}
+                    value={formData.gothramId || ''}
                     onChange={handleChange}
                     className={inputClassName('gothramId')}
                     disabled={dropdownData.loading}
                   >
                     <option value="">Select Gothram</option>
                     {dropdownData.gothrams.map(gothram => (
-                      <option key={gothram.id} value={gothram.id}>
+                      <option key={gothram.id} value={String(gothram.id)}>
                         {gothram.name}
                       </option>
                     ))}
@@ -1200,29 +1396,52 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="bg-unset px-6 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className={`px-6 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary)] text-white font-medium rounded-lg transition-colors flex items-center ${
-                  isLoading ? 'opacity-75 cursor-not-allowed' : ''
-                }`}
-              >
-                {isLoading && (
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                )}
-                {submitButtonText}
-              </button>
+            <div className="flex justify-between items-center pt-4">
+              {/* Delete Profile Button - Only show for current user profile editing */}
+              {isCurrentUserProfile && (
+                <button
+                  type="button"
+                  onClick={handleDeleteProfile}
+                  disabled={isDeleting}
+                  className={`px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors flex items-center ${
+                    isDeleting ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isDeleting && (
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {isDeleting ? 'Deleting...' : 'Delete Profile'}
+                </button>
+              )}
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="bg-unset px-6 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`px-6 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary)] text-white font-medium rounded-lg transition-colors flex items-center ${
+                    isLoading ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isLoading && (
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {submitButtonText}
+                </button>
+              </div>
             </div>
           </form>
         </div>

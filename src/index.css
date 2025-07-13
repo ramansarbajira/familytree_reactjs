@@ -70,6 +70,93 @@
   }
 }
 
+/* Enhanced modal animations for ViewMemberModal */
+@keyframes modalBackdropFadeIn {
+  from { 
+    opacity: 0; 
+    backdrop-filter: blur(0px);
+  }
+  to { 
+    opacity: 1; 
+    backdrop-filter: blur(4px);
+  }
+}
+
+@keyframes modalContentSlideIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95) translateY(30px);
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modalHeaderGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes detailCardHover {
+  from { 
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  to { 
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Modal backdrop animation */
+.modal-backdrop {
+  animation: modalBackdropFadeIn 0.3s ease-out;
+}
+
+/* Modal content animation */
+.modal-content-animate {
+  animation: modalContentSlideIn 0.4s ease-out;
+}
+
+/* Animated gradient header */
+.modal-header-gradient {
+  background-size: 200% 200%;
+  animation: modalHeaderGradient 3s ease infinite;
+}
+
+/* Detail card hover animation */
+.detail-card-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.detail-card-hover:hover {
+  animation: detailCardHover 0.2s ease-out forwards;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Smooth transitions for all interactive elements */
+.transition-smooth {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Glass morphism effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
 .text-primary{
     color: var(--color-primary);
   }
@@ -89,34 +176,33 @@
 .custom-scrollbar {
     overflow-y: auto;
     -ms-overflow-style: none; 
-    scrollbar-width: none; 
-}
-.custom-scrollbar::-webkit-scrollbar {
-    display: none; 
+    scrollbar-width: thin; 
 }
 
 /* Custom Scrollbar Styles for Webkit browsers (Chrome, Safari, Edge) */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px; /* Width of the scrollbar */
+  width: 6px; /* Width of the scrollbar */
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f1f1; /* Color of the track */
+  background: transparent; /* Transparent track */
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e0; /* Color of the thumb */
+  background: #d1d5db; /* Light gray thumb */
   border-radius: 10px;
+  transition: background 0.2s ease;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #a0aec0; /* Color of the thumb on hover */
+  background: #9ca3af; /* Darker gray on hover */
 }
 
 /* Custom Scrollbar Styles for Firefox */
 .custom-scrollbar {
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
 }
 
 @keyframes scale-in {

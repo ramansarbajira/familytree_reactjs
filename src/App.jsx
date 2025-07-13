@@ -22,7 +22,7 @@ import OrderManagementPage from './Pages/OrderManagementPage';
 
 import { UserProvider } from './Contexts/UserContext';
 import { LanguageProvider } from './Contexts/LanguageContext';
-import PrivateRoute from './Routes/PrivateRoute';
+import PrivateRoute, { RoleBasedRoute } from './Routes/PrivateRoute';
 import GuestRoute from './Routes/GuestRoute';
 
 // Add a wrapper for admin-only route
@@ -58,7 +58,7 @@ function App() {
         <Route path="/my-family" element={<PrivateRoute><UserProvider><LanguageProvider><MyFamily /></LanguageProvider></UserProvider></PrivateRoute>  } />
         <Route path="/family-tree" element={<PrivateRoute><UserProvider><LanguageProvider><FamilyTreePage /></LanguageProvider></UserProvider></PrivateRoute>  } />
 
-        <Route path ="/pending-request" element={<PrivateRoute><UserProvider><LanguageProvider><PendingFamilyRequests /> </LanguageProvider></UserProvider> </PrivateRoute>} />
+        <Route path ="/pending-request" element={<PrivateRoute><UserProvider><LanguageProvider><PendingFamilyRequests /></LanguageProvider></UserProvider></PrivateRoute>} />
         <Route path="/posts-and-feeds" element={<PrivateRoute><UserProvider><LanguageProvider><PostsAndFeedsPage /></LanguageProvider></UserProvider></PrivateRoute>} />
         <Route path="/family-gallery" element={<PrivateRoute><UserProvider><LanguageProvider><FamilyGalleryPage /></LanguageProvider></UserProvider></PrivateRoute>} />
         <Route path="/gifts-memories" element={<PrivateRoute><UserProvider><LanguageProvider><GiftListingPage /></LanguageProvider></UserProvider></PrivateRoute>} />

@@ -5,11 +5,13 @@ import FamilyOverView from '../Components/FamilyOverView';
 import ProfileFormModal from '../Components/ProfileFormModal';
 import FamilyMemberCard from '../Components/FamilyMemberCard';
 import ViewFamilyMemberModal from '../Components/ViewMemberModal';
-import { FiPlus } from 'react-icons/fi';
+import NoFamilyView from '../Components/NoFamilyView';
+import PendingApprovalView from '../Components/PendingApprovalView';
+import { FiPlus, FiLoader } from 'react-icons/fi';
 import { jwtDecode } from 'jwt-decode';
 
 const FamilyMemberListing = () => {
-  const { userInfo } = useUser();
+  const { userInfo, userLoading } = useUser();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editMemberData, setEditMemberData] = useState(null);
@@ -18,6 +20,7 @@ const FamilyMemberListing = () => {
   const [viewMember, setViewMember] = useState(null);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [viewLoading, setViewLoading] = useState(false);
   
   useEffect(() => {
     const storedToken = localStorage.getItem('access_token');
@@ -70,11 +73,18 @@ const FamilyMemberListing = () => {
 
    const handleViewMember = async (memberId) => {
     if (!memberId) return;
-    const fullDetails = await fetchMemberDetails(memberId);
-    if (fullDetails) {
-      console.log(fullDetails);
-      
-      setViewMember(fullDetails);
+    
+    setViewLoading(true);
+    try {
+      const fullDetails = await fetchMemberDetails(memberId);
+      if (fullDetails) {
+        console.log(fullDetails);
+        setViewMember(fullDetails);
+      }
+    } catch (error) {
+      console.error('Error viewing member:', error);
+    } finally {
+      setViewLoading(false);
     }
   };
 
@@ -130,9 +140,11 @@ const FamilyMemberListing = () => {
         fatherName: profile.fatherName || '',
         motherName: profile.motherName || '',
         motherTongue: parseInt(profile.languageId) || 0,
+        languageId: parseInt(profile.languageId) || 0, // Add this for consistency
         religionId: parseInt(profile.religionId) || 0,
         caste: profile.caste || '',
         gothram: parseInt(profile.gothramId) || 0,
+        gothramId: parseInt(profile.gothramId) || 0, // Add this for consistency
         kuladevata: profile.kuladevata || '',
         hobbies: profile.hobbies || '',
         likes: profile.likes || '',
@@ -150,6 +162,11 @@ const FamilyMemberListing = () => {
         mobile: user.mobile || '',
         status: user.status || 0,
         role: user.role || 0,
+
+        // Include nested objects for proper display
+        religion: profile.religion || null,
+        language: profile.language || null,
+        gothram: profile.gothram || null,
 
         raw: user, // full object including both user + userProfile
       };
@@ -174,6 +191,55 @@ const FamilyMemberListing = () => {
     return age;
   };
 
+  // Show loading state while checking user info
+  if (userLoading || !userInfo) {
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="flex flex-col items-center justify-center py-20">
+            <FiLoader className="text-6xl text-primary-600 animate-spin mb-4" />
+            <h2 className="text-2xl font-semibold text-gray-700 mb-2">Loading Family Members...</h2>
+            <p className="text-gray-500">Please wait while we fetch your family information.</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Show NoFamilyView if user has no family code
+  if (!userInfo.familyCode) {
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <NoFamilyView 
+            onCreateFamily={() => setIsModalOpen(true)}
+            onJoinFamily={() => {
+              // Handle join family logic here
+              console.log('Join family clicked');
+            }}
+          />
+        </div>
+      </Layout>
+    );
+  }
+
+  // Show PendingApprovalView if user is not approved
+  if (userInfo.approveStatus !== 'approved') {
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <PendingApprovalView 
+            familyCode={userInfo.familyCode}
+            onJoinFamily={() => {
+              // Handle join family logic here
+              console.log('Join family clicked');
+            }}
+          />
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -181,14 +247,17 @@ const FamilyMemberListing = () => {
 
         <FamilyOverView familyCode={userInfo?.familyCode} token={token} />
 
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={handleOpenModal}
-            className="flex items-center bg-primary-DEFAULT text-white px-4 py-2 rounded-md hover:bg-primary-700"
-          >
-            <FiPlus className="mr-2" /> Add New Member
-          </button>
-        </div>
+        {/* Show Add New Member button only for Admin (role 2) and Superadmin (role 3) */}
+        {(userInfo?.role === 2 || userInfo?.role === 3) && (
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={handleOpenModal}
+              className="flex items-center bg-primary-DEFAULT text-white px-4 py-2 rounded-md hover:bg-primary-700"
+            >
+              <FiPlus className="mr-2" /> Add New Member
+            </button>
+          </div>
+        )}
 
         <FamilyMemberCard 
           familyCode={userInfo?.familyCode} 
@@ -219,6 +288,7 @@ const FamilyMemberListing = () => {
             isOpen={!!viewMember}
             onClose={() => setViewMember(null)}
             member={viewMember}
+            isLoading={viewLoading}
           />
         )}
       </div>

@@ -13,6 +13,8 @@ import { RelationshipCalculator } from '../utils/relationshipCalculator';
 import html2canvas from 'html2canvas';
 import LanguageSwitcher from '../Components/LanguageSwitcher';
 import Swal from 'sweetalert2';
+import { FaPlus, FaSave } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 // Utility for authenticated fetch with logout on 401 or error
 const authFetch = async (url, options = {}) => {
@@ -66,7 +68,52 @@ const FamilyTreePage = () => {
     const [saveMessage, setSaveMessage] = useState('');
     const [selectedPersonId, setSelectedPersonId] = useState(null);
     const { language } = useLanguage();
-    const { userInfo } = useUser();
+    const { userInfo, userLoading } = useUser();
+    const navigate = useNavigate();
+
+    // Only allow editing for role 2 or 3
+    const canEdit = userInfo && (userInfo.role === 2 || userInfo.role === 3);
+
+    // Check approval status and familyCode
+    useEffect(() => {
+        if (userLoading) return; // Wait for user data to load
+        
+        if (!userInfo) {
+            // User not logged in, redirect to login
+            navigate('/login');
+            return;
+        }
+
+        // Check if user is approved and has familyCode
+        if (userInfo.approveStatus !== 'approved' || !userInfo.familyCode) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Access Restricted',
+                text: userInfo.approveStatus !== 'approved' 
+                    ? 'Your family membership is pending approval. Please wait for admin approval.'
+                    : 'You need to create or join a family first.',
+                confirmButtonText: 'Go to My Family',
+                showCancelButton: false,
+            }).then(() => {
+                navigate('/my-family');
+            });
+            return;
+        }
+    }, [userInfo, userLoading, navigate]);
+
+    // Show loading state while checking approval or if user is not approved
+    if (userLoading || !userInfo || userInfo.approveStatus !== 'approved' || !userInfo.familyCode) {
+        return (
+            <Layout>
+                <div className="flex items-center justify-center min-h-screen bg-gray-100">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading family tree...</p>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
 
     // Initialize tree (now with API/sample data support)
     useEffect(() => {
@@ -574,6 +621,22 @@ const FamilyTreePage = () => {
         }
     }, [tree]);
 
+    // On mobile, always scroll to top and center horizontally after tree loads
+    useEffect(() => {
+        if (tree && tree.people.size > 0 && window.innerWidth <= 600 && containerRef.current) {
+            containerRef.current.scrollTop = 0;
+            // Center horizontally
+            let minX = Infinity, maxX = -Infinity;
+            tree.people.forEach(person => {
+                const personSize = 100;
+                minX = Math.min(minX, person.x - personSize / 2);
+                maxX = Math.max(maxX, person.x + personSize / 2);
+            });
+            const treeWidth = maxX - minX;
+            containerRef.current.scrollLeft = (minX + treeWidth / 2) - containerRef.current.clientWidth / 2;
+        }
+    }, [tree]);
+
     // Recalculate radial menu position on scroll/resize if open
     useEffect(() => {
         if (!radialMenu.isActive || !radialMenu.activePersonId) return;
@@ -648,88 +711,126 @@ const FamilyTreePage = () => {
         }
     };
 
+    useEffect(() => {
+        if (saveStatus === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: 'Family tree saved successfully!',
+            });
+            setSaveStatus('idle');
+        } else if (saveStatus === 'error') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to save family tree.',
+            });
+            setSaveStatus('idle');
+        }
+    }, [saveStatus]);
+
     return (
-      <Layout>
-        <div className="mx-auto px-4 py-8 space-y-8">
-            {/* Section Header */}
-            {/* <div className="bg-white rounded-2xl shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-1">Family Tree</h1>
-                    <p className="text-gray-600">Visualize and manage your family connections.</p>
+        <Layout>
+            {/* Main container for tree and controls */}
+            <div className="relative flex flex-col h-[calc(100vh-56px)] w-full bg-gray-100 overflow-hidden">
+                {canEdit && (
+                    <div className="hidden sm:flex w-full justify-between items-center gap-4 px-8 py-4 bg-white border-b border-gray-200 z-40">
+                        {/* Stats section */}
+                        <div className="flex gap-6 text-gray-700 text-base font-medium">
+                            <div>Total: <span className="font-bold">{stats.total}</span></div>
+                            <div>Male: <span className="font-bold">{stats.male}</span></div>
+                            <div>Female: <span className="font-bold">{stats.female}</span></div>
+                            <div>Generations: <span className="font-bold">{stats.generations}</span></div>
+                        </div>
+                        {/* Action buttons */}
+                        <div className="flex gap-4">
+                            <button
+                                className="flex items-center gap-2 px-6 py-2 bg-green-500 text-white rounded-lg shadow-md text-lg font-semibold active:scale-95 transition"
+                                onClick={resetTree}
+                            >
+                                <FaPlus /> New Tree
+                            </button>
+                            <button
+                                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md text-lg font-semibold active:scale-95 transition disabled:opacity-60"
+                                onClick={saveTreeToApi}
+                                disabled={saveStatus === 'loading'}
+                            >
+                                {saveStatus === 'loading' && (
+                                    <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                    </svg>
+                                )}
+                                <FaSave /> Save
+                            </button>
+                        </div>
+                    </div>
+                )}
+                {!canEdit && (
+                    <div className="hidden sm:flex w-full justify-start items-center gap-4 px-8 py-4 bg-white border-b border-gray-200 z-40">
+                        {/* Stats section only */}
+                        <div className="flex gap-6 text-gray-700 text-base font-medium">
+                            <div>Total: <span className="font-bold">{stats.total}</span></div>
+                            <div>Male: <span className="font-bold">{stats.male}</span></div>
+                            <div>Female: <span className="font-bold">{stats.female}</span></div>
+                            <div>Generations: <span className="font-bold">{stats.generations}</span></div>
+                        </div>
+                    </div>
+                )}
+                {/* Tree visualization area */}
+                <div className="flex-1 w-full h-full min-h-0 min-w-0 overflow-auto">
+                    <div className="relative min-w-[900px] min-h-[600px] w-max h-max mx-auto flex flex-col items-start justify-start sm:items-center sm:justify-center">
+                        {/* Tree SVG connections */}
+                        {dagreGraph && (
+                            <TreeConnections
+                                dagreGraph={dagreGraph}
+                                dagreLayoutOffsetX={dagreLayoutOffsetX}
+                                dagreLayoutOffsetY={dagreLayoutOffsetY}
+                            />
+                        )}
+                        {/* Render person cards (example, adjust as per your logic) */}
+                        {tree && Array.from(tree.people.values()).map(person => (
+                            <Person
+                                key={person.id}
+                                person={person}
+                                isRoot={person.id === tree.rootId}
+                                onClick={canEdit ? handlePersonClick : undefined}
+                                rootId={tree.rootId}
+                                tree={tree}
+                                language={language}
+                            />
+                        ))}
+                    </div>
                 </div>
-            </div> */}
-
-            {/* Controls and Stats */}
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-3 sticky top-0 z-20 bg-white shadow border-b border-gray-200" style={{paddingTop: '1rem', paddingBottom: '1rem'}}>
-                <div className="flex gap-3 ml-3 mr-3">
-                    <button className="bg-primary-600 text-white rounded-xl px-5 py-2.5 shadow-lg hover:bg-primary-700 transition font-semibold" onClick={resetTree}>
-                        New Tree
-                    </button>
-                    <button className="bg-purple-600 text-white rounded-xl px-5 py-2.5 shadow-lg hover:bg-purple-700 transition font-semibold hidden" onClick={useAdvancedAlgorithms}>
-                        Advanced Algo
-                    </button>
-                    <button className="bg-gray-800 text-white rounded-xl px-5 py-2.5 shadow-lg hover:bg-gray-900 transition font-semibold" onClick={downloadTreeData}>
-                        Download Tree Data
-                    </button>
-                    <button className="bg-green-600 text-white rounded-xl px-5 py-2.5 shadow-lg hover:bg-green-700 transition font-semibold" onClick={saveTreeToApi} disabled={saveStatus === 'loading'}>
-                        {saveStatus === 'loading' ? 'Saving...' : 'Save Family Tree'}
-                    </button>
-                    {/* Language Switcher */}
-                    <LanguageSwitcher />
-                </div>
-                <div className="flex gap-4 text-sm font-medium mr-3">
-                    <span>Total: <span className="font-bold">{stats.total}</span></span>
-                    <span>Males: <span className="font-bold">{stats.male}</span></span>
-                    <span>Females: <span className="font-bold">{stats.female}</span></span>
-                    <span>Generations: <span className="font-bold">{stats.generations}</span></span>
-                </div>
-            </div>
-
-            {saveStatus !== 'idle' && (
-                <div className={`mt-2 text-center ${saveStatus === 'success' ? 'text-green-600' : 'text-red-600'}`}>{saveMessage}</div>
-            )}
-
-            {/* Family Tree Section */}
-            <div
-              className="bg-gray-50 rounded-2xl shadow-xl p-2 sm:p-4 md:p-8 flex items-start justify-center max-w-full w-full overflow-auto"
-              style={{
-                maxWidth: '100vw',
-                width: '100%',
-                height: '100vh',
-                minHeight: '100vh',
-                overflow: 'auto',
-              }}
-            >
-                <div className="tree-canvas" style={{ marginTop: '32px', position: 'relative' }}>
-                    <TreeConnections 
-                        dagreGraph={dagreGraph}
-                        dagreLayoutOffsetX={dagreLayoutOffsetX}
-                        dagreLayoutOffsetY={dagreLayoutOffsetY}
-                    />
-                    {tree && Array.from(tree.people.values()).map(person => (
-                        <Person
-                            key={person.id}
-                            person={person}
-                            isRoot={person.id === tree.rootId}
-                            onClick={handlePersonClick}
-                            rootId={tree.rootId}
-                            tree={tree}
-                            language={language}
-                        />
-                    ))}
-                </div>
+                {canEdit && (
+                    <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-around items-center py-3 z-50 sm:hidden">
+                        <button
+                            className="flex items-center gap-2 px-6 py-2 bg-green-500 text-white rounded-lg shadow-md text-lg font-semibold active:scale-95 transition"
+                            onClick={resetTree}
+                        >
+                            <FaPlus /> New Tree
+                        </button>
+                        <button
+                            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md text-lg font-semibold active:scale-95 transition"
+                            onClick={saveTreeToApi}
+                            disabled={saveStatus === 'loading'}
+                        >
+                            <FaSave /> Save
+                        </button>
+                    </div>
+                )}
             </div>
 
             <RadialMenu
-                isActive={radialMenu.isActive}
+                isActive={canEdit && radialMenu.isActive}
                 position={radialMenu.position}
-                items={radialMenu.items}
+                items={canEdit ? radialMenu.items : []}
                 onItemClick={handleRadialMenuItemClick}
                 onClose={() => setRadialMenu({ isActive: false, position: { x: 0, y: 0 }, items: [], activePersonId: null })}
             />
 
             <AddPersonModal
-                isOpen={modal.isOpen}
+                isOpen={canEdit && modal.isOpen}
                 onClose={() => setModal({ isOpen: false, action: { type: '', person: null } })}
                 action={modal.action}
                 onAddPersons={handleAddPersons}
@@ -767,9 +868,8 @@ const FamilyTreePage = () => {
                     </div>
                 </div>
             )}
-        </div>
-      </Layout>
+        </Layout>
     );
-}
+};
 export default FamilyTreePage;
 

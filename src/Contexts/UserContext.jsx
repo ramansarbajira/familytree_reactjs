@@ -71,6 +71,7 @@ export const UserProvider = ({ children }) => {
       childrenArray.forEach((name, index) => {
         childFields[`childName${index}`] = name;
       });
+      
 
       setUserInfo({
         userId: userProfile.userId,
@@ -103,6 +104,7 @@ export const UserProvider = ({ children }) => {
         bio: userProfile.bio || '',
         profileUrl: userProfile.profile || '',
         familyCode: userProfile.familyMember?.familyCode || '',
+        approveStatus: userProfile.familyMember?.approveStatus || 'pending',
         name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim(),
         
         countryCode: countryCode || '',

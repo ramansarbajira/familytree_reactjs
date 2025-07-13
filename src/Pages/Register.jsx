@@ -17,14 +17,30 @@ const Register = () => {
     email: '',
     mobile: '',
     countryCode: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
   
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [isLoading, setIsLoading] = useState(false); // Add loading state
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const apiErrorRef = useRef(null);
 
+  // Password validation function
+  const validatePassword = (password) => {
+    const minLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    
+    return {
+      isValid: minLength && hasUpperCase && hasSpecialChar,
+      minLength,
+      hasUpperCase,
+      hasSpecialChar
+    };
+  };
 
   const validate = () => {
     const newErrors = {};
@@ -37,7 +53,23 @@ const Register = () => {
     } else if (formData.mobile.length < 6 || formData.mobile.length > 15) {
       newErrors.mobile = 'Mobile number must be between 6 and 15 digits';
     }
-    if (!formData.password.trim()) newErrors.password = 'Password is required';
+    
+    // Password validation
+    if (!formData.password.trim()) {
+      newErrors.password = 'Password is required';
+    } else {
+      const passwordValidation = validatePassword(formData.password);
+      if (!passwordValidation.isValid) {
+        newErrors.password = 'Password must be at least 8 characters with 1 uppercase letter and 1 special character';
+      }
+    }
+    
+    // Confirm password validation
+    if (!formData.confirmPassword.trim()) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
 
     setErrors(newErrors);
 
@@ -67,15 +99,30 @@ const Register = () => {
     setIsLoading(true); // Set loading to true when API call starts
 
     try {
+      // Create API data without confirmPassword
+      const apiData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        mobile: formData.mobile,
+        countryCode: formData.countryCode,
+        password: formData.password
+      };
+
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(apiData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         setApiError(errorData.message || 'Login failed. Please check credentials.');
+        // Focus on error section after a short delay to ensure DOM update
+        setTimeout(() => {
+          apiErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          apiErrorRef.current?.focus();
+        }, 100);
         return;
       }
       
@@ -88,6 +135,11 @@ const Register = () => {
       }
     } catch (error) {
       setApiError('Registration failed. Please check your network and try again.');
+      // Focus on error section after a short delay to ensure DOM update
+      setTimeout(() => {
+        apiErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        apiErrorRef.current?.focus();
+      }, 100);
     } finally {
       setIsLoading(false); // Set loading to false when API call completes
     }
@@ -108,7 +160,11 @@ const Register = () => {
         </div>
 
         {apiError && (
-          <div className="error-alert mb-4 p-3 text-sm text-red-700 bg-red-100 rounded border border-red-300">
+          <div 
+            ref={apiErrorRef}
+            tabIndex="-1"
+            className="error-alert mb-4 p-3 text-sm text-red-700 bg-red-100 rounded border border-red-300 focus:outline-none focus:ring-2 focus:ring-red-300"
+          >
             {apiError}
             <button
               onClick={() => setApiError('')}
@@ -283,6 +339,64 @@ const Register = () => {
     )}
   </span>
   {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+  
+  {/* Password Requirements */}
+  {formData.password && (
+    <div className="mt-2 text-xs">
+      <p className="text-gray-600 mb-1">Password requirements:</p>
+      <div className="space-y-1">
+        <div className={`flex items-center ${formData.password.length >= 8 ? 'text-green-600' : 'text-gray-400'}`}>
+          <span className="mr-1">{formData.password.length >= 8 ? '✓' : '○'}</span>
+          At least 8 characters
+        </div>
+        <div className={`flex items-center ${/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-gray-400'}`}>
+          <span className="mr-1">{/[A-Z]/.test(formData.password) ? '✓' : '○'}</span>
+          1 uppercase letter
+        </div>
+        <div className={`flex items-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password) ? 'text-green-600' : 'text-gray-400'}`}>
+          <span className="mr-1">{/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password) ? '✓' : '○'}</span>
+          1 special character
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+
+          {/* Confirm Password */}
+       <div className="relative">
+  <label htmlFor="confirmPassword" className="block text-sm font-bold text-gray-800 mb-1">
+    Confirm Password <span className="text-red-500">*</span>
+  </label>
+  <input
+    id="confirmPassword"
+    type={showConfirmPassword ? 'text' : 'password'}
+    value={formData.confirmPassword}
+    onChange={(e) => handleChange('confirmPassword', e.target.value)}
+    className={`w-full px-4 py-3 pr-10 border rounded-lg focus:outline-none focus:ring-2 ${
+      errors.confirmPassword
+        ? 'border-red-500 focus:ring-red-300'
+        : 'border-gray-300 focus:ring-[var(--color-primary)]'
+    }`}
+    placeholder="Confirm password"
+  />
+  <span
+    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+    className="absolute top-9 right-3 cursor-pointer text-gray-500"
+  >
+    {showConfirmPassword ? (
+      // Eye Slash SVG
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9.27-3.11-11-7.5a11.05 11.05 0 013.304-4.348M3 3l18 18M16.24 16.24A5 5 0 017.76 7.76" />
+      </svg>
+    ) : (
+      // Eye Open SVG
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1.5 12S5.5 5.5 12 5.5 22.5 12 22.5 12s-4 6.5-10.5 6.5S1.5 12 1.5 12z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    )}
+  </span>
+  {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
 </div>
 
 

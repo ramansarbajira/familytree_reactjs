@@ -5,48 +5,12 @@ import { FiSearch, FiPlusCircle } from 'react-icons/fi';
 import { MdPublic, MdPeople } from 'react-icons/md';
 import CreateAlbumModal from '../Components/CreateAlbumModal';
 import { useUser } from '../Contexts/UserContext'; // Import useUser context
-import { jwtDecode } from 'jwt-decode';
-
-// Custom hook to get familyCode
-function useUserFamilyCode() {
-  const [familyCode, setFamilyCode] = useState('');
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    let userId;
-    try {
-      const decoded = jwtDecode(token);
-      userId = decoded.id || decoded.userId || decoded.sub;
-    } catch {
-      setLoading(false);
-      return;
-    }
-    fetch(`${import.meta.env.VITE_API_BASE_URL}/family/member/member/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json'
-      }
-    })
-      .then(res => res.json())
-      .then(data => {
-        setFamilyCode(data.familyCode || '');
-      })
-      .catch(() => setFamilyCode(''))
-      .finally(() => setLoading(false));
-  }, []);
-  return { familyCode, loading };
-}
 
 const FamilyGalleryPage = () => {
     const { userInfo, userLoading } = useUser(); // Get user info from context
     const [token, setToken] = useState(null); // State to store the token
-    const { familyCode, loading: familyCodeLoading } = useUserFamilyCode();
 
-    const [activeFeed, setActiveFeed] = useState('family'); // 'family' or 'public'
+    const [activeFeed, setActiveFeed] = useState('public'); // Changed to 'public' as default
     const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
     const [selectedAlbum, setSelectedAlbum] = useState(null); // To store the album currently viewed in modal
     const [isCreateAlbumModalOpen, setIsCreateAlbumModalOpen] = useState(false);
@@ -67,6 +31,13 @@ const FamilyGalleryPage = () => {
 
     // Function to fetch gallery albums from the API
     const fetchGalleries = async (galleryTitleSearch = '') => {
+        // For family feed, check if user has familyCode and is approved
+        if (activeFeed === 'family' && (!userInfo?.familyCode || userInfo?.approveStatus !== 'approved')) {
+            setGalleryAlbums([]);
+            setLoadingAlbums(false);
+            return;
+        }
+
         if (!userInfo || !token) {
             setLoadingAlbums(false);
             return;
@@ -126,7 +97,7 @@ const FamilyGalleryPage = () => {
     // Fetch galleries whenever activeFeed, userInfo, or token changes
     useEffect(() => {
         fetchGalleries();
-    }, [activeFeed, userInfo, token]);
+    }, [activeFeed, userInfo?.familyCode, userInfo?.approveStatus, token]);
 
     const filteredAlbums = galleryAlbums; // No need to filter here, API should return filtered results
 
@@ -161,24 +132,24 @@ const FamilyGalleryPage = () => {
 
                     {/* Top Bar - Enhanced with Create Album button */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-gray-200">
-                        <h1 className="text-3xl font-extrabold text-gray-900 leading-none">Your Photo Albums</h1>
+                        <h1 className="text-3xl font-extrabold text-gray-900 leading-none">Gallery Hub</h1>
                         <div className="flex items-center gap-3 mt-4 sm:mt-0">
                             {/* Feed Switcher - Modern Segmented Control */}
                             <div className="relative inline-flex rounded-full p-1">
-                                {familyCode && (
+                                <button
+                                    onClick={() => setActiveFeed('public')}
+                                    className={`flex items-center gap-1.5 py-2 px-4 mr-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeFeed === 'public' ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg' : 'text-gray-700 hover:text-primary-600 hover:bg-gray-200'}`}
+                                >
+                                    <MdPublic size={18} /> Public
+                                </button>
+                                {userInfo?.familyCode && userInfo?.approveStatus === 'approved' && (
                                     <button
                                         onClick={() => setActiveFeed('family')}
-                                        className={`flex items-center gap-1.5 py-2 px-4 mr-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeFeed === 'family' ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg' : 'text-gray-700 hover:text-primary-600 hover:bg-gray-200'}`}
+                                        className={`flex items-center gap-1.5 py-2 px-4 rounded-full text-sm font-semibold transition-all duration-300 ${activeFeed === 'family' ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg' : 'text-gray-700 hover:text-primary-600 hover:bg-gray-200'}`}
                                     >
                                         <MdPeople size={18} /> Family
                                     </button>
                                 )}
-                                <button
-                                    onClick={() => setActiveFeed('public')}
-                                    className={`flex items-center gap-1.5 py-2 px-4 rounded-full text-sm font-semibold transition-all duration-300 ${activeFeed === 'public' ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg' : 'text-gray-700 hover:text-primary-600 hover:bg-gray-200'}`}
-                                >
-                                    <MdPublic size={18} /> Public
-                                </button>
                             </div>
 
                             {/* Action Buttons */}

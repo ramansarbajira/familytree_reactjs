@@ -26,8 +26,24 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
         defs.appendChild(marker);
         svg.appendChild(defs);
 
-        const CARD_HEIGHT = 170; // reduced from 220
-        const CARD_MARGIN = 12;  // reduced from 24
+        const getCardHeight = () => (window.innerWidth <= 600 ? 140 : 220);
+        const CARD_HEIGHT = getCardHeight();
+        const CARD_CONNECT_OFFSET = 10; // Fine-tune so lines touch boxes
+
+        // Responsive dagre layout spacing
+        const isMobile = window.innerWidth <= 600;
+        const NODE_SEP = isMobile ? 40 : 120; // horizontal space between boxes
+        const RANK_SEP = isMobile ? 60 : 150; // vertical space between boxes
+        // If you have access to dagreGraph.setGraph, update its spacing here
+        if (dagreGraph.setGraph) {
+            dagreGraph.setGraph({
+                rankdir: 'TB',
+                nodesep: NODE_SEP,
+                ranksep: RANK_SEP,
+                marginx: 40,
+                marginy: 40,
+            });
+        }
 
         // Draw family connectors (parent-child)
         dagreGraph.nodes().forEach(v => {
@@ -36,56 +52,56 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
                 const parents = dagreGraph.predecessors(v) || [];
                 const children = dagreGraph.successors(v) || [];
                 if (parents.length > 0 && children.length > 0) {
+                    // Get parent and child node positions
                     const parentPoints = parents.map(pid => dagreGraph.node(pid));
                     const childPoints = children.map(cid => dagreGraph.node(cid));
-                    // Calculate center x between parents
-                    const parentXs = parentPoints.map(p => p.x);
-                    const centerX = parentXs.length > 1 ? (Math.min(...parentXs) + Math.max(...parentXs)) / 2 : parentXs[0];
-                    const connectorY = familyNode.y + dagreLayoutOffsetY;
-                    // Draw vertical from each parent to connectorY (bottom edge of parent card)
+                    // Draw vertical line from each parent to y of family node
                     parentPoints.forEach(parent => {
                         if (parent) {
                             const x = parent.x + dagreLayoutOffsetX;
-                            const y1 = parent.y + dagreLayoutOffsetY + CARD_HEIGHT / 2; // bottom edge of card (removed CARD_MARGIN)
-                            svg.appendChild(svgShadowPath(`M ${x} ${y1} L ${x} ${connectorY}`, '#6ee7b7'));
-                            svg.appendChild(svgPath(`M ${x} ${y1} L ${x} ${connectorY}`, '#34d399', 5, false));
+                            const y1 = parent.y + dagreLayoutOffsetY + CARD_HEIGHT / 2 - CARD_CONNECT_OFFSET; // bottom of parent card, fine-tuned
+                            const y2 = familyNode.y + dagreLayoutOffsetY;
+                            svg.appendChild(svgShadowPath(`M ${x} ${y1} L ${x} ${y2}`, '#6ee7b7'));
+                            svg.appendChild(svgPath(`M ${x} ${y1} L ${x} ${y2}`, '#34d399', 5, false));
                         }
                     });
-                    // Draw horizontal connector line at connectorY between parents
+                    // Draw horizontal connector line at y of family node
                     if (parentPoints.length > 1) {
                         const minX = Math.min(...parentPoints.map(p => p.x)) + dagreLayoutOffsetX;
                         const maxX = Math.max(...parentPoints.map(p => p.x)) + dagreLayoutOffsetX;
-                        svg.appendChild(svgShadowPath(`M ${minX} ${connectorY} H ${maxX}`, '#6ee7b7'));
-                        svg.appendChild(svgPath(`M ${minX} ${connectorY} H ${maxX}`, '#34d399', 5, false));
+                        const y = familyNode.y + dagreLayoutOffsetY;
+                        svg.appendChild(svgShadowPath(`M ${minX} ${y} H ${maxX}`, '#6ee7b7'));
+                        svg.appendChild(svgPath(`M ${minX} ${y} H ${maxX}`, '#34d399', 5, false));
                     }
-                    // Draw single vertical line from centerX, connectorY to children
-                    let childY;
+                    // --- Children connector logic ---
+                    const connectorX = familyNode.x + dagreLayoutOffsetX;
+                    const connectorY = familyNode.y + dagreLayoutOffsetY;
                     if (childPoints.length === 1) {
+                        // Single child: straight vertical line
                         const child = childPoints[0];
                         if (child) {
-                            childY = child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2; // top edge of card (removed CARD_MARGIN)
-                            svg.appendChild(svgShadowPath(`M ${centerX + dagreLayoutOffsetX} ${connectorY} L ${centerX + dagreLayoutOffsetX} ${childY}`, '#6ee7b7'));
-                            svg.appendChild(svgPath(`M ${centerX + dagreLayoutOffsetX} ${connectorY} L ${centerX + dagreLayoutOffsetX} ${childY}`, '#34d399', 5, false));
-                            // Connect to child
-                            svg.appendChild(svgShadowPath(`M ${centerX + dagreLayoutOffsetX} ${childY} L ${child.x + dagreLayoutOffsetX} ${childY}`, '#6ee7b7'));
-                            svg.appendChild(svgPath(`M ${centerX + dagreLayoutOffsetX} ${childY} L ${child.x + dagreLayoutOffsetX} ${childY}`, '#34d399', 5, false));
+                            const childX = child.x + dagreLayoutOffsetX;
+                            const childY = child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2 + CARD_CONNECT_OFFSET; // top of child card, fine-tuned
+                            svg.appendChild(svgShadowPath(`M ${connectorX} ${connectorY} L ${childX} ${childY}`, '#6ee7b7'));
+                            svg.appendChild(svgPath(`M ${connectorX} ${connectorY} L ${childX} ${childY}`, '#34d399', 5, false));
                         }
                     } else if (childPoints.length > 1) {
-                        // 1. Vertical from centerX to junctionY
-                        const junctionY = Math.min(...childPoints.map(c => c.y)) + dagreLayoutOffsetY - CARD_HEIGHT / 2 - 10; // less gap
-                        svg.appendChild(svgShadowPath(`M ${centerX + dagreLayoutOffsetX} ${connectorY} L ${centerX + dagreLayoutOffsetX} ${junctionY}`, '#6ee7b7'));
-                        svg.appendChild(svgPath(`M ${centerX + dagreLayoutOffsetX} ${connectorY} L ${centerX + dagreLayoutOffsetX} ${junctionY}`, '#34d399', 5, false));
-                        // 2. Horizontal from leftmost to rightmost child at junctionY
+                        // Multiple children: vertical line down to just above children, then horizontal, then short vertical to each child
+                        const childY = Math.min(...childPoints.map(c => c.y)) + dagreLayoutOffsetY - CARD_HEIGHT / 2 - 20 + CARD_CONNECT_OFFSET; // just above top of child cards, fine-tuned
+                        // Vertical line from connector to horizontal connector
+                        svg.appendChild(svgShadowPath(`M ${connectorX} ${connectorY} L ${connectorX} ${childY}`, '#6ee7b7'));
+                        svg.appendChild(svgPath(`M ${connectorX} ${connectorY} L ${connectorX} ${childY}`, '#34d399', 5, false));
+                        // Horizontal line connecting all children
                         const minX = Math.min(...childPoints.map(c => c.x)) + dagreLayoutOffsetX;
                         const maxX = Math.max(...childPoints.map(c => c.x)) + dagreLayoutOffsetX;
-                        svg.appendChild(svgShadowPath(`M ${minX} ${junctionY} H ${maxX}`, '#6ee7b7'));
-                        svg.appendChild(svgPath(`M ${minX} ${junctionY} H ${maxX}`, '#34d399', 5, false));
-                        // 3. Short vertical from horizontal to each child top
+                        svg.appendChild(svgShadowPath(`M ${minX} ${childY} H ${maxX}`, '#6ee7b7'));
+                        svg.appendChild(svgPath(`M ${minX} ${childY} H ${maxX}`, '#34d399', 5, false));
+                        // Short vertical line from horizontal to each child (no arrow)
                         childPoints.forEach(child => {
                             const childX = child.x + dagreLayoutOffsetX;
-                            const childY2 = child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2; // top edge of card (removed CARD_MARGIN)
-                            svg.appendChild(svgShadowPath(`M ${childX} ${junctionY} L ${childX} ${childY2}`, '#6ee7b7'));
-                            svg.appendChild(svgPath(`M ${childX} ${junctionY} L ${childX} ${childY2}`, '#34d399', 5, false));
+                            const childY2 = child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2 + CARD_CONNECT_OFFSET; // top of child card, fine-tuned
+                            svg.appendChild(svgShadowPath(`M ${childX} ${childY} L ${childX} ${childY2}`, '#6ee7b7'));
+                            svg.appendChild(svgPath(`M ${childX} ${childY} L ${childX} ${childY2}`, '#34d399', 5, false));
                         });
                     }
                 }

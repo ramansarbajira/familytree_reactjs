@@ -33,13 +33,15 @@ export function autoArrange(tree) {
                 const familyId = `family-${parentKey}`;
                 familyUnits.set(parentKey, familyId);
                 g.setNode(familyId, { width: familyNodeSize, height: familyNodeSize });
-                parentIds.forEach(pid => g.setEdge(pid.toString(), familyId, { weight: 10 }));
-                
-                const childrenOfThisUnit = [...person.children].filter(childId => {
-                    const child = tree.people.get(childId);
-                    return [...child.parents].sort().join('-') === parentKey;
+                parentIds.forEach(pid => {
+                  g.setEdge(pid.toString(), familyId, { weight: 10 });
+                  console.log(`Edge: parent ${pid} -> family node ${familyId}`);
                 });
-                childrenOfThisUnit.forEach(cid => g.setEdge(familyId, cid.toString()));
+                // Connect ALL children of these parents to the family node (regardless of parentKey match)
+                [...person.children].forEach(childId => {
+                  g.setEdge(familyId, childId.toString());
+                  console.log(`Edge: family node ${familyId} -> child ${childId}`);
+                });
             }
         }
 

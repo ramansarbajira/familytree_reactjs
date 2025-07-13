@@ -14,44 +14,74 @@ import {
 } from 'react-icons/fi';
 import { RiGitMergeLine } from 'react-icons/ri';
 import { FaTimes } from 'react-icons/fa';
-
-let userInfo = null;
-try {
-  userInfo = JSON.parse(localStorage.getItem('userInfo'));
-} catch {}
-
-const hasFamilyCode = userInfo && userInfo.familyCode;
-
-const menuItems = [
-  { id: 'home', label: 'Home', route: '/dashboard', icon: <FiHome size={19} /> },
-  { id: 'events', label: 'Events', route: '/events', icon: <FiCalendar size={19} /> },
-  { id: 'familyTree', label: 'Family Tree', route: '/family-tree', icon: <RiGitMergeLine size={19} /> },
-  {
-    id: 'familyManagement',
-    label: 'Family Management',
-    icon: <FiUsers size={19} />,
-    children: [
-      { id: 'myFamily', label: 'My Family', route: '/my-family', icon: <FiUsers size={17} /> },
-      { id: 'myFamilyMembers', label: 'All Members', route: '/my-family-member', icon: <FiUsers size={17} /> },
-      { id: 'pendingRequests', label: 'Pending Requests', route: '/pending-request', icon: <FiClock size={17} /> },
-    ]
-  },
-  { id: 'posts', label: 'Posts & Stories', route: '/posts-and-feeds', icon: <FiShare2 size={19} /> },
-  { id: 'gallery', label: 'Family Gallery', route: '/family-gallery', icon: <FiImage size={19} /> },
-  { id: 'gifts', label: 'Gifts & Memories', route: '/gifts-memories', icon: <FiGift size={19} /> },
-  { id: 'orders', label: 'Order Management', route: '/orders', icon: <FiPackage size={19} /> },
-];
+import { useUser } from '../Contexts/UserContext';
 
 const Sidebar = ({ isMobile, onCloseMobile }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedParents, setExpandedParents] = useState({});
-  // Get user info from localStorage
+  const { userInfo } = useUser();
+  
+  // Check if user is admin
   const isAdmin = userInfo && userInfo.role === 3;
+  
+  // Check if user is approved
+  const isApproved = userInfo && userInfo.approveStatus === 'approved';
 
-  const filteredMenuItems = isAdmin
-    ? menuItems
-    : menuItems.filter(item => item.id !== 'orders');
+  const menuItems = [
+    { id: 'home', label: 'Home', route: '/dashboard', icon: <FiHome size={19} />, requiresApproval: true },
+    { id: 'events', label: 'Events', route: '/events', icon: <FiCalendar size={19} />, requiresApproval: true },
+    { id: 'familyTree', label: 'Family Tree', route: '/family-tree', icon: <RiGitMergeLine size={19} /> },
+    {
+      id: 'familyManagement',
+      label: 'Family Management',
+      icon: <FiUsers size={19} />,
+      children: [
+        { id: 'myFamily', label: 'My Family', route: '/my-family', icon: <FiUsers size={17} /> },
+        { id: 'myFamilyMembers', label: 'All Members', route: '/my-family-member', icon: <FiUsers size={17} /> },
+        { id: 'pendingRequests', label: 'Pending Requests', route: '/pending-request', icon: <FiClock size={17} />, requiresApproval: true },
+      ]
+    },
+    { id: 'posts', label: 'Posts & Stories', route: '/posts-and-feeds', icon: <FiShare2 size={19} /> },
+    { id: 'gallery', label: 'Gallery Hub', route: '/family-gallery', icon: <FiImage size={19} /> },
+    { id: 'gifts', label: 'Gifts & Memories', route: '/gifts-memories', icon: <FiGift size={19} /> },
+    { id: 'orders', label: 'Order Management', route: '/orders', icon: <FiPackage size={19} /> },
+  ];
+
+  const filteredMenuItems = menuItems
+    .filter(item => {
+      // Filter out orders if not admin
+      if (item.id === 'orders' && !isAdmin) return false;
+      
+      // Filter out items that require approval if user is not approved
+      if (item.requiresApproval && !isApproved) return false;
+      
+      // For items with children, filter children that require approval
+      if (item.children) {
+        const filteredChildren = item.children.filter(child => {
+          if (child.requiresApproval && !isApproved) return false;
+          return true;
+        });
+        
+        // Only show parent if it has visible children
+        return filteredChildren.length > 0;
+      }
+      
+      return true;
+    })
+    .map(item => {
+      // For items with children, filter the children array
+      if (item.children) {
+        return {
+          ...item,
+          children: item.children.filter(child => {
+            if (child.requiresApproval && !isApproved) return false;
+            return true;
+          })
+        };
+      }
+      return item;
+    });
 
   useEffect(() => {
     const newExpandedParents = {};
@@ -74,6 +104,10 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
       return item.children.some(child => location.pathname === child.route); //  Exact match for children
     }
     return false;
+  };
+
+  const isChildActive = (child) => {
+    return location.pathname === child.route; //  Use exact match for child items
   };
 
   const handleItemClick = (item) => {
@@ -116,7 +150,7 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-5 px-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto py-5 px-4 custom-scrollbar scroll-smooth">
         <nav className="space-y-1.5">
           {filteredMenuItems.map((item) => (
             <div key={item.id}>
@@ -146,13 +180,13 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
                         <button
                           key={child.id}
                           className={`bg-unset flex items-center w-full px-4 py-2.5 rounded-lg text-left text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-200
-                            ${location.pathname.startsWith(child.route)
+                            ${isChildActive(child)
                               ? 'text-primary-600 bg-primary-50 font-medium'
                               : 'text-gray-600 hover:text-primary-500 hover:bg-gray-100'
                             }`}
                           onClick={() => handleItemClick(child)}
                         >
-                          <span className={`mr-3 ${location.pathname.startsWith(child.route) ? 'text-primary-400' : 'text-gray-400'}`}>
+                          <span className={`mr-3 ${isChildActive(child) ? 'text-primary-400' : 'text-gray-400'}`}>
                             {child.icon}
                           </span>
                           {child.label}

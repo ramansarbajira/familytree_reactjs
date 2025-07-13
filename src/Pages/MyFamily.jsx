@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../Components/Layout';
 import FamilyView from '../Components/FamilyView';
 import NoFamilyView from '../Components/NoFamilyView';
+import PendingApprovalView from '../Components/PendingApprovalView';
+import JoinFamilyModal from '../Components/JoinFamilyModal';
 import { useNavigate } from 'react-router-dom';
 import CreateFamilyModal from '../Components/CreateFamilyModal';
 import { UserProvider, useUser } from '../Contexts/UserContext';
@@ -37,7 +39,11 @@ const FamilyHubPage = () => {
     let ignore = false; // prevent race condition
 
     const fetchFamilyData = async () => {
-      if (!userInfo?.familyCode || userLoading){ setLoading(false); return; }
+      // Only fetch family data if user has family code and is approved
+      if (!userInfo?.familyCode || userInfo?.approveStatus !== 'approved' || userLoading) {
+        setLoading(false);
+        return;
+      }
 
       setLoading(true);
       setError(null);
@@ -76,14 +82,28 @@ const FamilyHubPage = () => {
     return () => {
       ignore = true;
     };
-  }, [userInfo?.familyCode, userLoading]);
+  }, [userInfo?.familyCode, userInfo?.approveStatus, userLoading]);
 
   const handleCreateFamily = () => {
     setIsCreateFamilyModalOpen(true);
   };
 
-  const handleJoinFamily = () => {
-    setIsJoinFamilyModalOpen(true);
+  const handleJoinFamily = (familyCode = null) => {
+    if (familyCode) {
+      // Handle joining with specific family code
+      console.log('Joining family with code:', familyCode);
+      // TODO: Implement API call to join family with new code
+      // For now, just show the modal
+      setIsJoinFamilyModalOpen(true);
+    } else {
+      setIsJoinFamilyModalOpen(true);
+    }
+  };
+
+  const handleFamilyJoined = (familyData) => {
+    // Refresh user info to get updated family code and approval status
+    //refetchUserInfo();
+    setIsJoinFamilyModalOpen(false);
   };
 
   const handleManageMembers = () => {
@@ -131,14 +151,14 @@ const FamilyHubPage = () => {
   };
 
 
-  if (loading) {
+  if (userLoading) {
     return (
       <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
         <div className="max-w-7xl mx-auto px-4 py-8 md:px-6 lg:px-8">
             <div className="flex flex-col items-center justify-center py-20">
                 <FiLoader className="text-6xl text-primary-600 animate-spin mb-4" />
-                <h2 className="text-2xl font-semibold text-gray-700 mb-2">Loading Data...</h2>
-                <p className="text-gray-500">Please wait while we fetching data.</p>
+                <h2 className="text-2xl font-semibold text-gray-700 mb-2">Loading User Data...</h2>
+                <p className="text-gray-500">Please wait while we fetch your information.</p>
             </div>
         </div>
       </Layout>
@@ -159,30 +179,46 @@ const FamilyHubPage = () => {
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-          {familyData ? (
-          <>
-            <FamilyView
-              familyData={familyData}
-              totalMembers={totalMembers}
-              males={males}
-              females={females}
-              averageAge={averageAge}
-              onManageMembers={handleManageMembers}
-              onManageEvents={handleManageEvent}
-              onManageGifts={handleManageGifts}
-              onEditFamily={handleEditFamily}
-              onShareFamilyCode={handleShareFamilyCode}
+          {/* Condition 1: No family code - show NoFamilyView */}
+          {!userInfo?.familyCode ? (
+            <NoFamilyView onCreateFamily={handleCreateFamily} onJoinFamily={handleJoinFamily} />
+          ) : 
+          /* Condition 2: Has family code but not approved - show PendingApprovalView */
+          userInfo?.familyCode && userInfo?.approveStatus !== 'approved' ? (
+            <PendingApprovalView 
+              familyCode={userInfo.familyCode} 
+              onJoinFamily={handleJoinFamily} 
             />
+          ) : 
+          /* Condition 3: Has family code and approved - show family details */
+          familyData ? (
+            <>
+              <FamilyView
+                familyData={familyData}
+                totalMembers={totalMembers}
+                males={males}
+                females={females}
+                averageAge={averageAge}
+                onManageMembers={handleManageMembers}
+                onManageEvents={handleManageEvent}
+                onManageGifts={handleManageGifts}
+                onEditFamily={handleEditFamily}
+                onShareFamilyCode={handleShareFamilyCode}
+              />
 
-            <FamilyOverView 
-              familyCode={userInfo?.familyCode} 
-              token={token} 
-            />
-            
-          </>
-        ) : (
-          <NoFamilyView onCreateFamily={handleCreateFamily} onJoinFamily={handleJoinFamily} />
-        )}
+              <FamilyOverView 
+                familyCode={userInfo?.familyCode} 
+                token={token} 
+              />
+            </>
+          ) : (
+            /* Fallback: Loading state for approved users */
+            <div className="flex flex-col items-center justify-center py-20">
+              <FiLoader className="text-6xl text-primary-600 animate-spin mb-4" />
+              <h2 className="text-2xl font-semibold text-gray-700 mb-2">Loading Family Data...</h2>
+              <p className="text-gray-500">Please wait while we fetch your family information.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -193,16 +229,13 @@ const FamilyHubPage = () => {
         token={token}
       />
 
-      {isEditModalOpen && (
-        <CreateFamilyModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          onFamilyCreated={handleFamilyCreated}
-          token={token}
-          mode="edit"
-          initialData={familyData}
-        />
-      )}
+      <JoinFamilyModal
+        isOpen={isJoinFamilyModalOpen}
+        onClose={() => setIsJoinFamilyModalOpen(false)}
+        onFamilyJoined={handleFamilyJoined}
+        token={token}
+        refetchUserInfo={refetchUserInfo}
+      />
 
       {isEditModalOpen && (
         <CreateFamilyModal

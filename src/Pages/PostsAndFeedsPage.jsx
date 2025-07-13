@@ -13,44 +13,12 @@ import { FaRegHeart, FaHeart, FaCommentDots, FaShareAlt } from 'react-icons/fa';
 import { MdPublic, MdPeople } from 'react-icons/md';
 import { caption } from 'framer-motion/client';
 
-// Custom hook to get familyCode
-function useUserFamilyCode() {
-  const [familyCode, setFamilyCode] = useState('');
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    let userId;
-    try {
-      const decoded = jwtDecode(token);
-      userId = decoded.id || decoded.userId || decoded.sub;
-    } catch {
-      setLoading(false);
-      return;
-    }
-    fetch(`${import.meta.env.VITE_API_BASE_URL}/family/member/member/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json'
-      }
-    })
-      .then(res => res.json())
-      .then(data => {
-        setFamilyCode(data.familyCode || '');
-      })
-      .catch(() => setFamilyCode(''))
-      .finally(() => setLoading(false));
-  }, []);
-  return { familyCode, loading };
-}
+
 
 const PostsAndFeedsPage = () => {
     const [token, setToken] = useState(null);
     const [user, setUser] = useState(null);
-    const [activeFeed, setActiveFeed] = useState('family');
+    const [activeFeed, setActiveFeed] = useState('public');
     const [posts, setPosts] = useState([]);
     const [likeLoadingIds, setLikeLoadingIds] = useState(new Set());
     const [loadingFeed, setLoadingFeed] = useState(true);
@@ -61,14 +29,28 @@ const PostsAndFeedsPage = () => {
     const [selectedPost, setSelectedPost] = useState(null);
     const [showSearchInput, setShowSearchInput] = useState(false);
     const [searchCaption, setSearchCaption] = useState('');
+    const [feedError, setFeedError] = useState(null);
     const searchTimeoutRef = useRef(null);
-    const { familyCode, loading: familyCodeLoading } = useUserFamilyCode();
+    // Removed familyCode hook since we're using userInfo directly
 
     useEffect(() => {
         const storedToken = localStorage.getItem('access_token');
         if (storedToken) {
             setToken(storedToken);
         }
+        
+        // Listen for storage changes (in case token is updated elsewhere)
+        const handleStorageChange = (e) => {
+            if (e.key === 'access_token') {
+                setToken(e.newValue);
+            }
+        };
+        
+        window.addEventListener('storage', handleStorageChange);
+        
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
     }, []);
 
     useEffect(() => {
@@ -95,12 +77,20 @@ const PostsAndFeedsPage = () => {
     
 
     // Define fetchPosts outside of useEffect so you can call it elsewhere
-    const fetchPosts = async (captionSearch = '') => {
-        if (!userInfo?.familyCode) return;
+    const fetchPosts = async (captionSearch = '', retryCount = 0) => {
+        // For family feed, check if user has familyCode and is approved
+        if (activeFeed === 'family' && (!userInfo?.familyCode || userInfo?.approveStatus !== 'approved')) {
+            setPosts([]);
+            setLoadingFeed(false);
+            return;
+        }
 
         setLoadingFeed(true);
         try {
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            // Get fresh token in case it was updated
+            const currentToken = localStorage.getItem('access_token');
+            const headers = currentToken ? { Authorization: `Bearer ${currentToken}` } : {};
+            
             let url =
             activeFeed === 'family'
                 ? `${import.meta.env.VITE_API_BASE_URL}/post/by-options?familyCode=${userInfo.familyCode}&privacy=private`
@@ -111,7 +101,41 @@ const PostsAndFeedsPage = () => {
             }
 
             const response = await fetch(url, { headers });
+            
+            // Check if response is successful
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.error('Unauthorized: Token might be expired or invalid');
+                    setFeedError('Authentication failed. Please refresh the page or log in again.');
+                    
+                    // If this is the first attempt and we have a token, try to refresh user info
+                    if (retryCount === 0 && currentToken) {
+                        console.log('Attempting to refresh user info...');
+                        await refetchUserInfo();
+                        
+                        // Wait a bit and retry once
+                        setTimeout(() => {
+                            fetchPosts(captionSearch, 1);
+                        }, 1000);
+                        return;
+                    }
+                    
+                    // If still failing after retry, clear posts and stop
+                    setPosts([]);
+                    return;
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
+
+            // Check if data is an array before mapping
+            if (!Array.isArray(data)) {
+                console.error('API returned non-array data:', data);
+                setFeedError('Invalid data received from server. Please try again.');
+                setPosts([]);
+                return;
+            }
 
             const formattedPosts = data.map(post => ({
             id: post.id,
@@ -129,8 +153,11 @@ const PostsAndFeedsPage = () => {
             }));
 
             setPosts(formattedPosts);
+            setFeedError(null); // Clear any previous errors on success
         } catch (error) {
             console.error('Failed to fetch posts:', error);
+            setFeedError('Failed to load posts. Please try again.');
+            setPosts([]);
         } finally {
             setLoadingFeed(false);
         }
@@ -138,8 +165,9 @@ const PostsAndFeedsPage = () => {
 
     // Call fetchPosts inside useEffect for initial loading and on changes
     useEffect(() => {
+        setFeedError(null); // Clear errors when feed changes
         fetchPosts();
-    }, [activeFeed, userInfo?.familyCode]);
+    }, [activeFeed, userInfo?.familyCode, userInfo?.approveStatus]);
 
     console.log(posts);
     
@@ -215,7 +243,7 @@ const PostsAndFeedsPage = () => {
             <div className="flex flex-col lg:flex-row lg:gap-8 max-w-7xl mx-auto px-4 py-6 md:px-6 lg:px-8">
 
                 {/* Main Content (Feed) Column */}
-                <div className="w-full lg:w-2/3 xl:w-3/4">
+                <div className="w-full">
 
                     {/* Top Bar - Clean and Functional */}
                     <div className="flex items-center justify-between gap-4 py-3 mb-6">
@@ -223,7 +251,17 @@ const PostsAndFeedsPage = () => {
                         <div className="flex items-center gap-3">
                             {/* Feed Switcher - Modern Segmented Control */}
                             <div className="relative inline-flex rounded-full p-1">
-                                {familyCode && (
+                                <button
+                                    onClick={() => setActiveFeed('public')}
+                                    className={`flex items-center gap-1.5 py-2 px-3 mr-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                                        activeFeed === 'public'
+                                            ? 'bg-primary-600 text-white shadow-md'
+                                            : 'text-gray-700 hover:text-primary-600 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <MdPublic size={18} /> Public
+                                </button>
+                                {userInfo?.familyCode && userInfo?.approveStatus === 'approved' && (
                                   <button
                                     onClick={() => setActiveFeed('family')}
                                     className={`flex items-center gap-1.5 py-2 px-3 mr-2 rounded-full text-sm font-semibold transition-all duration-200 ${
@@ -235,16 +273,7 @@ const PostsAndFeedsPage = () => {
                                     <MdPeople size={18} /> Family
                                   </button>
                                 )}
-                                <button
-                                    onClick={() => setActiveFeed('public')}
-                                    className={`flex items-center gap-1.5 py-2 px-3 rounded-full text-sm font-semibold transition-all duration-200 ${
-                                        activeFeed === 'public'
-                                            ? 'bg-primary-600 text-white shadow-md'
-                                            : 'text-gray-700 hover:text-primary-600 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    <MdPublic size={18} /> Public
-                                </button>
+                                
                             </div>
 
                             {/* Search and Notification Buttons */}
@@ -311,6 +340,30 @@ const PostsAndFeedsPage = () => {
 
                     {/* Main Feed Content - Streamlined Posts */}
                     <div className="space-y-4">
+                        {feedError && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex-shrink-0">
+                                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm text-red-800">{feedError}</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            setFeedError(null);
+                                            fetchPosts();
+                                        }}
+                                        className="text-sm text-red-600 hover:text-red-800 font-medium"
+                                    >
+                                        Retry
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        
                         {loadingFeed ? (
                             <div className="flex justify-center items-center py-20">
                                 <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-primary-600 border-solid"></div>
@@ -415,14 +468,13 @@ const PostsAndFeedsPage = () => {
                     </div>
                 </div>
 
-                {/* Right Sidebar Column (Desktop Only) */}
-                <div className="hidden lg:block lg:w-1/3 xl:w-1/4 mt-8 lg:mt-0 space-y-4"> {/* Added space-y for consistent spacing between widgets */}
+                {/* Right Sidebar Column (Desktop Only) - HIDDEN FOR FUTURE USE */}
+                {/* 
+                <div className="hidden lg:block lg:w-1/3 xl:w-1/4 mt-8 lg:mt-0 space-y-4">
 
-                    {/* IMPROVED Upcoming Events Widget - Professional Design (NOW FIRST) */}
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                         <h3 className="font-bold text-lg text-gray-800 mb-5">Upcoming Events</h3>
                         <ul className="space-y-4">
-                            {/* Event 1 */}
                             <li className="flex items-start gap-3 p-3 -mx-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
                                 <div className="bg-primary-100 p-2 rounded-full flex-shrink-0">
                                     <FiCalendar size={18} className="text-primary-600" />
@@ -438,7 +490,6 @@ const PostsAndFeedsPage = () => {
                                 </div>
                             </li>
                             <hr className="border-gray-200" />
-                            {/* Event 2 */}
                             <li className="flex items-start gap-3 p-3 -mx-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
                                 <div className="bg-primary-100 p-2 rounded-full flex-shrink-0">
                                     <FiCalendar size={18} className="text-primary-600" />
@@ -459,11 +510,9 @@ const PostsAndFeedsPage = () => {
                         </button>
                     </div>
 
-                    {/* REVISED: Gift Ideas Widget - Image Left, Name/Price/Button Right */}
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                         <h3 className="font-bold text-lg text-gray-800 mb-5">Gift Ideas for Family</h3>
-                        <ul className="space-y-4"> {/* Using space-y for vertical gap between items */}
-                            {/* Gift Item 1 */}
+                        <ul className="space-y-4">
                             <li className="bg-gray-50 rounded-lg p-3 flex items-center shadow-sm border border-gray-100 transition-shadow hover:shadow-md cursor-pointer">
                                 <img src="https://picsum.photos/seed/gift1/100/100" alt="Personalized Photo Album" className="w-24 h-24 rounded-md object-cover flex-shrink-0 mr-4 border border-gray-200" />
                                 <div className="flex-grow flex flex-col justify-center">
@@ -474,8 +523,7 @@ const PostsAndFeedsPage = () => {
                                     </button>
                                 </div>
                             </li>
-                            <hr className="border-gray-200" /> {/* Divider */}
-                            {/* Gift Item 2 */}
+                            <hr className="border-gray-200" />
                             <li className="bg-gray-50 rounded-lg p-3 flex items-center shadow-sm border border-gray-100 transition-shadow hover:shadow-md cursor-pointer">
                                 <img src="https://picsum.photos/seed/gift2/100/100" alt="Smartwatch" className="w-24 h-24 rounded-md object-cover flex-shrink-0 mr-4 border border-gray-200" />
                                 <div className="flex-grow flex flex-col justify-center">
@@ -486,8 +534,7 @@ const PostsAndFeedsPage = () => {
                                     </button>
                                 </div>
                             </li>
-                            <hr className="border-gray-200" /> {/* Divider */}
-                            {/* Gift Item 3 */}
+                            <hr className="border-gray-200" />
                             <li className="bg-gray-50 rounded-lg p-3 flex items-center shadow-sm border border-gray-100 transition-shadow hover:shadow-md cursor-pointer">
                                 <img src="https://picsum.photos/seed/gift3/100/100" alt="Handmade Ceramic Mug Set" className="w-24 h-24 rounded-md object-cover flex-shrink-0 mr-4 border border-gray-200" />
                                 <div className="flex-grow flex flex-col justify-center">
@@ -504,6 +551,7 @@ const PostsAndFeedsPage = () => {
                         </button>
                     </div>
                 </div>
+                */}
             </div>
 
             {/* Create Post Modal */}

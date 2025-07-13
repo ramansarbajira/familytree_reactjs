@@ -5,8 +5,6 @@ import BottomNavBar from './BottomNavBar';
 import {
   FiMenu,
   FiBell,
-  FiSearch,
-  FiX,
   FiChevronDown,
   FiCheck,
   FiClock,
@@ -25,16 +23,15 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
   const [token, setToken] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const sidebarRef = useRef(null);
-  const searchRef = useRef(null);
   const profileRef = useRef(null);
   
   const navigate = useNavigate();
+  const location = useLocation(); // Add this line
 
   useEffect(() => {
       const storedToken = localStorage.getItem('access_token');
@@ -54,7 +51,6 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
       setIsMobile(mobile);
       if (!mobile) {
         setSidebarOpen(false);
-        setSearchOpen(false);
       }
     };
     handleResize();
@@ -65,18 +61,15 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
   useEffect(() => {
   const handleClickOutside = (e) => {
     const clickedOutsideSidebar = sidebarRef.current && !sidebarRef.current.contains(e.target);
-    const clickedOutsideSearch = searchRef.current && !searchRef.current.contains(e.target);
     const clickedOutsideProfile = profileRef.current && !profileRef.current.contains(e.target);
     const clickedOutsideNotification = '';
 
     if (
       sidebarOpen && clickedOutsideSidebar ||
-      searchOpen && clickedOutsideSearch ||
       profileOpen && clickedOutsideProfile ||
       notificationOpen && clickedOutsideNotification
     ) {
       setSidebarOpen(false);
-      setSearchOpen(false);
       setProfileOpen(false);
       setNotificationOpen(false);
     }
@@ -84,7 +77,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
 
   document.addEventListener('mousedown', handleClickOutside);
   return () => document.removeEventListener('mousedown', handleClickOutside);
-}, [sidebarOpen, searchOpen, profileOpen, notificationOpen]);
+}, [sidebarOpen, profileOpen, notificationOpen]);
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -177,31 +170,6 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
 
             {/* Right Section */}
             <div className="flex items-center space-x-4">
-              {/* Search Button (Mobile) */}
-              {isMobile && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSearchOpen(!searchOpen);
-                  }}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
-                >
-                  <FiSearch size={20} />
-                </button>
-              )}
-
-              {/* Search Bar (Desktop) */}
-              {!isMobile && (
-                <div ref={searchRef} className="relative search-container">
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  />
-                  <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                </div>
-              )}
-
               {/* Notifications */}
               <div className="relative">
                 <button
@@ -289,26 +257,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
             </div>
           </div>
 
-          {/* Mobile Search Bar */}
-          {isMobile && searchOpen && (
-            <div ref={searchRef} className="mt-3 search-container">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  autoFocus
-                />
-                <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <button
-                  onClick={() => setSearchOpen(false)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <FiX size={18} />
-                </button>
-              </div>
-            </div>
-          )}
+
         </header>
 
         {/* Content Area */}
@@ -317,7 +266,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
         </div>
 
         {/* Mobile Bottom Navigation */}
-        {isMobile && (
+        {isMobile && location.pathname !== '/family-tree' && (
           <BottomNavBar activeTab={activeTab} setActiveTab={setActiveTab} />
         )}
       </main>

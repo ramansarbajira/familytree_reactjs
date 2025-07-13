@@ -5,14 +5,16 @@ import {
 } from 'react-icons/fi';
 import { FaGlobeAmericas, FaUserFriends } from 'react-icons/fa';
 import EmojiPicker from 'emoji-picker-react';
+import { useUser } from '../Contexts/UserContext';
 
 const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToken, mode = 'create', postData = null }) => {
+    const { userInfo } = useUser();
     // State for form fields
     const [content, setContent] = useState('');
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null); // Used for new image file previews
     const [currentPostImageUrl, setCurrentPostImageUrl] = useState(null); // Used for existing post image
-    const [privacy, setPrivacy] = useState('family'); // Default to 'family' as the privacy type
+    const [privacy, setPrivacy] = useState('public'); // Default to 'public' as the privacy type
     const [familyCode, setFamilyCode] = useState(''); // Added for family privacy
 
     // UI/logic states
@@ -43,8 +45,13 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
             } else { // 'create' mode
                 // Reset form for new post
                 setContent('');
-                setPrivacy('family'); // Always default to 'family' as the privacy type for new posts
-                setFamilyCode(currentUser?.familyCode || ''); // Pre-fill with user's family code if available
+                // Check if user has family code and is approved to show private option
+                const hasFamilyCode = currentUser?.familyCode && currentUser.familyCode.trim() !== '';
+                const isApproved = userInfo?.approveStatus === 'approved';
+                const canUsePrivate = hasFamilyCode && isApproved;
+                
+                setPrivacy('public'); // Default to public posts
+                setFamilyCode(currentUser?.familyCode || userInfo?.familyCode || ''); // Pre-fill with user's family code if available
                 setImageFile(null);
                 setImagePreview(null);
                 setCurrentPostImageUrl(null);
@@ -53,7 +60,7 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
             setShowEmojiPicker(false); // Ensure emoji picker is closed
             setShowPrivacyDropdown(false); // Ensure privacy dropdown is closed
         }
-    }, [isOpen, mode, postData, currentUser]);
+    }, [isOpen, mode, postData, currentUser, userInfo]);
 
     // Effect to close the main modal when clicking outside of it
     useEffect(() => {
@@ -144,11 +151,6 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
             setMessage("Please add some content or an image to your post.");
             return;
         }
-        
-        if (privacy === 'family' && !familyCode.trim()) {
-            setMessage("Please enter a family code for family-only privacy.");
-            return;
-        }
 
         setIsLoading(true);
 
@@ -156,7 +158,8 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
         formData.append('caption', content.trim());
         formData.append('privacy', privacy === 'family' ? 'private' : privacy); // Map 'family' to 'private' for backend
         formData.append('status', '1'); 
-        formData.append('familyCode', familyCode);
+        // Only append familyCode if privacy is family (private)
+        formData.append('familyCode', privacy === 'family' ? familyCode : '');
 
         if (imageFile) {
             formData.append('postImage', imageFile); // Only append if a new file is selected
@@ -217,8 +220,12 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
         setImageFile(null);
         setImagePreview(null);
         setCurrentPostImageUrl(null);
-        setPrivacy('family'); // Reset to 'family'
-        setFamilyCode(''); // Reset family code
+        // Check if user can use private option for default
+        const hasFamilyCode = currentUser?.familyCode && currentUser.familyCode.trim() !== '';
+        const isApproved = userInfo?.approveStatus === 'approved';
+        const canUsePrivate = hasFamilyCode && isApproved;
+        setPrivacy(canUsePrivate ? 'family' : 'public'); // Reset based on user's family status
+        setFamilyCode(currentUser?.familyCode || userInfo?.familyCode || ''); // Reset to user's family code
         setIsLoading(false);
         setShowEmojiPicker(false);
         setShowPrivacyDropdown(false);
@@ -237,14 +244,24 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
         setMessage(''); // Clear any previous messages
     };
 
+    // Check if user can use private option
+    const hasFamilyCode = (currentUser?.familyCode || userInfo?.familyCode) && (currentUser?.familyCode || userInfo?.familyCode).trim() !== '';
+    const isApproved = userInfo?.approveStatus === 'approved';
+    const canUsePrivate = hasFamilyCode && isApproved;
+
     // Options for the custom privacy selector
     const PrivacyOptions = {
-        family: { icon: <FaUserFriends className="mr-1.5" />, label: "Private", color: "text-primary-600" }, // Changed label to "Private"
+        family: { icon: <FaUserFriends className="mr-1.5" />, label: "Private", color: "text-primary-600" },
         public: { icon: <FaGlobeAmericas className="mr-1.5" />, label: "Public", color: "text-green-600" }
     };
 
+    // Filter options based on user's family status
+    const availablePrivacyOptions = canUsePrivate 
+        ? PrivacyOptions 
+        : { public: PrivacyOptions.public };
+
     // Ensure privacy always maps to a valid key in PrivacyOptions
-    const currentPrivacyOption = PrivacyOptions[privacy] || PrivacyOptions['family']; 
+    const currentPrivacyOption = PrivacyOptions[privacy] || PrivacyOptions['public']; 
 
     return (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300 overflow-hidden">
@@ -292,7 +309,7 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
                                 {showPrivacyDropdown && (
                                     <div className="origin-top-left absolute left-0 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
                                         <div className="py-1">
-                                            {Object.entries(PrivacyOptions).map(([value, { icon, label, color }]) => (
+                                            {Object.entries(availablePrivacyOptions).map(([value, { icon, label, color }]) => (
                                                 <button
                                                     key={value}
                                                     type="button" // Important for buttons inside a form but not submitting
@@ -342,21 +359,12 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
                         )}
                     </div>
 
-                    {/* Family Code Input (conditionally rendered) */}
-                    {privacy === 'family' && (
-                        <div className="mb-4">
-                            <label htmlFor="familyCode" className="block text-gray-700 text-sm font-bold mb-2">Family Code:</label>
-                            <input
-                                type="text"
-                                id="familyCode"
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                value={familyCode}
-                                onChange={(e) => setFamilyCode(e.target.value)}
-                                placeholder="Enter family code (e.g., FAM001)"
-                                required={privacy === 'family'}
-                            />
-                        </div>
-                    )}
+                    {/* Family Code Input - Hidden but still used in payload */}
+                    <input
+                        type="hidden"
+                        id="familyCode"
+                        value={familyCode}
+                    />
 
                     {/* Message Display (replaces alert) */}
                     {message && (
@@ -435,9 +443,9 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
 
                             <button
                                 type="submit"
-                                disabled={isLoading || (!content.trim() && !imageFile && !currentPostImageUrl) || (privacy === 'family' && !familyCode.trim())}
+                                disabled={isLoading || (!content.trim() && !imageFile && !currentPostImageUrl)}
                                 className={`px-4 py-2 rounded-lg font-medium text-white transition-all flex items-center gap-1 ${
-                                    (content.trim() || imageFile || currentPostImageUrl) && !(privacy === 'family' && !familyCode.trim())
+                                    (content.trim() || imageFile || currentPostImageUrl)
                                         ? 'bg-primary-500 hover:bg-primary-600 shadow-md'
                                         : 'bg-gray-300 cursor-not-allowed'
                                 }`}

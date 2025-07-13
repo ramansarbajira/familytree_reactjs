@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiEdit2, FiTrash2, FiEye } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiEye, FiLoader } from 'react-icons/fi';
 import { FaBirthdayCake, FaPhone, FaHome, FaMale, FaFemale } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 
@@ -19,6 +19,8 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
   const [searchTerm, setSearchTerm] = useState('');
   const [familyMembers, setFamilyMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewLoadingStates, setViewLoadingStates] = useState({});
+  const [editLoadingStates, setEditLoadingStates] = useState({});
 
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -35,7 +37,7 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
         id: item.id,
         memberId: item.memberId,
         userId: item.user.id,
-        name: item.user.fullName,
+        name: item.user.fullName || 'Unknown Name',
         gender: item.user.userProfile?.gender || 'N/A',
         role: roleMapping[item.user.role] || 'Member',
         contact: item.user.userProfile?.contactNumber,
@@ -70,6 +72,37 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
     return age;
   };
 
+  const handleViewMember = async (userId, e) => {
+    e.stopPropagation();
+    
+    // Set loading state for this specific member
+    setViewLoadingStates(prev => ({ ...prev, [userId]: true }));
+    
+    try {
+      await onViewMember(userId);
+    } finally {
+      // Clear loading state after a short delay to ensure smooth transition
+      setTimeout(() => {
+        setViewLoadingStates(prev => ({ ...prev, [userId]: false }));
+      }, 500);
+    }
+  };
+
+  const handleEditMember = async (userId, e) => {
+    e.stopPropagation();
+    
+    // Set loading state for this specific member
+    setEditLoadingStates(prev => ({ ...prev, [userId]: true }));
+    
+    try {
+      await onEditMember(userId);
+    } finally {
+      // Clear loading state after a short delay to ensure smooth transition
+      setTimeout(() => {
+        setEditLoadingStates(prev => ({ ...prev, [userId]: false }));
+      }, 500);
+    }
+  };
 
   
     const handleDeleteMember = async (userId, familyCode, e) => {
@@ -114,13 +147,22 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
 };
 
   const filteredMembers = familyMembers.filter((member) =>
-    member.name.toLowerCase().includes(searchTerm.toLowerCase())
+    member.name && member.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const SingleMemberCard = ({ member }) => (
     <div
-      onClick={() => handleViewMember(member.id)}
-      className="relative bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 ease-in-out group cursor-pointer transform hover:-translate-y-1"
+      onClick={() => {
+        // Only allow viewing if user has Admin (role 2) or Superadmin (role 3) role
+        if (currentUser?.role === 2 || currentUser?.role === 3) {
+          handleViewMember(member.userId, { stopPropagation: () => {} });
+        }
+      }}
+      className={`relative bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-md transition-all duration-300 ease-in-out group transform hover:-translate-y-1 ${
+        (currentUser?.role === 2 || currentUser?.role === 3) 
+          ? 'hover:shadow-lg cursor-pointer' 
+          : 'cursor-default'
+      }`}
     >
       <div className="flex items-start p-5 pb-0">
         <div className="relative flex-shrink-0 w-24 h-24 rounded-full overflow-hidden border-3 border-primary-200 shadow-lg">
@@ -181,18 +223,24 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
       <div className="flex justify-between items-center px-5 py-4">
         <span className="text-xs text-gray-500">Last updated: {member.lastUpdated}</span>
         <div className="flex space-x-2">
-          {/* Admin can edit/delete any member */}
-          {currentUser?.role === 2 && (
+          {/* Show view, edit, delete buttons only for Admin (role 2) and Superadmin (role 3) */}
+          {(currentUser?.role === 2 || currentUser?.role === 3) && (
             <>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditMember?.(member.userId);
-                }}
-                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700 transition-colors tooltip"
+                onClick={(e) => handleEditMember(member.userId, e)}
+                disabled={editLoadingStates[member.userId]}
+                className={`p-2 rounded-full transition-all duration-200 tooltip ${
+                  editLoadingStates[member.userId]
+                    ? 'bg-primary-100 text-primary-700 cursor-not-allowed'
+                    : 'bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700'
+                }`}
                 title="Edit Member"
               >
-                <FiEdit2 size={18} />
+                {editLoadingStates[member.userId] ? (
+                  <FiLoader size={18} className="animate-spin" />
+                ) : (
+                  <FiEdit2 size={18} />
+                )}
               </button>
               <button
                 onClick={(e) => handleDeleteMember(member.memberId, familyCode, e)}
@@ -201,41 +249,25 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
               >
                 <FiTrash2 size={18} />
               </button>
-            </>
-          )}
-          {/* Member can only edit/delete/view their own profile */}
-          {currentUser?.role === 1 && currentUser.userId === member.userId && (
-            <>
+              {/* View button with loading state */}
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditMember?.(member.userId);
-                }}
-                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700 transition-colors tooltip"
-                title="Edit Member"
+                onClick={(e) => handleViewMember(member.userId, e)}
+                disabled={viewLoadingStates[member.userId]}
+                className={`p-2 rounded-full transition-all duration-200 tooltip ${
+                  viewLoadingStates[member.userId]
+                    ? 'bg-primary-100 text-primary-700 cursor-not-allowed'
+                    : 'bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700'
+                }`}
+                title="View Member"
               >
-                <FiEdit2 size={18} />
-              </button>
-              <button
-                onClick={(e) => handleDeleteMember(member.memberId, familyCode, e)}
-                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700 transition-colors tooltip"
-                title="Delete Member"
-              >
-                <FiTrash2 size={18} />
+                {viewLoadingStates[member.userId] ? (
+                  <FiLoader size={18} className="animate-spin" />
+                ) : (
+                  <FiEye size={18} />
+                )}
               </button>
             </>
           )}
-          {/* Always show view button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewMember(member.userId);
-            }}
-            className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700 transition-colors tooltip"
-            title="View Member"
-          >
-            <FiEye size={18} />
-          </button>
         </div>
       </div>
     </div>

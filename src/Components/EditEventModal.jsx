@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiCalendar, FiClock, FiMapPin, FiFileText, FiImage, FiPlus, FiLoader } from 'react-icons/fi';
+import { FiX, FiCalendar, FiClock, FiMapPin, FiFileText, FiImage, FiPlus, FiTrash2, FiLoader } from 'react-icons/fi';
 import { jwtDecode } from 'jwt-decode';
+import Swal from 'sweetalert2';
 
-const CreateEventModal = ({
+const EditEventModal = ({
   isOpen,
   onClose,
+  event,
+  onEventUpdated,
   apiBaseUrl = import.meta.env.VITE_API_BASE_URL,
 }) => {
   const [title, setTitle] = useState('');
@@ -14,16 +17,25 @@ const CreateEventModal = ({
   const [description, setDescription] = useState('');
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const [userId, setUserId] = useState(null);
   const [familyCode, setFamilyCode] = useState(null);
 
-  // Add debug logging for API base URL
+  // Populate form with existing event data when modal opens
   useEffect(() => {
-    // console.log('🔗 API Base URL:', apiBaseUrl);
-    // console.log('🌍 Environment VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
-  }, [apiBaseUrl]);
+    if (isOpen && event) {
+      setTitle(event.title || '');
+      setDate(event.date || '');
+      setTime(event.time || '');
+      setLocation(event.location || '');
+      setDescription(event.description || '');
+      setExistingImages(event.eventImages || []);
+      setImages([]);
+      setImagePreviews([]);
+    }
+  }, [isOpen, event]);
 
   // Fetch userId and familyCode when modal opens
   useEffect(() => {
@@ -32,21 +44,29 @@ const CreateEventModal = ({
         const token = localStorage.getItem('access_token');
 
         if (!token) {
-          alert('No access token found.');
+          Swal.fire({
+            icon: 'error',
+            title: 'Authentication Error',
+            text: 'No access token found.',
+            confirmButtonColor: '#10b981'
+          });
           return;
         }
 
         const decoded = jwtDecode(token);
-
         const uid = decoded.id || decoded.userId;
         if (!uid) {
-          alert('User ID not found in token.');
+          Swal.fire({
+            icon: 'error',
+            title: 'Authentication Error',
+            text: 'User ID not found in token.',
+            confirmButtonColor: '#10b981'
+          });
           return;
         }
         setUserId(uid);
 
         const userEndpoint = `${apiBaseUrl}/user/${uid}`;
-
         const res = await fetch(userEndpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -54,12 +74,16 @@ const CreateEventModal = ({
         if (!res.ok) {
           const errorText = await res.text();
           console.error('❌ User API failed:', errorText);
-          alert(`API Error: ${res.status} - ${errorText}`);
+          Swal.fire({
+            icon: 'error',
+            title: 'API Error',
+            text: `API Error: ${res.status} - ${errorText}`,
+            confirmButtonColor: '#10b981'
+          });
           return;
         }
 
         const userData = await res.json();
-
         const fc =
           userData?.data?.userProfile?.familyMember?.familyCode ||
           userData?.data?.userProfile?.familyCode;
@@ -72,7 +96,12 @@ const CreateEventModal = ({
         }
       } catch (err) {
         console.error('💥 Fetch user error:', err);
-        alert(`Error fetching user data: ${err.message}`);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: `Error fetching user data: ${err.message}`,
+          confirmButtonColor: '#10b981'
+        });
       }
     };
 
@@ -81,7 +110,7 @@ const CreateEventModal = ({
     }
   }, [isOpen, apiBaseUrl]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !event) return null;
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
@@ -89,12 +118,22 @@ const CreateEventModal = ({
     setImagePreviews(files.map((file) => URL.createObjectURL(file)));
   };
 
+  const handleRemoveExistingImage = (index) => {
+    const newExistingImages = existingImages.filter((_, i) => i !== index);
+    setExistingImages(newExistingImages);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
     if (!userId || !familyCode) {
-      alert('User ID or Family Code missing.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Missing Information',
+        text: 'User ID or Family Code missing.',
+        confirmButtonColor: '#10b981'
+      });
       setIsLoading(false);
       return;
     }
@@ -103,7 +142,6 @@ const CreateEventModal = ({
       const token = localStorage.getItem('access_token');
 
       const formData = new FormData();
-      formData.append('userId', userId);
       formData.append('eventTitle', title);
       formData.append('eventDescription', description);
       formData.append('eventDate', date);
@@ -111,14 +149,20 @@ const CreateEventModal = ({
       formData.append('location', location);
       formData.append('familyCode', familyCode);
 
+      // Add new images
       images.forEach((img) => {
-        formData.append('eventImages', img);  
+        formData.append('eventImages', img);
       });
 
-      const createEndpoint = `${apiBaseUrl}/event/create`;
+      // Add remaining existing images (those that weren't removed)
+      existingImages.forEach((img) => {
+        formData.append('eventImages', img);
+      });
 
-      const response = await fetch(createEndpoint, {
-        method: 'POST',
+      const updateEndpoint = `${apiBaseUrl}/event/${event.id}`;
+
+      const response = await fetch(updateEndpoint, {
+        method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -127,26 +171,34 @@ const CreateEventModal = ({
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error('❌ Create event API error:', errText);
-        alert(`Create Event Error: ${response.status} - ${errText}`);
+        console.error('❌ Update event API error:', errText);
+        Swal.fire({
+          icon: 'error',
+          title: 'Update Event Error',
+          text: `Update Event Error: ${response.status} - ${errText}`,
+          confirmButtonColor: '#10b981'
+        });
         setIsLoading(false);
         return;
       }
 
       const resData = await response.json();
+      console.log('✅ Event updated successfully:', resData);
 
-      // Reset form
-      setTitle('');
-      setDate('');
-      setTime('');
-      setLocation('');
-      setDescription('');
-      setImages([]);
-      setImagePreviews([]);
+      // Call the callback to refresh events
+      if (onEventUpdated) {
+        onEventUpdated();
+      }
+
       onClose();
     } catch (err) {
-      console.error('💥 Error creating event:', err);
-      alert(`Something went wrong: ${err.message}`);
+      console.error('💥 Error updating event:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: `Something went wrong: ${err.message}`,
+        confirmButtonColor: '#10b981'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -169,8 +221,8 @@ const CreateEventModal = ({
                 <FiCalendar size={16} />
               </div>
               <div>
-                <h2 className="text-xl font-bold">Create New Event</h2>
-                <p className="text-primary-100 text-xs">Plan your next family gathering</p>
+                <h2 className="text-xl font-bold">Edit Event</h2>
+                <p className="text-primary-100 text-xs">Update your event details</p>
               </div>
             </div>
           </div>
@@ -266,13 +318,46 @@ const CreateEventModal = ({
               ></textarea>
             </div>
 
-            {/* Image Upload */}
+            {/* Existing Images */}
+            {existingImages.length > 0 && (
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-gray-700 font-semibold text-sm">
+                  <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center">
+                    <FiImage size={12} className="text-primary-600" />
+                  </div>
+                  Existing Images
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {existingImages.map((src, idx) => (
+                    <div key={idx} className="relative group">
+                      <img
+                        src={src}
+                        alt={`Existing Image ${idx + 1}`}
+                        className="w-full h-24 object-cover rounded-xl border-2 border-gray-200"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveExistingImage(idx)}
+                          className="bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                          title="Remove image"
+                        >
+                          <FiTrash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* New Image Upload */}
             <div className="space-y-3">
               <label className="flex items-center gap-2 text-gray-700 font-semibold text-sm">
                 <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center">
                   <FiImage size={12} className="text-primary-600" />
                 </div>
-                Event Images
+                Add New Images
               </label>
               
               {imagePreviews.length > 0 ? (
@@ -286,15 +371,15 @@ const CreateEventModal = ({
                           className="w-full h-24 object-cover rounded-xl border-2 border-gray-200"
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                          <span className="text-white text-xs font-medium">Image {idx + 1}</span>
+                          <span className="text-white text-xs font-medium">New Image {idx + 1}</span>
                         </div>
                       </div>
                     ))}
                   </div>
                   <button
                     type="button"
-                    onClick={() => document.getElementById('event-image-input').click()}
-                    className="w-full py-3 border-2 border-dashed border-primary-300 rounded-xl text-primary-600 hover:bg-primary-50 transition-colors flex items-center justify-center gap-2"
+                    onClick={() => document.getElementById('edit-event-image-input').click()}
+                    className="bg-unset w-full py-3 border-2 border-dashed border-primary-300 rounded-xl text-primary-600 hover:bg-primary-50 transition-colors flex items-center justify-center gap-2"
                   >
                     <FiPlus size={16} />
                     Add More Images
@@ -303,18 +388,18 @@ const CreateEventModal = ({
               ) : (
                 <div
                   className="w-full min-h-32 border-2 border-dashed border-primary-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-primary-50 transition-colors p-6"
-                  onClick={() => document.getElementById('event-image-input').click()}
+                  onClick={() => document.getElementById('edit-event-image-input').click()}
                 >
                   <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mb-3">
                     <FiImage size={24} className="text-primary-600" />
                   </div>
-                  <p className="text-primary-600 font-medium mb-1">Upload Event Images</p>
+                  <p className="text-primary-600 font-medium mb-1">Add New Images</p>
                   <p className="text-gray-500 text-sm text-center">Click to select multiple images</p>
                 </div>
               )}
               
               <input
-                id="event-image-input"
+                id="edit-event-image-input"
                 type="file"
                 accept="image/*"
                 multiple
@@ -345,10 +430,10 @@ const CreateEventModal = ({
               {isLoading ? (
                 <>
                   <FiLoader className="animate-spin" size={16} />
-                  Creating...
+                  Updating...
                 </>
               ) : (
-                'Create Event'
+                'Update Event'
               )}
             </button>
           </div>
@@ -358,4 +443,4 @@ const CreateEventModal = ({
   );
 };
 
-export default CreateEventModal;
+export default EditEventModal; 
