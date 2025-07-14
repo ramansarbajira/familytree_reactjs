@@ -38,11 +38,11 @@ export const UserProvider = ({ children }) => {
           'Content-Type': 'application/json',
         },
       });
-      if (response.status === 401) {
-        localStorage.removeItem('access_token'); // Clear token
-        window.location.href = '/login'; //  Redirect to login page
-        return;
-      }
+      // if (response.status >= 400) {
+      //   localStorage.removeItem('access_token'); // Clear token
+      //   window.location.href = '/login'; // Redirect to login page
+      //   return;
+      // }
 
       if (!response.ok) throw new Error('Failed to fetch user details');
 

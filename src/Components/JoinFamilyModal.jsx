@@ -3,7 +3,7 @@ import { FiX, FiHash, FiUsers } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { useUser } from '../Contexts/UserContext';
 
-const JoinFamilyModal = ({ isOpen, onClose, token, onFamilyJoined, refetchUserInfo }) => {
+const JoinFamilyModal = ({ isOpen, onClose, token, onFamilyJoined }) => {
   const [familyCode, setFamilyCode] = useState('');
   const [loading, setLoading] = useState(false);
   const { userInfo } = useUser();
@@ -63,13 +63,7 @@ const JoinFamilyModal = ({ isOpen, onClose, token, onFamilyJoined, refetchUserIn
           onFamilyJoined(data);
           onClose();
           // Refresh user info and then reload page
-          if (refetchUserInfo) {
-            refetchUserInfo().then(() => {
-              window.location.reload();
-            });
-          } else {
-            window.location.reload();
-          }
+          window.location.reload();
         }
       });
     } catch (err) {

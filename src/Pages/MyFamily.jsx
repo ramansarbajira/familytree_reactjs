@@ -14,7 +14,7 @@ const FamilyHubPage = () => {
   const navigate = useNavigate();
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
-  const { userInfo, userLoading, refetchUserInfo } = useUser();
+  const { userInfo, userLoading } = useUser();
   const [activeTab, setActiveTab] = useState('myFamily');
   const [familyData, setFamilyData] = useState(null);
   const [isCreateFamilyModalOpen, setIsCreateFamilyModalOpen] = useState(false);
@@ -138,7 +138,6 @@ const FamilyHubPage = () => {
 
   const handleFamilyCreated = (newFamilyDetails) => {
     // Refresh user info to get updated family code and approval status
-    refetchUserInfo();
     
     // Update local family data if available
     if (newFamilyDetails) {
@@ -241,7 +240,6 @@ const FamilyHubPage = () => {
         onClose={() => setIsJoinFamilyModalOpen(false)}
         onFamilyJoined={handleFamilyJoined}
         token={token}
-        refetchUserInfo={refetchUserInfo}
       />
 
       {isEditModalOpen && (

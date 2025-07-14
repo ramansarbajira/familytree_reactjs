@@ -47,34 +47,63 @@ const CreateFamilyModal = ({ isOpen, onClose, token, onFamilyCreated, mode = "cr
             body: formData,
             });
 
-            if (!res.ok) throw new Error('Failed to submit form');
-            const data = await res.json();
+            // Debug: log status and response
+            const text = await res.text();
+            console.log('Response status:', res.status);
+            console.log('Response text:', text);
 
-            Swal.fire({
-            icon: 'success',
-            title: mode === 'edit' ? 'Family updated!' : 'Family created!',
-            showConfirmButton: false,
-            timer: 1500,
-            });
-
-            // If creating (not editing), update localStorage userInfo with new familyCode
-            if (mode !== 'edit' && data && data.familyCode) {
-              let userInfo = null;
-              try {
-                userInfo = JSON.parse(localStorage.getItem('userInfo'));
-              } catch {}
-              if (userInfo) {
-                userInfo.familyCode = data.familyCode;
-                localStorage.setItem('userInfo', JSON.stringify(userInfo));
-              }
+            if (!res.ok) {
+                let errorMsg = 'Failed to submit form';
+                try {
+                    const errorData = JSON.parse(text);
+                    if (errorData && errorData.message) errorMsg = errorData.message;
+                } catch {}
+                throw new Error(errorMsg);
             }
-            onFamilyCreated(data);
-            onClose();
+
+            let data = {};
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch {
+                data = {};
+            }
+
+            if (mode === 'edit') {
+              Swal.fire({
+                icon: 'success',
+                title: 'Family updated!',
+                showConfirmButton: true,
+              }).then(() => {
+                onFamilyCreated(data);
+                onClose();
+                window.location.reload();
+              });
+            } else {
+              Swal.fire({
+                icon: 'success',
+                title: 'Family created!',
+                showConfirmButton: false,
+                timer: 1500,
+              });
+              // If creating (not editing), update localStorage userInfo with new familyCode
+              if (data && data.familyCode) {
+                let userInfo = null;
+                try {
+                  userInfo = JSON.parse(localStorage.getItem('userInfo'));
+                } catch {}
+                if (userInfo) {
+                  userInfo.familyCode = data.familyCode;
+                  localStorage.setItem('userInfo', JSON.stringify(userInfo));
+                }
+              }
+              onFamilyCreated(data);
+              onClose();
+            }
         } catch (err) {
             Swal.fire({
             icon: 'error',
             title: 'Oops...',
-            text: 'Failed to submit form',
+            text: err.message || 'Failed to submit form',
             });
             console.error(err);
         } finally {

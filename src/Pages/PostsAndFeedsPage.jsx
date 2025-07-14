@@ -24,7 +24,7 @@ const PostsAndFeedsPage = () => {
     const [loadingFeed, setLoadingFeed] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [loadingUserProfile, setLoadingUserProfile] = useState(true);
-    const { userInfo, userLoading, refetchUserInfo } = useUser();
+    const { userInfo, userLoading } = useUser();
     const [isPostViewerOpen, setIsPostViewerOpen] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
     const [showSearchInput, setShowSearchInput] = useState(false);
@@ -111,7 +111,6 @@ const PostsAndFeedsPage = () => {
                     // If this is the first attempt and we have a token, try to refresh user info
                     if (retryCount === 0 && currentToken) {
                         console.log('Attempting to refresh user info...');
-                        await refetchUserInfo();
                         
                         // Wait a bit and retry once
                         setTimeout(() => {
