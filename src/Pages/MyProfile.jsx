@@ -14,7 +14,7 @@ const ProfilePage = () => {
     const [token, setToken] = useState(null);
     const [loadingUserProfile, setLoadingUserProfile] = useState(true);
     const [user, setUser] = useState(null);
-    const { userInfo, userLoading, refetchUserInfo } = useUser();
+    const { userInfo, userLoading } = useUser();
     const [userPosts, setUserPosts] = useState([]);
     const [loadingPosts, setLoadingPosts] = useState(true);
     const [loadingGalleries, setLoadingGalleries] = useState(true);
@@ -689,7 +689,7 @@ const ProfilePage = () => {
                 isOpen={isProfileFormModalOpen}
                 onClose={() => setIsProfileFormModalOpen(false)}
                 mode="edit-profile"
-                onProfileUpdated={refetchUserInfo}
+                // onProfileUpdated removed
             />
             <CreatePostModal
                 isOpen={isCreatePostModalOpen}

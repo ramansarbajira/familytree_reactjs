@@ -31,7 +31,7 @@ import CreateFamilyModal from '../Components/CreateFamilyModal';
 import JoinFamilyModal from '../Components/JoinFamilyModal';
 
 const EventsPage = () => {
-  const { userInfo, userLoading, refetchUserInfo } = useUser();
+  const { userInfo, userLoading } = useUser();
   
   // true = upcoming, false = my-events, 'all' = all events
   const [activeTab, setActiveTab] = useState('upcoming');
@@ -371,17 +371,13 @@ const EventsPage = () => {
 
   const handleFamilyJoined = (familyData) => {
     // Refresh user info to get updated family code and approval status
-    refetchUserInfo().then(() => {
-      setIsJoinFamilyModalOpen(false);
-      // Reload the page to reflect the changes
-      window.location.reload();
-    });
+    setIsJoinFamilyModalOpen(false);
+    // Reload the page to reflect the changes
+    window.location.reload();
   };
 
   const handleFamilyCreated = (newFamilyDetails) => {
     // Refresh user info to get updated family code and approval status
-    refetchUserInfo();
-    
     setIsCreateFamilyModalOpen(false);
   };
 
@@ -916,7 +912,6 @@ const EventsPage = () => {
         onClose={() => setIsJoinFamilyModalOpen(false)}
         onFamilyJoined={handleFamilyJoined}
         token={localStorage.getItem('access_token')}
-        refetchUserInfo={refetchUserInfo}
       />
     </Layout>
   );

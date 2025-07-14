@@ -13,7 +13,7 @@ import { FiPlus, FiLoader } from 'react-icons/fi';
 import { jwtDecode } from 'jwt-decode';
 
 const FamilyMemberListing = () => {
-  const { userInfo, userLoading, refetchUserInfo } = useUser();
+  const { userInfo, userLoading } = useUser();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editMemberData, setEditMemberData] = useState(null);
@@ -78,17 +78,13 @@ const FamilyMemberListing = () => {
 
   const handleFamilyJoined = (familyData) => {
     // Refresh user info to get updated family code and approval status
-    refetchUserInfo().then(() => {
-      setIsJoinFamilyModalOpen(false);
-      // Reload the page to reflect the changes
-      window.location.reload();
-    });
+    setIsJoinFamilyModalOpen(false);
+    // Reload the page to reflect the changes
+    window.location.reload();
   };
 
   const handleFamilyCreated = (newFamilyDetails) => {
     // Refresh user info to get updated family code and approval status
-    refetchUserInfo();
-    
     setIsCreateFamilyModalOpen(false);
   };
 
@@ -337,7 +333,6 @@ const FamilyMemberListing = () => {
           onClose={() => setIsJoinFamilyModalOpen(false)}
           onFamilyJoined={handleFamilyJoined}
           token={token}
-          refetchUserInfo={refetchUserInfo}
         />
       </div>
     </Layout>

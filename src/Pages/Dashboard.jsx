@@ -30,6 +30,7 @@ const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
   const [recentPosts, setRecentPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCountSectionLoading, setIsCountSectionLoading] = useState(true);
+  const [productCount, setProductCount] = useState(null);
 
   // const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -214,6 +215,30 @@ useEffect(() => {
       setIsCountSectionLoading(false);
     }
   }, [familyStats, upcomingEventsCount, galleryCount]);
+
+  // Fetch product count for Gifts card
+  useEffect(() => {
+    fetch(`${apiBaseUrl}/product`, {
+      headers: {
+        'accept': '*/*',
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        // If data is an array, set count
+        if (Array.isArray(data)) {
+          setProductCount(data.length);
+        } else if (data.data && Array.isArray(data.data)) {
+          setProductCount(data.data.length);
+        } else {
+          setProductCount(0);
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching product data:', error);
+        setProductCount(0);
+      });
+  }, [apiBaseUrl]);
 
   const today = new Date();
   const formattedDate = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -428,11 +453,11 @@ console.log("token:", token);
           <FiGift className="text-primary-600 group-hover:text-black group-hover:opacity-90 transition-colors duration-300" size={40} />
           {!isCountSectionLoading && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-bounce">
-              2
+              {productCount !== null ? productCount : '-'}
             </span>
           )}
         </div>
-        <span className="text-gray-500 group-hover:text-black/80 text-sm font-medium tracking-wide transition-colors duration-300">GIFTS</span>
+        <span className="text-gray-500 group-hover:text-black/80 text-sm font-medium tracking-wide transition-colors duration-300">GIFT SHOP</span>
       </div>
       <div>
         {isCountSectionLoading ? (
@@ -442,13 +467,13 @@ console.log("token:", token);
           </div>
         ) : (
           <>
-            <h2 className="text-4xl font-bold text-gray-800 group-hover:text-black mb-1 transition-colors duration-300">2</h2>
-            <p className="text-gray-500 group-hover:text-black/80 text-sm transition-colors duration-300">Sent this month</p>
+            <h2 className="text-4xl font-bold text-gray-800 group-hover:text-black mb-1 transition-colors duration-300">{productCount !== null ? productCount : '-'}</h2>
+            <p className="text-gray-500 group-hover:text-black/80 text-sm transition-colors duration-300">Available Gifts</p>
           </>
         )}
         <button  onClick={() => navigate('/gifts-memories')}
          className="bg-unset text-primary mt-4 text-xs font-medium text-primary-600 group-hover:text-black hover:text-black/80 transition-colors flex items-center">
-          Track Gifts <FiChevronsRight size={14} className="ml-1" />
+          Browse Gifts <FiChevronsRight size={14} className="ml-1" />
         </button>
       </div>
     </div>
