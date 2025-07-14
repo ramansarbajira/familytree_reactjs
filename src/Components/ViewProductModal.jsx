@@ -342,7 +342,7 @@ const ViewProductModal = ({ isOpen, onClose, gift, onBuyNow }) => {
                                         console.log('🔍 Calling onBuyNow with:', { gift: gift.title, quantity });
                                         onBuyNow(gift, quantity); 
                                         console.log('🔍 Closing ViewProductModal');
-                                        onClose(); 
+                                        // onClose(); 
                                     }}
                                     disabled={gift.stock <= 0}
                                     className={`w-full flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-xl font-bold transition-all duration-300 transform hover:scale-[1.02] ${

@@ -557,9 +557,7 @@ const GiftListingPage = () => {
                         initialQuantity={quantities[selectedGift.id] || 1}
                         userInfo={userInfo}
                         onConfirmBuy={(giftId, quantity, details) => {
-                            console.log('🔍 Order confirmed:', { giftId, quantity, details });
-                            // Handle success (e.g., show toast, redirect, etc.)
-                            handleCloseBuyModal();
+                            // Do not close the modal here! Let BuyConfirmationModal handle its own closing after order confirmation.
                         }}
                     />
                 )}
