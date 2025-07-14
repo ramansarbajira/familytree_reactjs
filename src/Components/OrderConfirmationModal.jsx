@@ -166,7 +166,7 @@ const OrderConfirmationModal = ({ isOpen, onClose, orderDetails, onContinueShopp
                 >
                   Continue Shopping
                 </button>
-                <button
+                {/* <button
                   onClick={() => {
                     // You can add functionality to download invoice or share order details
                     console.log('Download invoice for order:', orderDetails.orderNumber);
@@ -175,7 +175,7 @@ const OrderConfirmationModal = ({ isOpen, onClose, orderDetails, onContinueShopp
                 >
                   <FiDownload size={16} />
                   <span>Download Invoice</span>
-                </button>
+                </button> */}
               </div>
 
               {/* Additional Info */}
