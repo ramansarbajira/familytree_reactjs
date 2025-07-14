@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { FiX, FiShoppingCart, FiCheckCircle, FiLoader, FiUser, FiMapPin, FiMessageSquare, FiPackage, FiMinus, FiPlus, FiGift, FiCalendar, FiTruck, FiDownload } from 'react-icons/fi';
+import React, { useState, useEffect, useRef } from 'react';
+import { FiX, FiShoppingCart, FiLoader, FiUser, FiMapPin, FiMessageSquare, FiPackage, FiMinus, FiPlus, FiGift, FiCalendar, FiTruck } from 'react-icons/fi';
+import OrderConfirmationModal from './OrderConfirmationModal';
 
 const BuyConfirmationModal = ({
   isOpen,
@@ -19,18 +20,35 @@ const BuyConfirmationModal = ({
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryInstructions, setDeliveryInstructions] = useState('');
   const [giftMessage, setGiftMessage] = useState('');
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [orderDetails, setOrderDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [familyMembers, setFamilyMembers] = useState([]);
   const [hasFamily, setHasFamily] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
+  const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
+  const [orderDetails, setOrderDetails] = useState(null);
+  const [orderProcessing, setOrderProcessing] = useState(false);
 
   // Update quantity when initialQuantity prop changes
   useEffect(() => {
     setQuantity(initialQuantity);
   }, [initialQuantity]);
+
+  // Debug effect to monitor order confirmation state
+  useEffect(() => {
+    console.log('🔄 Order confirmation state changed:', { 
+      showOrderConfirmation, 
+      orderDetails: !!orderDetails,
+      orderDetailsContent: orderDetails,
+      orderDetailsType: typeof orderDetails,
+      orderDetailsKeys: orderDetails ? Object.keys(orderDetails) : 'null'
+    });
+    
+    // Additional debug when orderDetails is set
+    if (orderDetails && showOrderConfirmation) {
+      console.log('🎉 Both orderDetails and showOrderConfirmation are true - modal should be visible!');
+    }
+  }, [showOrderConfirmation, orderDetails]);
 
   // === Check user approval status and fetch family members when modal opens ===
   useEffect(() => {
@@ -109,9 +127,19 @@ const BuyConfirmationModal = ({
       setDeliveryAddress('');
       setDeliveryInstructions('');
       setGiftMessage('');
-      setShowSuccess(false);
+      setError('');
+    } else {
+      // Reset everything when modal closes
+      setQuantity(initialQuantity);
+      setReceiverId(null);
+      setReceiverName('');
+      setDeliveryAddress('');
+      setDeliveryInstructions('');
+      setGiftMessage('');
+      setShowOrderConfirmation(false);
       setOrderDetails(null);
       setError('');
+      setOrderProcessing(false);
     }
   }, [isOpen, initialQuantity]);
 
@@ -128,6 +156,13 @@ const BuyConfirmationModal = ({
   };
 
   if (!isOpen || !gift) return null;
+
+  // Don't allow closing the main modal while order is being processed
+  const handleMainModalClose = () => {
+    if (!orderProcessing) {
+      onClose();
+    }
+  };
 
   // Filter out the current user from family members
   const filteredFamilyMembers = familyMembers.filter(member => member.userId !== userId);
@@ -185,6 +220,7 @@ const BuyConfirmationModal = ({
     }
 
     setIsLoading(true);
+    setOrderProcessing(true);
 
     try {
       const toCity = extractCityFromAddress(deliveryAddress);
@@ -208,9 +244,37 @@ const BuyConfirmationModal = ({
         giftMessage: giftMessage,
       };
 
-      // Store order details for confirmation popup
+      console.log('📋 Order details prepared for submission');
+
+      console.log('🚀 Submitting order data:', orderData);
+      
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${apiBaseUrl}/order/create`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(orderData)
+      });
+
+
+      console.log('📡 API Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ API Error:', errorData);
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📦 API Response result:', result);
+      
+      // Create the order details object that OrderConfirmationModal expects
       const confirmationDetails = {
         orderNumber: orderNumber,
+        orderDate: new Date().toLocaleDateString('en-IN'),
+        orderTime: new Date().toLocaleTimeString('en-IN'),
         gift: gift,
         quantity: quantity,
         totalPrice: gift.price * quantity,
@@ -218,26 +282,30 @@ const BuyConfirmationModal = ({
         deliveryAddress: deliveryAddress,
         deliveryInstructions: deliveryInstructions,
         giftMessage: giftMessage,
-        deliveryDuration: deliveryDuration,
         from: from,
         toCity: extractCityFromAddress(deliveryAddress),
-        orderDate: new Date().toLocaleDateString('en-IN'),
-        orderTime: new Date().toLocaleTimeString('en-IN'),
+        deliveryDuration: deliveryDuration,
+        apiResponse: result // Keep the original API response for reference
       };
-
-      const response = await fetch(`${apiBaseUrl}/order/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
+      
+      // Set order details and show confirmation modal immediately
+      setOrderDetails(confirmationDetails);
+      setOrderProcessing(false);
+      setShowOrderConfirmation(true);
+      
+      console.log('✅ Order confirmation state set - popup should show now');
+      console.log('🔧 orderDetails set to:', confirmationDetails);
+      
+      // Fallback to ensure confirmation shows if state didn't update
+      setTimeout(() => {
+        if (!showOrderConfirmation) {
+          console.log('🔄 Fallback: Forcing order confirmation to show');
+          setOrderProcessing(false);
+          setShowOrderConfirmation(true);
+        }
+      }, 300);
+      
+      // Call parent callback if provided (after showing confirmation)
       if (onConfirmBuy) {
         onConfirmBuy(gift.id, quantity, {
           receiverName: hasFamilyCodeAndApproved() ? receiverName : receiverName.trim(),
@@ -249,14 +317,11 @@ const BuyConfirmationModal = ({
           orderNumber: orderNumber
         });
       }
-
-      setOrderDetails(confirmationDetails);
-      setShowSuccess(true);
-     
+    
 
     } catch (error) {
-      console.error(error);
       setError(error.message || 'Order failed.');
+      setOrderProcessing(false);
     } finally {
       setIsLoading(false);
     }
@@ -265,7 +330,10 @@ const BuyConfirmationModal = ({
   const totalPrice = (gift.price * quantity).toLocaleString('en-IN');
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+    <>
+      {/* Main Buy Confirmation Modal */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-0 relative max-h-[95vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-6 rounded-t-2xl">
@@ -275,10 +343,10 @@ const BuyConfirmationModal = ({
               <h2 className="text-2xl font-bold">Complete Your Order</h2>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleMainModalClose}
               className="p-2 rounded-full bg-white bg-opacity-20 text-white hover:bg-opacity-30 transition-all"
               aria-label="Close"
-              disabled={isLoading}
+              disabled={isLoading || orderProcessing}
             >
               <FiX size={20} />
             </button>
@@ -286,168 +354,18 @@ const BuyConfirmationModal = ({
         </div>
 
         <div className="max-h-[calc(95vh-80px)] overflow-y-auto">
-          {showSuccess && orderDetails ? (
-            <div className="p-6">
-              {/* Success Header */}
-              <div className="text-center mb-8">
-                <div className="bg-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-                  <FiCheckCircle className="text-green-600 text-4xl" />
-                </div>
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">Order Confirmed!</h2>
-                <p className="text-gray-600">Your gift order has been successfully placed</p>
-              </div>
-
-              {/* Order Details */}
-              <div className="space-y-6">
-                {/* Order Number */}
-                <div className="bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl p-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-800">Order Number</h3>
-                    <span className="text-xl font-bold text-primary-600">{orderDetails.orderNumber}</span>
-                  </div>
-                  <div className="mt-2 text-sm text-gray-600">
-                    Placed on {orderDetails.orderDate} at {orderDetails.orderTime}
-                  </div>
-                </div>
-
-                {/* Product Details */}
-                <div className="bg-white border border-gray-200 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <FiPackage className="mr-3 text-primary-600" />
-                    Product Details
-                  </h3>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
-                      <img
-                        src={orderDetails.gift.images && orderDetails.gift.images.length > 0 ? orderDetails.gift.images[0] : 'https://placehold.co/64x64?text=No+Image'}
-                        alt={orderDetails.gift.title}
-                        className="w-full h-full object-cover rounded-lg"
-                        onError={(e) => {
-                          e.target.src = 'https://placehold.co/64x64?text=No+Image';
-                        }}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-800">{orderDetails.gift.title}</h4>
-                      <p className="text-sm text-gray-600">{orderDetails.gift.category}</p>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-sm text-gray-600">Quantity: {orderDetails.quantity}</span>
-                        <span className="font-semibold text-primary-600">₹{orderDetails.gift.price.toLocaleString('en-IN')} each</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Delivery Details */}
-                <div className="bg-white border border-gray-200 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <FiTruck className="mr-3 text-primary-600" />
-                    Delivery Details
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Receiver</label>
-                      <p className="text-gray-800 font-medium">{orderDetails.receiverName}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Delivery Address</label>
-                      <p className="text-gray-800">{orderDetails.deliveryAddress}</p>
-                    </div>
-                    {orderDetails.deliveryInstructions && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Delivery Instructions</label>
-                        <p className="text-gray-800">{orderDetails.deliveryInstructions}</p>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">From</label>
-                        <p className="text-gray-800">{orderDetails.from}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">To</label>
-                        <p className="text-gray-800">{orderDetails.toCity}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Estimated Delivery</label>
-                      <p className="text-gray-800">{orderDetails.deliveryDuration} day{orderDetails.deliveryDuration > 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Gift Message */}
-                {orderDetails.giftMessage && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                      <FiMessageSquare className="mr-3 text-primary-600" />
-                      Gift Message
-                    </h3>
-                    <p className="text-gray-800 italic">"{orderDetails.giftMessage}"</p>
-                  </div>
-                )}
-
-                {/* Order Summary */}
-                <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <FiShoppingCart className="mr-3 text-green-600" />
-                    Order Summary
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Product Price:</span>
-                      <span className="font-medium">₹{orderDetails.gift.price.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Quantity:</span>
-                      <span className="font-medium">{orderDetails.quantity}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Delivery:</span>
-                      <span className="font-medium text-green-600">Free</span>
-                    </div>
-                    <div className="border-t border-green-200 pt-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xl font-bold text-gray-800">Total Paid:</span>
-                        <span className="text-2xl font-bold text-green-600">₹{orderDetails.totalPrice.toLocaleString('en-IN')}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex space-x-4">
-                  <button
-                    onClick={onClose}
-                    className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-semibold"
-                  >
-                    Continue Shopping
-                  </button>
-                  <button
-                    onClick={() => {
-                      // You can add functionality to download invoice or share order details
-                      console.log('Download invoice for order:', orderDetails.orderNumber);
-                    }}
-                    className="flex-1 px-6 py-3 border border-primary-600 text-primary-600 rounded-xl hover:bg-primary-50 transition-colors font-semibold flex items-center justify-center space-x-2"
-                  >
-                    <FiDownload size={16} />
-                    <span>Download Invoice</span>
-                  </button>
-                </div>
-
-                {/* Additional Info */}
-                <div className="text-center text-sm text-gray-500">
-                  <p>You'll receive a confirmation email shortly with tracking details.</p>
-                  <p className="mt-1">For any queries, please contact our support team.</p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="p-6">
+          <div className="p-6">
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center">
                   <FiX className="mr-2" />
                   {error}
+                </div>
+              )}
+
+              {orderProcessing && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl flex items-center">
+                  <FiLoader className="animate-spin mr-2" />
+                  Processing your order...
                 </div>
               )}
 
@@ -695,12 +613,31 @@ const BuyConfirmationModal = ({
                     </>
                   )}
                 </button>
+              
+                
               </form>
             </div>
-          )}
+          </div>
         </div>
       </div>
-    </div>
+      )}
+      
+      {/* Order Confirmation Modal */}
+      <OrderConfirmationModal
+        isOpen={showOrderConfirmation}
+        onClose={() => {
+          setShowOrderConfirmation(false);
+          setOrderDetails(null);
+          // Don't call onClose() here - let user close the main modal manually
+        }}
+        onContinueShopping={() => {
+          setShowOrderConfirmation(false);
+          setOrderDetails(null);
+          onClose(); // Close the main modal when user clicks continue shopping
+        }}
+        orderDetails={orderDetails}
+      />
+    </>
   );
 };
 

@@ -37,8 +37,6 @@ const GiftListingPage = () => {
         }
     }
 
-    console.log('✅ userId:', userId);
-    console.log('✅ familyCode:', familyCode);
 
     const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -67,7 +65,7 @@ const GiftListingPage = () => {
         const fetchCategories = async () => {
             try {
                 setCategoriesLoading(true);
-                const response = await fetch(`${BASE_URL}/category`);
+                const response = await fetch(`${BASE_URL}/categories`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);

@@ -27,9 +27,11 @@ import EventViewerModal from '../Components/EventViewerModal';
 import EditEventModal from '../Components/EditEventModal';
 import NoFamilyView from '../Components/NoFamilyView';
 import PendingApprovalView from '../Components/PendingApprovalView';
+import CreateFamilyModal from '../Components/CreateFamilyModal';
+import JoinFamilyModal from '../Components/JoinFamilyModal';
 
 const EventsPage = () => {
-  const { userInfo, userLoading } = useUser();
+  const { userInfo, userLoading, refetchUserInfo } = useUser();
   
   // true = upcoming, false = my-events, 'all' = all events
   const [activeTab, setActiveTab] = useState('upcoming');
@@ -37,6 +39,8 @@ const EventsPage = () => {
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
   const [isEventViewerOpen, setIsEventViewerOpen] = useState(false);
   const [isEditEventModalOpen, setIsEditEventModalOpen] = useState(false);
+  const [isCreateFamilyModalOpen, setIsCreateFamilyModalOpen] = useState(false);
+  const [isJoinFamilyModalOpen, setIsJoinFamilyModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventsLoading, setEventsLoading] = useState(false);
 
@@ -350,13 +354,35 @@ const EventsPage = () => {
   };
 
   const handleCreateFamily = () => {
-    // Navigate to My Family page to create family
-    window.location.href = '/my-family';
+    setIsCreateFamilyModalOpen(true);
   };
 
-  const handleJoinFamily = () => {
-    // Navigate to My Family page to join family
-    window.location.href = '/my-family';
+  const handleJoinFamily = (familyCode = null) => {
+    if (familyCode) {
+      // Handle joining with specific family code
+      console.log('Joining family with code:', familyCode);
+      // TODO: Implement API call to join family with new code
+      // For now, just show the modal
+      setIsJoinFamilyModalOpen(true);
+    } else {
+      setIsJoinFamilyModalOpen(true);
+    }
+  };
+
+  const handleFamilyJoined = (familyData) => {
+    // Refresh user info to get updated family code and approval status
+    refetchUserInfo().then(() => {
+      setIsJoinFamilyModalOpen(false);
+      // Reload the page to reflect the changes
+      window.location.reload();
+    });
+  };
+
+  const handleFamilyCreated = (newFamilyDetails) => {
+    // Refresh user info to get updated family code and approval status
+    refetchUserInfo();
+    
+    setIsCreateFamilyModalOpen(false);
   };
 
   const displayedEvents = allEvents;
@@ -876,6 +902,21 @@ const EventsPage = () => {
         onClose={handleCloseEditModal}
         event={selectedEvent}
         onEventUpdated={handleEventUpdated}
+      />
+
+      <CreateFamilyModal
+        isOpen={isCreateFamilyModalOpen}
+        onClose={() => setIsCreateFamilyModalOpen(false)}
+        onFamilyCreated={handleFamilyCreated}
+        token={localStorage.getItem('access_token')}
+      />
+
+      <JoinFamilyModal
+        isOpen={isJoinFamilyModalOpen}
+        onClose={() => setIsJoinFamilyModalOpen(false)}
+        onFamilyJoined={handleFamilyJoined}
+        token={localStorage.getItem('access_token')}
+        refetchUserInfo={refetchUserInfo}
       />
     </Layout>
   );

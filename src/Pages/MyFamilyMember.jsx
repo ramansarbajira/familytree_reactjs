@@ -7,15 +7,19 @@ import FamilyMemberCard from '../Components/FamilyMemberCard';
 import ViewFamilyMemberModal from '../Components/ViewMemberModal';
 import NoFamilyView from '../Components/NoFamilyView';
 import PendingApprovalView from '../Components/PendingApprovalView';
+import CreateFamilyModal from '../Components/CreateFamilyModal';
+import JoinFamilyModal from '../Components/JoinFamilyModal';
 import { FiPlus, FiLoader } from 'react-icons/fi';
 import { jwtDecode } from 'jwt-decode';
 
 const FamilyMemberListing = () => {
-  const { userInfo, userLoading } = useUser();
+  const { userInfo, userLoading, refetchUserInfo } = useUser();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editMemberData, setEditMemberData] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateFamilyModalOpen, setIsCreateFamilyModalOpen] = useState(false);
+  const [isJoinFamilyModalOpen, setIsJoinFamilyModalOpen] = useState(false);
   const [token, setToken] = useState(null);
   const [viewMember, setViewMember] = useState(null);
   const [familyMembers, setFamilyMembers] = useState([]);
@@ -55,6 +59,38 @@ const FamilyMemberListing = () => {
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
+
+  const handleCreateFamily = () => {
+    setIsCreateFamilyModalOpen(true);
+  };
+
+  const handleJoinFamily = (familyCode = null) => {
+    if (familyCode) {
+      // Handle joining with specific family code
+      console.log('Joining family with code:', familyCode);
+      // TODO: Implement API call to join family with new code
+      // For now, just show the modal
+      setIsJoinFamilyModalOpen(true);
+    } else {
+      setIsJoinFamilyModalOpen(true);
+    }
+  };
+
+  const handleFamilyJoined = (familyData) => {
+    // Refresh user info to get updated family code and approval status
+    refetchUserInfo().then(() => {
+      setIsJoinFamilyModalOpen(false);
+      // Reload the page to reflect the changes
+      window.location.reload();
+    });
+  };
+
+  const handleFamilyCreated = (newFamilyDetails) => {
+    // Refresh user info to get updated family code and approval status
+    refetchUserInfo();
+    
+    setIsCreateFamilyModalOpen(false);
+  };
 
   const handleEditMember = async (memberUserId) => {
     if (!memberUserId) return;
@@ -212,11 +248,8 @@ const FamilyMemberListing = () => {
       <Layout>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <NoFamilyView 
-            onCreateFamily={() => setIsModalOpen(true)}
-            onJoinFamily={() => {
-              // Handle join family logic here
-              console.log('Join family clicked');
-            }}
+            onCreateFamily={handleCreateFamily}
+            onJoinFamily={handleJoinFamily}
           />
         </div>
       </Layout>
@@ -291,6 +324,21 @@ const FamilyMemberListing = () => {
             isLoading={viewLoading}
           />
         )}
+
+        <CreateFamilyModal
+          isOpen={isCreateFamilyModalOpen}
+          onClose={() => setIsCreateFamilyModalOpen(false)}
+          onFamilyCreated={handleFamilyCreated}
+          token={token}
+        />
+
+        <JoinFamilyModal
+          isOpen={isJoinFamilyModalOpen}
+          onClose={() => setIsJoinFamilyModalOpen(false)}
+          onFamilyJoined={handleFamilyJoined}
+          token={token}
+          refetchUserInfo={refetchUserInfo}
+        />
       </div>
     </Layout>
   );

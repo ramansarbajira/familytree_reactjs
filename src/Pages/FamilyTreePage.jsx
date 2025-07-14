@@ -67,6 +67,7 @@ const FamilyTreePage = () => {
     const [saveStatus, setSaveStatus] = useState('idle'); // idle | loading | success | error
     const [saveMessage, setSaveMessage] = useState('');
     const [selectedPersonId, setSelectedPersonId] = useState(null);
+    const [treeLoading, setTreeLoading] = useState(false);
     const { language } = useLanguage();
     const { userInfo, userLoading } = useUser();
     const navigate = useNavigate();
@@ -120,6 +121,8 @@ const FamilyTreePage = () => {
         const initializeTree = async () => {
             // Fetch family data from API using familyCode
             if (!userInfo || !userInfo.familyCode) return;
+            
+            setTreeLoading(true);
             let data = null;
             try {
                 const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/family/tree/${userInfo.familyCode}`, {
@@ -189,6 +192,7 @@ const FamilyTreePage = () => {
                 updateStats(newTree);
                 arrangeTree(newTree);
             }
+            setTreeLoading(false);
         };
         if (userInfo) initializeTree();
     }, [userInfo]);
@@ -198,17 +202,35 @@ const FamilyTreePage = () => {
     };
 
     const arrangeTree = (treeInstance) => {
-        const layout = autoArrange(treeInstance);
-        if (layout) {
-            setDagreGraph(layout.g);
-            setDagreLayoutOffsetX(layout.dagreLayoutOffsetX);
-            setDagreLayoutOffsetY(layout.dagreLayoutOffsetY);
+        // For large trees, show loading state during arrangement
+        const memberCount = treeInstance.people.size;
+        if (memberCount > 50) {
+            setTreeLoading(true);
+            // Use setTimeout to allow UI to update before heavy computation
+            setTimeout(() => {
+                const layout = autoArrange(treeInstance);
+                if (layout) {
+                    setDagreGraph(layout.g);
+                    setDagreLayoutOffsetX(layout.dagreLayoutOffsetX);
+                    setDagreLayoutOffsetY(layout.dagreLayoutOffsetY);
+                }
+                setTree(treeInstance);
+                setTreeLoading(false);
+            }, 100);
+        } else {
+            const layout = autoArrange(treeInstance);
+            if (layout) {
+                setDagreGraph(layout.g);
+                setDagreLayoutOffsetX(layout.dagreLayoutOffsetX);
+                setDagreLayoutOffsetY(layout.dagreLayoutOffsetY);
+            }
+            setTree(treeInstance);
         }
-        // Debug: Log positions of each person
-        if (treeInstance && treeInstance.people) {
+        
+        // Debug: Log positions of each person (only for smaller trees)
+        if (treeInstance && treeInstance.people && memberCount <= 25) {
             console.log('Person positions:', Array.from(treeInstance.people.values()).map(p => ({ id: p.id, name: p.name, x: p.x, y: p.y })));
         }
-        setTree(treeInstance);
     };
 
     const handlePersonClick = (personId) => {
@@ -599,8 +621,10 @@ const FamilyTreePage = () => {
         if (!containerRef.current) return;
         
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        const memberCount = tree.people.size;
+        const personSize = memberCount > 50 ? 80 : 100; // Dynamic person size
+        
         tree.people.forEach(person => {
-            const personSize = 100;
             minX = Math.min(minX, person.x - personSize / 2);
             minY = Math.min(minY, person.y - personSize / 2);
             maxX = Math.max(maxX, person.x + personSize / 2);
@@ -608,11 +632,17 @@ const FamilyTreePage = () => {
         });
         
         const treeWidth = maxX - minX;
-        // const treeHeight = maxY - minY; // Not needed for top alignment
+        const treeHeight = maxY - minY;
         
-        // Center horizontally, align to top vertically
-        containerRef.current.scrollLeft = (minX + treeWidth / 2) - containerRef.current.clientWidth / 2;
-        containerRef.current.scrollTop = 0; // Always scroll to top
+        // For large trees, center both horizontally and vertically
+        if (memberCount > 50) {
+            containerRef.current.scrollLeft = (minX + treeWidth / 2) - containerRef.current.clientWidth / 2;
+            containerRef.current.scrollTop = (minY + treeHeight / 2) - containerRef.current.clientHeight / 2;
+        } else {
+            // For smaller trees, center horizontally, align to top vertically
+            containerRef.current.scrollLeft = (minX + treeWidth / 2) - containerRef.current.clientWidth / 2;
+            containerRef.current.scrollTop = 0;
+        }
     };
 
     useEffect(() => {
@@ -624,11 +654,13 @@ const FamilyTreePage = () => {
     // On mobile, always scroll to top and center horizontally after tree loads
     useEffect(() => {
         if (tree && tree.people.size > 0 && window.innerWidth <= 600 && containerRef.current) {
+            const memberCount = tree.people.size;
+            const personSize = memberCount > 50 ? 80 : 100; // Dynamic person size
+            
             containerRef.current.scrollTop = 0;
             // Center horizontally
             let minX = Infinity, maxX = -Infinity;
             tree.people.forEach(person => {
-                const personSize = 100;
                 minX = Math.min(minX, person.x - personSize / 2);
                 maxX = Math.max(maxX, person.x + personSize / 2);
             });
@@ -778,8 +810,24 @@ const FamilyTreePage = () => {
                     </div>
                 )}
                 {/* Tree visualization area */}
-                <div className="flex-1 w-full h-full min-h-0 min-w-0 overflow-auto">
-                    <div className="relative min-w-[900px] min-h-[600px] w-max h-max mx-auto flex flex-col items-start justify-start sm:items-center sm:justify-center">
+                <div ref={containerRef} className="flex-1 w-full h-full min-h-0 min-w-0 overflow-auto">
+                    {treeLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-50">
+                            <div className="text-center">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                <p className="text-gray-600 font-medium">
+                                    {tree && tree.people.size > 50 ? 'Loading large family tree...' : 'Loading family tree...'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                    <div 
+                        className="relative w-max h-max mx-auto flex flex-col items-start justify-start sm:items-center sm:justify-center"
+                        style={{
+                            minWidth: tree && tree.people.size > 50 ? '1200px' : '900px',
+                            minHeight: tree && tree.people.size > 50 ? '800px' : '600px'
+                        }}
+                    >
                         {/* Tree SVG connections */}
                         {dagreGraph && (
                             <TreeConnections
@@ -788,18 +836,27 @@ const FamilyTreePage = () => {
                                 dagreLayoutOffsetY={dagreLayoutOffsetY}
                             />
                         )}
-                        {/* Render person cards (example, adjust as per your logic) */}
-                        {tree && Array.from(tree.people.values()).map(person => (
-                            <Person
-                                key={person.id}
-                                person={person}
-                                isRoot={person.id === tree.rootId}
-                                onClick={canEdit ? handlePersonClick : undefined}
-                                rootId={tree.rootId}
-                                tree={tree}
-                                language={language}
-                            />
-                        ))}
+                        {/* Render person cards with optimization for large trees */}
+                        {tree && Array.from(tree.people.values())
+                            .sort((a, b) => {
+                                // Sort by generation first, then by x position for better rendering order
+                                if (a.generation !== b.generation) {
+                                    return (a.generation || 0) - (b.generation || 0);
+                                }
+                                return a.x - b.x;
+                            })
+                            .map(person => (
+                                <Person
+                                    key={person.id}
+                                    person={person}
+                                    isRoot={person.id === tree.rootId}
+                                    onClick={canEdit ? handlePersonClick : undefined}
+                                    rootId={tree.rootId}
+                                    tree={tree}
+                                    language={language}
+                                    isSelected={selectedPersonId === person.id}
+                                />
+                            ))}
                     </div>
                 </div>
                 {canEdit && (

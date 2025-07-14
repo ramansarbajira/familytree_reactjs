@@ -102,8 +102,9 @@ const FamilyHubPage = () => {
 
   const handleFamilyJoined = (familyData) => {
     // Refresh user info to get updated family code and approval status
-    //refetchUserInfo();
     setIsJoinFamilyModalOpen(false);
+    // Reload the page to reflect the changes
+    window.location.reload();
   };
 
   const handleManageMembers = () => {
@@ -136,16 +137,22 @@ const FamilyHubPage = () => {
   };
 
   const handleFamilyCreated = (newFamilyDetails) => {
-    const updatedFamily = {
-      ...familyData,
-      ...newFamilyDetails,
-      familyPhotoUrl: newFamilyDetails.familyPhoto
-        ? familyData?.familyPhotoUrl
-        : familyData?.familyPhotoUrl || null,
-      updatedAt: new Date().toISOString(),
-    };
-
-    setFamilyData(updatedFamily);
+    // Refresh user info to get updated family code and approval status
+    refetchUserInfo();
+    
+    // Update local family data if available
+    if (newFamilyDetails) {
+      const updatedFamily = {
+        ...familyData,
+        ...newFamilyDetails,
+        familyPhotoUrl: newFamilyDetails.familyPhoto
+          ? familyData?.familyPhotoUrl
+          : familyData?.familyPhotoUrl || null,
+        updatedAt: new Date().toISOString(),
+      };
+      setFamilyData(updatedFamily);
+    }
+    
     setIsCreateFamilyModalOpen(false);
     setIsEditModalOpen(false);
   };
