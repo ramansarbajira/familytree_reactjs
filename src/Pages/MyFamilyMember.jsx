@@ -198,7 +198,6 @@ const FamilyMemberListing = () => {
         // Include nested objects for proper display
         religion: profile.religion || null,
         language: profile.language || null,
-        gothram: profile.gothram || null,
 
         raw: user, // full object including both user + userProfile
       };
