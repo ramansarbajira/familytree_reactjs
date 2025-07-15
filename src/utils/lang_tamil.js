@@ -9,14 +9,17 @@ const tamilRelationships = {
   F: "அப்பா", // Father
   M: "அம்மா", // Mother
   H: "கணவன்", // Husband
-"elder sister": "அக்கா", // Elder sister
-"younger sister": "தங்கை", // Younger sister
+  "FZ+": "அத்தை", // Father's elder sister
+  "FB+": "பெரியப்பா", // Father's elder brother
+  "FZ+DH": "மாமா/மைத்துனர்", // Father's elder sister's daughter's husband
+"Z+": "அக்கா", // Elder sister
+"Z-": "தங்கை", // Younger sister
 "Z+H": "மாமா", // Elder sister's husband
 "Z-H": "கொழுந்தன்", // Younger sister's husband
-"younger brother": "தம்பி", // Younger brother
+  "B-": "தம்பி", // Younger brother
 "B-W": "நங்கை", // Younger brother's wife
-daughter: "மகள்", // Daughter
-son: "மகன்", // Son
+"D": "மகள்", // Daughter
+"S": "மகன்", // Son
 "B-S": "மருமகன்", // Younger brother's son
 "B-D": "மருமகள்", // Younger brother's daughter
 "B+S": "மருமகன்", // Elder brother's son
@@ -29,15 +32,15 @@ SW: "மருமகள்", // Son's wife
 DH: "மருமகன்", // Daughter's husband
 grandson: "பேரன்", // Grandson
 granddaughter: "பேத்தி", // Granddaughter
-"grandmother (paternal)": "பாட்டி", // Paternal grandmother
-"grandfather (paternal)": "தாத்தா", // Paternal grandfather
+FM: "பாட்டி", // Paternal grandmother
+FF: "தாத்தா", // Paternal grandfather
 HFM: "பாட்டி", // Husband's father's mother
 HFF: "தாத்தா", // Husband's father's father
-"grandmother (maternal)": "பாட்டி", // Maternal grandmother
-"grandfather (maternal)": "தாத்தா", // Maternal grandfather
-"mother's younger brother": "மாமா", // Mother's younger brother
+MM: "பாட்டி", // Maternal grandmother
+MF: "தாத்தா", // Maternal grandfather
+"MB-": "மாமா", // Mother's younger brother
 "MB-W": "மாமி", // Mother's younger brother's wife
-"mother's younger sister": "சித்தி", // Mother's younger sister
+"MZ-": "சித்தி", // Mother's younger sister
 "MZ-H": "சித்தப்பா", // Mother's younger sister's husband
 "MB-S": "மாமா மகன்", // Mother's younger brother's son
 "MB-SW": "சகோதிரி", // Mother's younger brother's son's wife
@@ -61,8 +64,8 @@ HM: "மாமியார்", // Husband's mother
 HF: "மாமனார்", // Husband's father
 "HFZ-H": "சித்தப்பா", // Husband's father's younger sister's husband
 "HFZ-": "சித்தி", // Husband's father's younger sister
-"FFB+DD": "", // Father's father's elder brother's daughter's daughter
-"FFB+DDH": "", // Father's father's elder brother's daughter's daughter's husband
+"FFB+DD": "தங்கை", // Father's father's elder brother's daughter's daughter
+"FFB+DDH": "மச்சான்", // Father's father's elder brother's daughter's daughter's husband
 "FZ+D": "சித்தி", // Father's sister's daughter
 "FZ+SW": "மாமி", // Father's sister's son's wife
 "FZ+S": "மாமா", // Father's sister's son
@@ -109,6 +112,10 @@ HF: "மாமனார்", // Husband's father
 "HZ-DD": "பேத்தி", // Husband's sister's daughter's daughter
 "FB+SDS": "பேரன்", // Father's elder brother's son's daughter's son
 "FB+SDSD": "பேத்தி", // Father's elder brother's son's daughter's son's daughter
+  "DD": "பேத்தி",
+  "DS": "பேரன்",
+  "SD": "பேத்தி",
+  "SS": "பேரன்",
 
 // Wife's family (from husband's perspective)
 "WF": "மாமனார்", // Wife's father (father-in-law)
