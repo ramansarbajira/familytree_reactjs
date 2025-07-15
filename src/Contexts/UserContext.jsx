@@ -5,7 +5,10 @@ const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
   const [userInfo, setUserInfo] = useState(null);
-  const [userLoading, setUserLoading] = useState(false);
+  const [userLoading, setUserLoading] = useState(() => {
+    // Initialize as true if there's a token (indicating we need to fetch user data)
+    return !!localStorage.getItem('access_token');
+  });
 
   const fetchUserDetails = useCallback(async () => {
     const token = localStorage.getItem('access_token');

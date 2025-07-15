@@ -14,7 +14,7 @@ import {
   FiHeart
 } from 'react-icons/fi';
 import { RiUser3Line } from 'react-icons/ri';
-import { UserProvider, useUser } from '../Contexts/UserContext';
+import { useUser } from '../Contexts/UserContext';
 import ProfileFormModal from './ProfileFormModal';
 import NotificationPanel from './NotificationPanel';
 import { getNotificationType, getNotificationActions } from '../utils/notifications';

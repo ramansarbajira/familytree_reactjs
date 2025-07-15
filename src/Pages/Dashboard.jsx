@@ -613,17 +613,12 @@ console.log("token:", token);
                     {post.image && (
                       <img src={post.image} alt="Post media" className="rounded-lg w-full max-h-64 md:max-h-80 object-cover mb-4 shadow-sm border border-gray-100" />
                     )}
-                    <div className="flex justify-between items-center border-t border-gray-100 pt-3 text-xs md:text-sm text-gray-600">
-                      <div className="flex items-center gap-4 md:gap-5">
-                        <button className="bg-unset flex items-center gap-1.5 hover:text-red-600 transition font-medium group">
-                          <FiHeart size={16} className="text-red-500 group-hover:scale-110 transition-transform" /> {post.likes} Likes
-                        </button>
-                        <button className="bg-unset flex items-center gap-1.5 hover:text-primary-600 transition font-medium group">
-                          <FiMessageCircle size={16} className="group-hover:-translate-y-0.5 transition-transform" /> {post.comments} Comments
-                        </button>
-                      </div>
+                    <div className="flex items-center gap-4 md:gap-5 border-t border-gray-100 pt-3 text-xs md:text-sm text-gray-600">
+                      <button className="bg-unset flex items-center gap-1.5 hover:text-red-600 transition font-medium group">
+                        <FiHeart size={16} className="text-red-500 group-hover:scale-110 transition-transform" /> {post.likes} Likes
+                      </button>
                       <button className="bg-unset flex items-center gap-1.5 hover:text-primary-600 transition font-medium group">
-                        <FiShare2 size={16} className="group-hover:scale-110 transition-transform" /> Share
+                        <FiMessageCircle size={16} className="group-hover:-translate-y-0.5 transition-transform" /> {post.comments} Comments
                       </button>
                     </div>
                   </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../Components/Layout';
 import CreatePostModal from '../Components/CreatePostModal';
 import PostViewerModal from '../Components/PostViewerModal';
-import { UserProvider, useUser } from '../Contexts/UserContext';
+import { useUser } from '../Contexts/UserContext';
 import { jwtDecode } from 'jwt-decode';
 
 import {

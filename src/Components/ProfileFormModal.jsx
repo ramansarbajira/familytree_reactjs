@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PhoneInput from 'react-phone-input-2';
 import Swal from 'sweetalert2';
-import { UserProvider, useUser } from '../Contexts/UserContext';
+import { useUser } from '../Contexts/UserContext';
 
 const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode = 'add', memberData = {} }) => {
   const mobileRef = useRef(null);

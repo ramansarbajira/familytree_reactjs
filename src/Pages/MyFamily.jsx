@@ -6,7 +6,7 @@ import PendingApprovalView from '../Components/PendingApprovalView';
 import JoinFamilyModal from '../Components/JoinFamilyModal';
 import { useNavigate } from 'react-router-dom';
 import CreateFamilyModal from '../Components/CreateFamilyModal';
-import { UserProvider, useUser } from '../Contexts/UserContext';
+import { useUser } from '../Contexts/UserContext';
 import FamilyOverView from '../Components/FamilyOverView';
 import { FiLoader } from 'react-icons/fi';
 
