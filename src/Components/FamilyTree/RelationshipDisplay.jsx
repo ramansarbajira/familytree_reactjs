@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getTranslation } from '../../utils/languageTranslations';
 import { useLanguage } from '../../Contexts/LanguageContext';
-import { RelationshipCalculator } from '../../utils/relationshipCalculator';
+import RelationshipCalculator from '../../utils/relationshipCalculator';
 
 const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
   const { language, changeLanguage } = useLanguage();

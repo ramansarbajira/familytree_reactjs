@@ -4,7 +4,10 @@ import { useLanguage } from '../Contexts/LanguageContext';
 const LANGUAGES = [
   { code: 'english', label: 'English' },
   { code: 'tamil', label: 'தமிழ்' },
-  // Add more languages here in the future
+  { code: 'hindi', label: 'हिन्दी' },
+  { code: 'telugu', label: 'తెలుగు' },
+  { code: 'malayalam', label: 'മലയാളം' },
+  { code: 'kannada', label: 'ಕನ್ನಡ' },
 ];
 
 const LanguageSwitcher = () => {

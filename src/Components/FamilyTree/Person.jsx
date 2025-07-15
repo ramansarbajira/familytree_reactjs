@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { RelationshipCalculator } from '../../utils/relationshipCalculator';
+import RelationshipCalculator from '../../utils/relationshipCalculator';
 import { getTranslation } from '../../utils/languageTranslations';
 
 const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSelected }) => {
@@ -52,23 +52,12 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
 
     // Calculate relationship to root (memoized for performance)
     const relationshipText = useMemo(() => {
-        if (isRoot || !rootId || !tree) return '';
-        
-        const calculator = new RelationshipCalculator(tree);
-        const rel = calculator.calculateRelationship(rootId, person.id);
-        if (rel && rel.type && rel.type !== 'unknown' && rel.type !== 'self') {
-            // Use detailed Tamil relationship if available
-            if (rel.relationshipCode && language === 'tamil') {
-                return calculator.getDetailedTamilRelationship(rel.relationshipCode, language);
-            } else {
-                const translation = getTranslation(`relationships.${rel.type}`, language);
-                // Fallback if translation is missing
-                if (translation === `relationships.${rel.type}`) {
-                    return rel.type === 'custom'
-                        ? (getTranslation('relationships.relative', language) || rel.description || 'Relative')
-                        : (rel.description || rel.type);
-                }
-                return translation;
+        if (!isRoot && rootId && tree) {
+            const calculator = new RelationshipCalculator(tree);
+            const rel = calculator.calculateRelationship(rootId, person.id);
+            if (rel && rel.relationshipCode) {
+                // Always use getTranslation for all languages
+                return getTranslation(rel.relationshipCode, language) || rel.description || rel.relationshipCode;
             }
         }
         return '';

@@ -1,350 +1,365 @@
-// Family Relationship Calculator
-// This utility calculates the relationship between any two people in a family tree
-
 import tamilTranslations from './lang_tamil.js';
 
-export class RelationshipCalculator {
+/**
+ * Universal Family Relationship Calculator
+ * 
+ * This refactored version uses only a universal code generator approach.
+ * All relationships are calculated by finding the shortest path between two people
+ * and converting that path into a standardized relationship code.
+ * 
+ * Relationship Code Format:
+ * - F = Father, M = Mother
+ * - S = Son, D = Daughter  
+ * - B = Brother, Z = Sister
+ * - H = Husband, W = Wife
+ * - + = Elder, - = Younger
+ * 
+ * Examples:
+ * - F = Father
+ * - MB+ = Mother's elder brother (maternal uncle)
+ * - FZS = Father's sister's son (paternal cousin)
+ * - HB- = Husband's younger brother (brother-in-law)
+ */
+
+export default class RelationshipCalculator {
   constructor(tree) {
     this.tree = tree;
     this.people = tree.people;
   }
 
-  // Calculate relationship between two people
+  /**
+   * Calculate relationship between two people using universal path-based approach
+   * @param {string} person1Id - ID of the first person
+   * @param {string} person2Id - ID of the second person
+   * @returns {Object} Relationship object with type, description, and code
+   */
   calculateRelationship(person1Id, person2Id) {
+    // Handle self-relationship
     if (person1Id === person2Id) {
-      return { type: 'self', description: 'self', relationshipCode: 'self' };
+      return { 
+        type: 'self', 
+        description: 'self', 
+        relationshipCode: 'SELF',
+        generationDiff: 0
+      };
     }
 
     const person1 = this.people.get(person1Id);
     const person2 = this.people.get(person2Id);
 
     if (!person1 || !person2) {
-      return { type: 'unknown', description: 'unknown', relationshipCode: 'unknown' };
-    }
-
-    // Check direct relationships first
-    const directRelation = this.checkDirectRelationship(person1, person2);
-    if (directRelation) return directRelation;
-
-    // Check through parents
-    const parentRelation = this.checkThroughParents(person1, person2);
-    if (parentRelation) return parentRelation;
-
-    // Check through spouses
-    const spouseRelation = this.checkThroughSpouses(person1, person2);
-    if (spouseRelation) return spouseRelation;
-
-    // Check through siblings
-    const siblingRelation = this.checkThroughSiblings(person1, person2);
-    if (siblingRelation) return siblingRelation;
-
-    // Check complex relationships
-    const complexRelation = this.checkComplexRelationships(person1, person2);
-    if (complexRelation) return complexRelation;
-
-    // If not found, use path-based code
-    const path = this.getRelationshipPath(person1Id, person2Id);
-    if (path && path.length > 0) {
-      const code = this.getRelationshipCodeFromPath(path, person1, person2);
       return {
-        type: 'custom',
-        description: this.getDetailedTamilRelationship(code, 'tamil'),
-        relationshipCode: code
+        type: 'unknown', 
+        description: 'unknown', 
+        relationshipCode: 'UNKNOWN',
+        generationDiff: 0
       };
-    }
-
-    return { type: 'unknown', description: 'unknown', relationshipCode: 'unknown' };
   }
 
-  // Check direct relationships (parent-child, spouse, sibling)
-  checkDirectRelationship(person1, person2) {
-    // Check if person2 is spouse of any of person1's children (son-in-law/daughter-in-law)
-    for (const childId of person1.children) {
-      const child = this.people.get(childId);
-      if (child && child.spouses.has(person2.id)) {
-        const relationshipCode = person2.gender === 'male' ? 'DH' : 'DW';
+    // Find the shortest path between the two people
+    const path = this.findShortestPath(person1Id, person2Id);
+    
+    if (!path || path.length === 0) {
         return {
-          type: person2.gender === 'male' ? 'sonInLaw' : 'daughterInLaw',
-          description: person2.gender === 'male' ? 'sonInLaw' : 'daughterInLaw',
-          generationDiff: 1,
-          relationshipCode
+        type: 'unknown', 
+        description: 'no connection found', 
+        relationshipCode: 'UNRELATED',
+        generationDiff: 0
         };
-      }
     }
-    // Grandchild relationship (my child's child)
-    for (const childId of person1.children) {
-      const child = this.people.get(childId);
-      if (child && child.children.has(person2.id)) {
-        const relationshipCode = person2.gender === 'male' ? 'SS' : 'SD';
-        return {
-          type: person2.gender === 'male' ? 'grandson' : 'granddaughter',
-          description: person2.gender === 'male' ? 'grandson' : 'granddaughter',
-          generationDiff: 2,
-          relationshipCode
-        };
-      }
-    }
-    // Parent-child relationship
-    if (person1.parents.has(person2.id)) {
-      const relationshipCode = person2.gender === 'male' ? 'F' : 'M';
+    
+    // Convert path to relationship code
+    const relationshipCode = this.generateRelationshipCode(path, person1, person2);
+    
+    // Calculate generation difference
+    const generationDiff = this.calculateGenerationDiff(path);
+    
+    // Get human-readable description
+    const description = this.getRelationshipDescription(relationshipCode);
+    
       return {
-        type: person2.gender === 'male' ? 'father' : 'mother',
-        description: person2.gender === 'male' ? 'father' : 'mother',
-        generationDiff: -1,
-        relationshipCode
+      type: this.getRelationshipType(relationshipCode),
+      description: description,
+      relationshipCode: relationshipCode,
+      generationDiff: generationDiff,
+      path: path // Include path for debugging
       };
     }
 
-    if (person1.children.has(person2.id)) {
-      const relationshipCode = person2.gender === 'male' ? 'S' : 'D';
-      return {
-        type: person2.gender === 'male' ? 'son' : 'daughter',
-        description: person2.gender === 'male' ? 'son' : 'daughter',
-        generationDiff: 1,
-        relationshipCode
-      };
-    }
-
-    // Spouse relationship
-    if (person1.spouses.has(person2.id)) {
-      const relationshipCode = person2.gender === 'male' ? 'H' : 'W';
-      return {
-        type: person2.gender === 'male' ? 'husband' : 'wife',
-        description: person2.gender === 'male' ? 'husband' : 'wife',
-        generationDiff: 0,
-        relationshipCode
-      };
-    }
-
-    // Sibling relationship
-    if (person1.siblings.has(person2.id)) {
-      // Determine if elder or younger sibling
-      const birthOrder1 = person1.birthOrder || 0;
-      const birthOrder2 = person2.birthOrder || 0;
-      let relationshipCode;
+  /**
+   * Find the shortest path between two people using breadth-first search
+   * @param {string} startId - Starting person ID
+   * @param {string} endId - Target person ID
+   * @returns {Array} Array of path steps or null if no path exists
+   */
+  findShortestPath(startId, endId) {
+    const visited = new Set();
+    const queue = [{ personId: startId, path: [] }];
+    
+    while (queue.length > 0) {
+      const { personId: currentId, path } = queue.shift();
       
-      if (person2.gender === 'male') {
-        relationshipCode = birthOrder2 < birthOrder1 ? 'B+' : 'B-';
-      } else {
-        relationshipCode = birthOrder2 < birthOrder1 ? 'Z+' : 'Z-';
-      }
+      // Found the target
+      if (currentId === endId) {
+        return path;
+    }
+
+      // Skip if already visited
+      if (visited.has(currentId)) continue;
+      visited.add(currentId);
       
-      return {
-        type: person2.gender === 'male' ? 'brother' : 'sister',
-        description: person2.gender === 'male' ? 'brother' : 'sister',
-        generationDiff: 0,
-        relationshipCode
-      };
+      const person = this.people.get(currentId);
+      if (!person) continue;
+      
+      // Explore all possible connections
+      this.addConnectionsToQueue(person, currentId, path, queue, visited);
     }
 
-    return null;
+    return null; // No path found
   }
 
-  // Check relationships through parents
-  checkThroughParents(person1, person2) {
-    // Grandparent-grandchild
-    for (const parentId of person1.parents) {
-      const parent = this.people.get(parentId);
-      if (parent && parent.parents.has(person2.id)) {
-        const relationshipCode = person2.gender === 'male' ? 'FF' : 'FM';
-        return {
-          type: person2.gender === 'male' ? 'grandfather' : 'grandmother',
-          description: person2.gender === 'male' ? 'grandfather' : 'grandmother',
-          generationDiff: -2,
-          relationshipCode
-        };
+  /**
+   * Add all possible connections from current person to the search queue
+   * @param {Object} person - Current person object
+   * @param {string} currentId - Current person ID
+   * @param {Array} currentPath - Current path taken
+   * @param {Array} queue - Search queue
+   * @param {Set} visited - Set of visited person IDs
+   */
+  addConnectionsToQueue(person, currentId, currentPath, queue, visited) {
+    // Add parents
+    for (const parentId of person.parents) {
+      if (!visited.has(parentId)) {
+        queue.push({
+          personId: parentId,
+          path: [...currentPath, { 
+            type: 'parent', 
+            from: currentId, 
+            to: parentId 
+          }]
+        });
       }
     }
 
-    // Uncle/Aunt - Niece/Nephew
-    for (const parentId of person1.parents) {
-      const parent = this.people.get(parentId);
-      if (parent && parent.siblings.has(person2.id)) {
-        // Use birth order to distinguish elder/younger
-        const parentBirthOrder = parent.birthOrder || 0;
-        const uncleAuntBirthOrder = person2.birthOrder || 0;
-        let relationshipCode;
-        if (parent.gender === 'male') {
-          // Father's side
-          if (person2.gender === 'male') {
-            relationshipCode = uncleAuntBirthOrder < parentBirthOrder ? 'FB+' : 'FB';
-          } else {
-            relationshipCode = uncleAuntBirthOrder < parentBirthOrder ? 'FZ+' : 'FZ';
+    // Add children
+    for (const childId of person.children) {
+      if (!visited.has(childId)) {
+        queue.push({
+          personId: childId,
+          path: [...currentPath, { 
+            type: 'child', 
+            from: currentId, 
+            to: childId 
+          }]
+        });
           }
-        } else {
-          // Mother's side
-          if (person2.gender === 'male') {
-            relationshipCode = uncleAuntBirthOrder < parentBirthOrder ? 'MB+' : 'MB';
-          } else {
-            relationshipCode = uncleAuntBirthOrder < parentBirthOrder ? 'MZ+' : 'MZ';
-          }
-        }
-        return {
-          type: person2.gender === 'male' ? 'uncle' : 'aunt',
-          description: person2.gender === 'male' ? 'uncle' : 'aunt',
-          generationDiff: -1,
-          relationshipCode
-        };
+    }
+
+    // Add spouses
+    for (const spouseId of person.spouses) {
+      if (!visited.has(spouseId)) {
+        queue.push({
+          personId: spouseId,
+          path: [...currentPath, { 
+            type: 'spouse', 
+            from: currentId, 
+            to: spouseId 
+          }]
+        });
       }
     }
 
-    // Cousin relationship
-    for (const parent1Id of person1.parents) {
-      const parent1 = this.people.get(parent1Id);
-      if (parent1) {
-        for (const parent2Id of person2.parents) {
-          const parent2 = this.people.get(parent2Id);
-          if (parent2 && parent1.siblings.has(parent2.id)) {
-            // Determine cousin type based on parent relationship
-            const parent1Gender = parent1.gender;
-            const parent2Gender = parent2.gender;
-            let relationshipCode;
-            
-            if (parent1Gender === 'male' && parent2Gender === 'male') {
-              // Father's brother's children
-              relationshipCode = person2.gender === 'male' ? 'FB+S' : 'FB+D';
-            } else if (parent1Gender === 'male' && parent2Gender === 'female') {
-              // Father's sister's children
-              relationshipCode = person2.gender === 'male' ? 'FZ+S' : 'FZ+D';
-            } else if (parent1Gender === 'female' && parent2Gender === 'male') {
-              // Mother's brother's children
-              relationshipCode = person2.gender === 'male' ? 'MB+S' : 'MB+D';
-            } else {
-              // Mother's sister's children
-              relationshipCode = person2.gender === 'male' ? 'MZ+S' : 'MZ+D';
-            }
-            
-            return {
-              type: 'cousin',
-              description: 'cousin',
-              generationDiff: 0,
-              relationshipCode
-            };
-          }
-        }
+    // Add siblings
+    for (const siblingId of person.siblings) {
+      if (!visited.has(siblingId)) {
+        queue.push({
+          personId: siblingId,
+          path: [...currentPath, { 
+            type: 'sibling', 
+            from: currentId, 
+            to: siblingId 
+          }]
+        });
       }
     }
-
-    return null;
   }
 
-  // Check relationships through spouses
-  checkThroughSpouses(person1, person2) {
-    // In-law relationships
-    for (const spouseId of person1.spouses) {
-      const spouse = this.people.get(spouseId);
-      if (spouse) {
-        // Father-in-law, Mother-in-law
-        if (spouse.parents.has(person2.id)) {
-          const relationshipCode = person2.gender === 'male' ? 'FF' : 'FM';
-          return {
-            type: person2.gender === 'male' ? 'fatherInLaw' : 'motherInLaw',
-            description: person2.gender === 'male' ? 'fatherInLaw' : 'motherInLaw',
-            generationDiff: -1,
-            relationshipCode
-          };
-        }
-
-        // Brother-in-law, Sister-in-law
-        if (spouse.siblings.has(person2.id)) {
-          // Determine specific in-law type based on spouse's gender and birth order
-          const spouseGender = spouse.gender;
-          const spouseBirthOrder = spouse.birthOrder || 0;
-          const inLawBirthOrder = person2.birthOrder || 0;
-          let relationshipCode;
+  /**
+   * Generate relationship code from path
+   * @param {Array} path - Array of path steps
+   * @param {Object} person1 - First person object
+   * @param {Object} person2 - Second person object
+   * @returns {string} Relationship code
+   */
+  generateRelationshipCode(path, person1, person2) {
+    if (!path || path.length === 0) return '';
+    
+    let code = '';
+    
+    for (const step of path) {
+      const targetPerson = this.people.get(step.to);
+      if (!targetPerson) continue;
+      
+      switch (step.type) {
+        case 'parent':
+          code += targetPerson.gender === 'male' ? 'F' : 'M';
+          break;
           
-          if (spouseGender === 'male') {
-            // Husband's side
-            if (person2.gender === 'male') {
-              relationshipCode = inLawBirthOrder < spouseBirthOrder ? 'HB+' : 'HB-';
-            } else {
-              relationshipCode = inLawBirthOrder < spouseBirthOrder ? 'HZ+' : 'HZ-';
-            }
-          } else {
-            // Wife's side
-            if (person2.gender === 'male') {
-              relationshipCode = inLawBirthOrder < spouseBirthOrder ? 'WB+' : 'WB-';
-            } else {
-              relationshipCode = inLawBirthOrder < spouseBirthOrder ? 'WZ+' : 'WZ-';
-            }
-          }
+        case 'child':
+          code += targetPerson.gender === 'male' ? 'S' : 'D';
+          break;
           
-          return {
-            type: person2.gender === 'male' ? 'brotherInLaw' : 'sisterInLaw',
-            description: person2.gender === 'male' ? 'brotherInLaw' : 'sisterInLaw',
-            generationDiff: 0,
-            relationshipCode
-          };
-        }
-      }
-    }
-
-    return null;
-  }
-
-  // Check relationships through siblings
-  checkThroughSiblings(person1, person2) {
-    // Niece/Nephew
-    for (const siblingId of person1.siblings) {
-      const sibling = this.people.get(siblingId);
-      if (sibling && sibling.children.has(person2.id)) {
-        const relationshipCode = person2.gender === 'male' ? 'BS' : 'BD';
-        return {
-          type: person2.gender === 'male' ? 'nephew' : 'niece',
-          description: person2.gender === 'male' ? 'nephew' : 'niece',
-          generationDiff: 1,
-          relationshipCode
-        };
-      }
-    }
-
-    return null;
-  }
-
-  // Check complex relationships (great-grandparents, etc.)
-  checkComplexRelationships(person1, person2) {
-    // Great-grandparent relationship
-    for (const parentId of person1.parents) {
-      const parent = this.people.get(parentId);
-      if (parent) {
-        for (const grandparentId of parent.parents) {
-          const grandparent = this.people.get(grandparentId);
-          if (grandparent && grandparent.parents.has(person2.id)) {
-            const relationshipCode = person2.gender === 'male' ? 'FFF' : 'FFM';
-            return {
-              type: person2.gender === 'male' ? 'greatGrandfather' : 'greatGrandmother',
-              description: person2.gender === 'male' ? 'greatGrandfather' : 'greatGrandmother',
-              generationDiff: -3,
-              relationshipCode
-            };
+        case 'spouse':
+          code += targetPerson.gender === 'male' ? 'H' : 'W';
+          break;
+          
+        case 'sibling':
+          const fromPerson = this.people.get(step.from);
+          const elderYounger = this.determineElderYounger(fromPerson, targetPerson);
+          
+          if (targetPerson.gender === 'male') {
+            code += elderYounger === 'elder' ? 'B+' : 'B-';
+          } else {
+            code += elderYounger === 'elder' ? 'Z+' : 'Z-';
           }
-        }
+          break;
       }
     }
-
-    // Great-grandchild relationship
-    for (const childId of person1.children) {
-      const child = this.people.get(childId);
-      if (child) {
-        for (const grandchildId of child.children) {
-          const grandchild = this.people.get(grandchildId);
-          if (grandchild && grandchild.children.has(person2.id)) {
-            const relationshipCode = person2.gender === 'male' ? 'SSS' : 'SSD';
-            return {
-              type: person2.gender === 'male' ? 'greatGrandson' : 'greatGranddaughter',
-              description: person2.gender === 'male' ? 'greatGrandson' : 'greatGranddaughter',
-              generationDiff: 3,
-              relationshipCode
-            };
-          }
-        }
-      }
-    }
-
-    return null;
+    
+    return code;
   }
 
-  // Get all relationships for a person
+  /**
+   * Determine if person2 is elder or younger than person1
+   * @param {Object} person1 - First person
+   * @param {Object} person2 - Second person
+   * @returns {string} 'elder', 'younger', or 'same'
+   */
+  determineElderYounger(person1, person2) {
+    // Use birth order if available
+    if (person1.birthOrder && person2.birthOrder) {
+      return person2.birthOrder < person1.birthOrder ? 'elder' : 'younger';
+  }
+
+    // Fallback to age comparison
+    if (person1.age && person2.age) {
+      return person2.age > person1.age ? 'elder' : 'younger';
+    }
+    
+    // Default to same if no information available
+    return 'same';
+  }
+
+  /**
+   * Calculate generation difference from path
+   * @param {Array} path - Array of path steps
+   * @returns {number} Generation difference (positive = younger, negative = older)
+   */
+  calculateGenerationDiff(path) {
+    let diff = 0;
+    
+    for (const step of path) {
+      switch (step.type) {
+        case 'parent':
+          diff -= 1;
+          break;
+        case 'child':
+          diff += 1;
+          break;
+        case 'spouse':
+        case 'sibling':
+          // Same generation
+          break;
+      }
+    }
+
+    return diff;
+  }
+
+  /**
+   * Get relationship type from code
+   * @param {string} code - Relationship code
+   * @returns {string} Relationship type
+   */
+  getRelationshipType(code) {
+    // Basic direct relationships
+    const directTypes = {
+      'F': 'father',
+      'M': 'mother',
+      'S': 'son',
+      'D': 'daughter',
+      'H': 'husband',
+      'W': 'wife',
+      'B+': 'elderBrother',
+      'B-': 'youngerBrother',
+      'Z+': 'elderSister',
+      'Z-': 'youngerSister'
+    };
+    
+    if (directTypes[code]) {
+      return directTypes[code];
+    }
+    
+    // Complex relationships
+    if (code.includes('F') || code.includes('M')) {
+      if (code.length > 1) {
+        return 'extended';
+      }
+    }
+    
+    return 'complex';
+  }
+
+  /**
+   * Get human-readable description from relationship code
+   * @param {string} code - Relationship code
+   * @param {string} language - Language for description (default: 'tamil')
+   * @returns {string} Human-readable description
+   */
+  getRelationshipDescription(code, language = 'tamil') {
+    // Try Tamil translations first
+    if (language === 'tamil' && tamilTranslations[code]) {
+      return tamilTranslations[code];
+    }
+
+    // Fallback to English descriptions
+    const englishDescriptions = {
+      'F': 'father',
+      'M': 'mother',
+      'S': 'son',
+      'D': 'daughter',
+      'H': 'husband',
+      'W': 'wife',
+      'B+': 'elder brother',
+      'B-': 'younger brother',
+      'Z+': 'elder sister',
+      'Z-': 'younger sister',
+      'FF': 'grandfather (paternal)',
+      'FM': 'grandmother (paternal)',
+      'MF': 'grandfather (maternal)',
+      'MM': 'grandmother (maternal)',
+      'SS': 'grandson',
+      'SD': 'granddaughter',
+      'DS': 'grandson',
+      'DD': 'granddaughter',
+      'FB+': 'father\'s elder brother',
+      'FB-': 'father\'s younger brother',
+      'FZ+': 'father\'s elder sister',
+      'FZ-': 'father\'s younger sister',
+      'MB+': 'mother\'s elder brother',
+      'MB-': 'mother\'s younger brother',
+      'MZ+': 'mother\'s elder sister',
+      'MZ-': 'mother\'s younger sister'
+    };
+    
+    return englishDescriptions[code] || `relationship: ${code}`;
+  }
+
+  /**
+   * Get all relationships for a person
+   * @param {string} personId - Person ID
+   * @returns {Array} Array of relationship objects
+   */
   getAllRelationships(personId) {
     const relationships = [];
     const person = this.people.get(personId);
@@ -365,136 +380,12 @@ export class RelationshipCalculator {
       }
     });
 
+    // Sort by generation difference, then by relationship type
     return relationships.sort((a, b) => {
-      // Sort by generation difference first, then by relationship type
       const genDiffA = a.relationship.generationDiff || 0;
       const genDiffB = b.relationship.generationDiff || 0;
       if (genDiffA !== genDiffB) return genDiffA - genDiffB;
       return a.relationship.type.localeCompare(b.relationship.type);
     });
   }
-
-  // Get relationship path between two people
-  getRelationshipPath(person1Id, person2Id) {
-    if (person1Id === person2Id) {
-      return [{ type: 'self', personId: person1Id }];
-    }
-
-    const visited = new Set();
-    const queue = [{ personId: person1Id, path: [] }];
-    
-    while (queue.length > 0) {
-      const { personId: currentId, path } = queue.shift();
-      
-      if (currentId === person2Id) {
-        return path;
-      }
-      
-      if (visited.has(currentId)) continue;
-      visited.add(currentId);
-      
-      const person = this.people.get(currentId);
-      if (!person) continue;
-      
-      // Check parents
-      for (const parentId of person.parents) {
-        if (!visited.has(parentId)) {
-          queue.push({
-            personId: parentId,
-            path: [...path, { type: 'parent', personId: currentId, targetId: parentId }]
-          });
-        }
-      }
-      
-      // Check children
-      for (const childId of person.children) {
-        if (!visited.has(childId)) {
-          queue.push({
-            personId: childId,
-            path: [...path, { type: 'child', personId: currentId, targetId: childId }]
-          });
-        }
-      }
-      
-      // Check spouses
-      for (const spouseId of person.spouses) {
-        if (!visited.has(spouseId)) {
-          queue.push({
-            personId: spouseId,
-            path: [...path, { type: 'spouse', personId: currentId, targetId: spouseId }]
-          });
-        }
-      }
-      
-      // Check siblings
-      for (const siblingId of person.siblings) {
-        if (!visited.has(siblingId)) {
-          queue.push({
-            personId: siblingId,
-            path: [...path, { type: 'sibling', personId: currentId, targetId: siblingId }]
-          });
-        }
-      }
-    }
-    
-    return null; // No path found
-  }
-
-  // Get generation difference between two people
-  getGenerationDifference(person1Id, person2Id) {
-    const person1 = this.people.get(person1Id);
-    const person2 = this.people.get(person2Id);
-    
-    if (!person1 || !person2) return 0;
-    
-    return (person2.generation || 0) - (person1.generation || 0);
-  }
-
-  // Get detailed Tamil relationship using relationship code
-  getDetailedTamilRelationship(relationshipCode, language = 'tamil') {
-    if (language === 'tamil' && tamilTranslations[relationshipCode]) {
-      return tamilTranslations[relationshipCode];
-    }
-    
-    // Fallback to basic relationship types
-    const basicRelationships = {
-      'F': 'father', 'M': 'mother', 'S': 'son', 'D': 'daughter',
-      'H': 'husband', 'W': 'wife', 'B+': 'elder brother', 'B-': 'younger brother',
-      'Z+': 'elder sister', 'Z-': 'younger sister'
-    };
-    
-    return basicRelationships[relationshipCode] || relationshipCode;
-  }
-
-  // Helper: Convert a relationship path to a code string (e.g., FFF, SSS, FB+S, etc.)
-  getRelationshipCodeFromPath(path, person1, person2) {
-    if (!path || path.length === 0) return '';
-    let code = '';
-    let currentGender = person1.gender;
-    let lastType = null;
-    for (const step of path) {
-      if (step.type === 'parent') {
-        code += 'F';
-        currentGender = this.people.get(step.targetId)?.gender || currentGender;
-      } else if (step.type === 'child') {
-        code += 'S';
-        currentGender = this.people.get(step.targetId)?.gender || currentGender;
-      } else if (step.type === 'spouse') {
-        code += (currentGender === 'male' ? 'W' : 'H');
-        // Spouse doesn't change gender context
-      } else if (step.type === 'sibling') {
-        // Use birth order to distinguish elder/younger
-        const from = this.people.get(step.personId);
-        const to = this.people.get(step.targetId);
-        if (to.gender === 'male') {
-          code += (to.birthOrder < from.birthOrder ? 'B+' : 'B-');
-        } else {
-          code += (to.birthOrder < from.birthOrder ? 'Z+' : 'Z-');
-        }
-        currentGender = to.gender;
-      }
-      lastType = step.type;
-    }
-    return code;
-  }
-} 
+}

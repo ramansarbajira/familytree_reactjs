@@ -9,7 +9,7 @@ import RadialMenu from '../Components/FamilyTree/RadialMenu';
 import AddPersonModal from '../Components/FamilyTree/AddPersonModal';
 import { getTranslation } from '../utils/languageTranslations';
 import { useLanguage } from '../Contexts/LanguageContext';
-import { RelationshipCalculator } from '../utils/relationshipCalculator';
+import RelationshipCalculator from '../utils/relationshipCalculator';
 import html2canvas from 'html2canvas';
 import LanguageSwitcher from '../Components/LanguageSwitcher';
 import Swal from 'sweetalert2';
@@ -773,6 +773,7 @@ const FamilyTreePage = () => {
                             <div>Male: <span className="font-bold">{stats.male}</span></div>
                             <div>Female: <span className="font-bold">{stats.female}</span></div>
                             <div>Generations: <span className="font-bold">{stats.generations}</span></div>
+                            <div><LanguageSwitcher /></div>
                         </div>
                         {/* Action buttons */}
                         <div className="flex gap-4">
