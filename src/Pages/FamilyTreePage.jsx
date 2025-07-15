@@ -208,12 +208,12 @@ const FamilyTreePage = () => {
             setTreeLoading(true);
             // Use setTimeout to allow UI to update before heavy computation
             setTimeout(() => {
-                const layout = autoArrange(treeInstance);
-                if (layout) {
-                    setDagreGraph(layout.g);
-                    setDagreLayoutOffsetX(layout.dagreLayoutOffsetX);
-                    setDagreLayoutOffsetY(layout.dagreLayoutOffsetY);
-                }
+        const layout = autoArrange(treeInstance);
+        if (layout) {
+            setDagreGraph(layout.g);
+            setDagreLayoutOffsetX(layout.dagreLayoutOffsetX);
+            setDagreLayoutOffsetY(layout.dagreLayoutOffsetY);
+        }
                 setTree(treeInstance);
                 setTreeLoading(false);
             }, 100);
@@ -223,8 +223,8 @@ const FamilyTreePage = () => {
                 setDagreGraph(layout.g);
                 setDagreLayoutOffsetX(layout.dagreLayoutOffsetX);
                 setDagreLayoutOffsetY(layout.dagreLayoutOffsetY);
-            }
-            setTree(treeInstance);
+        }
+        setTree(treeInstance);
         }
         
         // Debug: Log positions of each person (only for smaller trees)
@@ -636,7 +636,7 @@ const FamilyTreePage = () => {
         
         // For large trees, center both horizontally and vertically
         if (memberCount > 50) {
-            containerRef.current.scrollLeft = (minX + treeWidth / 2) - containerRef.current.clientWidth / 2;
+        containerRef.current.scrollLeft = (minX + treeWidth / 2) - containerRef.current.clientWidth / 2;
             containerRef.current.scrollTop = (minY + treeHeight / 2) - containerRef.current.clientHeight / 2;
         } else {
             // For smaller trees, center horizontally, align to top vertically
@@ -762,7 +762,7 @@ const FamilyTreePage = () => {
     }, [saveStatus]);
 
     return (
-        <Layout>
+      <Layout>
             {/* Main container for tree and controls */}
             <div className="relative flex flex-col h-[calc(100vh-56px)] w-full bg-gray-100 overflow-hidden">
                 {canEdit && (
@@ -774,7 +774,7 @@ const FamilyTreePage = () => {
                             <div>Female: <span className="font-bold">{stats.female}</span></div>
                             <div>Generations: <span className="font-bold">{stats.generations}</span></div>
                             <div><LanguageSwitcher /></div>
-                        </div>
+                </div>
                         {/* Action buttons */}
                         <div className="flex gap-4">
                             <button
@@ -782,7 +782,7 @@ const FamilyTreePage = () => {
                                 onClick={resetTree}
                             >
                                 <FaPlus /> New Tree
-                            </button>
+                    </button>
                             <button
                                 className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md text-lg font-semibold active:scale-95 transition disabled:opacity-60"
                                 onClick={saveTreeToApi}
@@ -795,9 +795,9 @@ const FamilyTreePage = () => {
                                     </svg>
                                 )}
                                 <FaSave /> Save
-                            </button>
-                        </div>
-                    </div>
+                    </button>
+                </div>
+                </div>
                 )}
                 {!canEdit && (
                     <div className="hidden sm:flex w-full justify-start items-center gap-4 px-8 py-4 bg-white border-b border-gray-200 z-40">
@@ -807,7 +807,7 @@ const FamilyTreePage = () => {
                             <div>Male: <span className="font-bold">{stats.male}</span></div>
                             <div>Female: <span className="font-bold">{stats.female}</span></div>
                             <div>Generations: <span className="font-bold">{stats.generations}</span></div>
-                        </div>
+            </div>
                     </div>
                 )}
                 {/* Tree visualization area */}
@@ -824,18 +824,18 @@ const FamilyTreePage = () => {
                     )}
                     <div 
                         className="relative w-max h-max mx-auto flex flex-col items-start justify-start sm:items-center sm:justify-center"
-                        style={{
+              style={{
                             minWidth: tree && tree.people.size > 50 ? '1200px' : '900px',
                             minHeight: tree && tree.people.size > 50 ? '800px' : '600px'
                         }}
                     >
                         {/* Tree SVG connections */}
                         {dagreGraph && (
-                            <TreeConnections
-                                dagreGraph={dagreGraph}
-                                dagreLayoutOffsetX={dagreLayoutOffsetX}
-                                dagreLayoutOffsetY={dagreLayoutOffsetY}
-                            />
+                    <TreeConnections 
+                        dagreGraph={dagreGraph}
+                        dagreLayoutOffsetX={dagreLayoutOffsetX}
+                        dagreLayoutOffsetY={dagreLayoutOffsetY}
+                    />
                         )}
                         {/* Render person cards with optimization for large trees */}
                         {tree && Array.from(tree.people.values())
@@ -847,18 +847,18 @@ const FamilyTreePage = () => {
                                 return a.x - b.x;
                             })
                             .map(person => (
-                                <Person
-                                    key={person.id}
-                                    person={person}
-                                    isRoot={person.id === tree.rootId}
+                        <Person
+                            key={person.id}
+                            person={person}
+                            isRoot={person.id === tree.rootId}
                                     onClick={canEdit ? handlePersonClick : undefined}
-                                    rootId={tree.rootId}
-                                    tree={tree}
-                                    language={language}
+                            rootId={tree.rootId}
+                            tree={tree}
+                            language={language}
                                     isSelected={selectedPersonId === person.id}
-                                />
-                            ))}
-                    </div>
+                        />
+                    ))}
+                </div>
                 </div>
                 {canEdit && (
                     <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-around items-center py-3 z-50 sm:hidden">
@@ -926,7 +926,7 @@ const FamilyTreePage = () => {
                     </div>
                 </div>
             )}
-        </Layout>
+      </Layout>
     );
 };
 export default FamilyTreePage;
