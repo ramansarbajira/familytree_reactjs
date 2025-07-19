@@ -8,7 +8,7 @@ import CreateAlbumModal from '../Components/CreateAlbumModal';
 import ProfileFormModal from '../Components/ProfileFormModal';
 import GalleryViewerModal from '../Components/GalleryViewerModal';
 import PostViewerModal from '../Components/PostViewerModal';
-import { UserProvider, useUser } from '../Contexts/UserContext';
+import { useUser } from '../Contexts/UserContext';
 
 const ProfilePage = () => {
     const [token, setToken] = useState(null);

@@ -5,7 +5,20 @@ import LoadingSpinner from '../Components/LoadingSpinner';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('access_token');
-  return token ? children : <Navigate to="/" replace />;
+  const { userLoading } = useUser();
+
+  // If no token, redirect to login
+  if (!token) {
+    return <Navigate to="/" replace />;
+  }
+
+  // If user context is still loading, show loading spinner
+  if (userLoading) {
+    return <LoadingSpinner fullScreen={true} text="Loading..." />;
+  }
+
+  // If user is authenticated and context is loaded, allow access
+  return children;
 };
 
 // New component for role-based access control
