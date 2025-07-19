@@ -2,11 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { getTranslation } from '../../utils/languageTranslations';
 import { useLanguage } from '../../Contexts/LanguageContext';
 import RelationshipCalculator from '../../utils/relationshipCalculator';
+import { useFamilyTreeLabels } from '../../Contexts/FamilyTreeContext';
+import { updateRelationshipLabel } from '../../utils/familyTreeApi';
 
 const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
   const { language, changeLanguage } = useLanguage();
+  const { getLabel } = useFamilyTreeLabels();
   const [relationships, setRelationships] = useState([]);
   const [hoveredPersonId, setHoveredPersonId] = useState(null);
+  const [editModal, setEditModal] = useState({ open: false, code: '', current: '', newLabel: '' });
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     if (tree && selectedPersonId) {
@@ -23,15 +28,10 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
   };
 
   const getRelationshipText = (relationship) => {
-    // Use detailed Tamil relationship if available
-    if (relationship.relationshipCode && language === 'tamil') {
-      const calculator = new RelationshipCalculator(tree);
-      return calculator.getDetailedTamilRelationship(relationship.relationshipCode, language);
+    if (relationship.relationshipCode) {
+      return getLabel(relationship.relationshipCode);
     }
-    
-    // Fallback to basic relationship types
-    const relationshipKey = `relationships.${relationship.type}`;
-    return getTranslation(relationshipKey, language);
+    return relationship.type;
   };
 
   const getGenerationText = (generationDiff) => {
@@ -52,6 +52,28 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
     if (generationDiff < 0) return 'text-blue-600'; // Older generation
     if (generationDiff === 0) return 'text-green-600'; // Same generation
     return 'text-purple-600'; // Younger generation
+  };
+
+  const handleEditClick = (relationship) => {
+    setEditModal({
+      open: true,
+      code: relationship.relationshipCode,
+      current: getRelationshipText(relationship),
+      newLabel: getRelationshipText(relationship),
+    });
+  };
+
+  const handleEditSave = async () => {
+    setUpdating(true);
+    try {
+      await updateRelationshipLabel(editModal.code, editModal.newLabel, {}); // Add language fields as needed
+      setEditModal({ open: false, code: '', current: '', newLabel: '' });
+      // Optionally, trigger a refresh here
+      window.location.reload();
+    } catch (err) {
+      alert('Failed to update label');
+    }
+    setUpdating(false);
   };
 
   if (!tree || !selectedPersonId) {
@@ -148,6 +170,12 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
                     <p className="font-medium text-gray-800">{rel.personName}</p>
                     <p className={`text-sm font-medium ${getRelationshipColor(rel.relationship.generationDiff)}`}>
                       {getRelationshipText(rel.relationship)}
+                      <button
+                        className="ml-2 text-xs text-blue-600 underline"
+                        onClick={e => { e.stopPropagation(); handleEditClick(rel.relationship); }}
+                      >
+                        Edit
+                      </button>
                     </p>
                   </div>
                 </div>
@@ -164,6 +192,33 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {/* Edit Modal */}
+      {editModal.open && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-80">
+            <h4 className="text-lg font-semibold mb-2">Edit Relationship Label</h4>
+            <p className="text-sm text-gray-500 mb-2">Code: <span className="font-mono">{editModal.code}</span></p>
+            <input
+              className="w-full border rounded px-2 py-1 mb-4"
+              value={editModal.newLabel}
+              onChange={e => setEditModal(m => ({ ...m, newLabel: e.target.value }))}
+              disabled={updating}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-3 py-1 bg-gray-200 rounded"
+                onClick={() => setEditModal({ open: false, code: '', current: '', newLabel: '' })}
+                disabled={updating}
+              >Cancel</button>
+              <button
+                className="px-3 py-1 bg-blue-600 text-white rounded"
+                onClick={handleEditSave}
+                disabled={updating}
+              >{updating ? 'Saving...' : 'Save'}</button>
+            </div>
+          </div>
         </div>
       )}
 

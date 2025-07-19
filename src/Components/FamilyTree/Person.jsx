@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import RelationshipCalculator from '../../utils/relationshipCalculator';
 import { getTranslation } from '../../utils/languageTranslations';
+import { fetchCustomLabel } from '../../utils/fetchCustomLabel'; // <-- import the new util
+import { useFamilyTreeLabels } from '../../Contexts/FamilyTreeContext';
 
-const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSelected }) => {
+const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSelected, currentUserId, currentFamilyId }) => {
     // Dynamic sizing based on tree size
     const memberCount = tree ? tree.people.size : 0;
     
@@ -50,18 +52,68 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
     
     const ageText = person.age ? ` (Age: ${person.age})` : '';
 
-    // Calculate relationship to root (memoized for performance)
-    const relationshipText = useMemo(() => {
+    // Calculate relationship code to root (memoized for performance)
+    const relationshipCode = useMemo(() => {
         if (!isRoot && rootId && tree) {
             const calculator = new RelationshipCalculator(tree);
             const rel = calculator.calculateRelationship(rootId, person.id);
             if (rel && rel.relationshipCode) {
-                // Always use getTranslation for all languages
-                return getTranslation(rel.relationshipCode, language) || rel.description || rel.relationshipCode;
+                return rel.relationshipCode;
             }
         }
         return '';
-    }, [isRoot, rootId, tree, person.id, language]);
+    }, [isRoot, rootId, tree, person.id]);
+
+    // Use context to get label
+    const { getLabel, refreshLabels } = useFamilyTreeLabels();
+    const relationshipText = relationshipCode ? getLabel(relationshipCode) : '';
+
+    // Inline edit state for relationship label
+    const [isEditingLabel, setIsEditingLabel] = useState(false);
+    const [editLabelValue, setEditLabelValue] = useState('');
+
+    // Handler to start editing
+    const handleEditLabelClick = (e) => {
+        e.stopPropagation();
+        setEditLabelValue(relationshipText);
+        setIsEditingLabel(true);
+    };
+
+    // Handler to save label
+    const handleSaveLabel = async (e) => {
+        e.stopPropagation();
+        if (!currentUserId || !currentFamilyId) {
+            alert('User ID or Family Code missing. Cannot save label.');
+            return;
+        }
+        const apiLanguage = language === 'tamil' ? 'ta' : language;
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        try {
+            await fetch(`${baseUrl}/custom-labels`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    relationshipKey: relationshipCode,
+                    language: apiLanguage,
+                    custom_label: editLabelValue,
+                    creatorId: currentUserId, // FIXED: use correct param name
+                    familyCode: currentFamilyId, // FIXED: use correct param name
+                    scope: 'user' // or 'family'/'global' as needed
+                })
+            });
+            if (refreshLabels) refreshLabels();
+            setIsEditingLabel(false);
+            alert('Label saved!');
+        } catch (err) {
+            alert('Failed to save label');
+        }
+    };
+
+    // Handler to cancel editing
+    const handleCancelEdit = (e) => {
+        e.stopPropagation();
+        setIsEditingLabel(false);
+    };
 
     const handleCardClick = (e) => {
         // Only trigger onClick if the click is not on the radial menu button
@@ -192,23 +244,64 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 >
                     {person.name}
                 </span>
+                {/* Show relationship code and label below name */}
+                {relationshipCode && (
+                  <span className="details text-xs text-blue-700 text-center font-mono mb-1" style={{fontSize: `${fontSizeDetails}px`}}>
+                    {relationshipCode}
+                  </span>
+                )}
+                {relationshipText && !isEditingLabel && (
+                  <span className="details text-xs text-gray-600 text-center font-medium mb-1" style={{fontSize: `${fontSizeDetails}px`}}>
+                    {relationshipText}
+                  </span>
+                )}
                 <span 
                     className="details text-xs text-gray-600 text-center font-medium mb-1" 
                     style={{fontSize: `${fontSizeDetails}px`}}
                 >
                     {person.gender.charAt(0).toUpperCase() + person.gender.slice(1)}{ageText}
                 </span>
-                {relationshipText && (
+                {relationshipText && !isEditingLabel && (
                     <span 
-                        className="relationship inline-block px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold text-center tracking-wide shadow-sm mt-1" 
+                        className="relationship inline-block px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold text-center tracking-wide shadow-sm mt-1 cursor-pointer hover:bg-green-200 transition"
                         style={{
                             fontSize: `${fontSizeRelationship}px`, 
                             maxWidth: memberCount > 50 ? '60px' : '80px', 
                             overflowWrap: 'break-word', 
                             wordBreak: 'break-word'
                         }}
+                        title="Click to edit label"
+                        onClick={handleEditLabelClick}
                     >
-                        {relationshipText}
+                        {relationshipText} ✏️
+                    </span>
+                )}
+                {isEditingLabel && (
+                    <span className="relationship-edit inline-flex items-center mt-1">
+                        <input
+                            type="text"
+                            className="px-2 py-0.5 rounded-l bg-white border border-green-300 text-green-700 font-semibold text-center tracking-wide shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                            style={{ fontSize: `${fontSizeRelationship}px`, width: memberCount > 50 ? '60px' : '80px' }}
+                            value={editLabelValue}
+                            onChange={e => setEditLabelValue(e.target.value)}
+                            autoFocus
+                        />
+                        <button
+                            className="px-1 py-0.5 bg-green-500 text-white rounded-r hover:bg-green-600 focus:outline-none"
+                            style={{ fontSize: `${fontSizeRelationship}px` }}
+                            onClick={handleSaveLabel}
+                            title="Save label"
+                        >
+                            ✔
+                        </button>
+                        <button
+                            className="px-1 py-0.5 bg-gray-300 text-gray-700 rounded ml-1 hover:bg-gray-400 focus:outline-none"
+                            style={{ fontSize: `${fontSizeRelationship}px` }}
+                            onClick={handleCancelEdit}
+                            title="Cancel"
+                        >
+                            ✖
+                        </button>
                     </span>
                 )}
             </div>

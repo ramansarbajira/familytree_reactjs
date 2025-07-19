@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getTranslation } from '../../utils/languageTranslations';
 import { useLanguage } from '../../Contexts/LanguageContext';
 import { X, UserPlus, Users, Edit, Plus, UserMinus, Camera, Save, ArrowLeft } from 'lucide-react';
+import { fetchRelationships } from '../../utils/familyTreeApi';
 
 const PRIMARY_COLOR = '#3f982c';
 
@@ -17,7 +18,24 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
     const [parentSelections, setParentSelections] = useState({ father: { selectedMemberId: null, showManualEntry: false }, mother: { selectedMemberId: null, showManualEntry: false } });
     const [formSelections, setFormSelections] = useState({});
     const { language } = useLanguage();
-    
+    // Add state for relationships
+    const [relationshipTypes, setRelationshipTypes] = useState([]);
+
+    // Fetch relationship types on mount
+    useEffect(() => {
+        fetchRelationships()
+            .then(setRelationshipTypes)
+            .catch(() => setRelationshipTypes([]));
+    }, []);
+
+    // Helper to get the correct label for a relationship
+    const getRelationshipLabel = (rel) => {
+        // Map language code to DB field
+        const langMap = { ta: 'ta', en: 'en', hi: 'hi', te: 'te', ml: 'ml', kn: 'ka', ka: 'ka' };
+        const dbLang = langMap[language] || 'en';
+        return rel[`description_${dbLang}`] || rel.description_en || rel.key;
+    };
+
     const titles = {
         parents: 'Add Parents',
         spouse: 'Add Spouse',

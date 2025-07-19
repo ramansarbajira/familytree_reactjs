@@ -79,4 +79,25 @@ export async function saveFamilyTree(people, familyCode) {
   });
   if (!res.ok) throw new Error('Failed to save family tree');
   return true;
+}
+
+// Fetch all relationships with multilingual descriptions
+export async function fetchRelationships() {
+  const res = await fetch('/api/relationships', {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to fetch relationships');
+  return await res.json();
+}
+
+// Update a relationship label (and mark as curated)
+export async function updateRelationshipLabel(code, description, labels) {
+  const res = await fetch(`/relationships/edit/${code}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ description, labels }),
+  });
+  if (!res.ok) throw new Error('Failed to update relationship label');
+  return await res.json();
 } 

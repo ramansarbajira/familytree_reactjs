@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import dagre from 'dagre';
+import { useUser } from './UserContext';
+import { getUniversalRelationshipLabel } from '../utils/getUniversalRelationshipLabel';
 
 const FamilyTreeContext = createContext();
 
@@ -68,7 +70,35 @@ function recalculateGenerations(people) {
   });
 }
 
-export const FamilyTreeProvider = ({ children }) => {
+export const FamilyTreeProvider = ({ children, language }) => {
+  const { userInfo } = useUser();
+  const [labels, setLabels] = useState({});
+
+  const refreshLabels = useCallback(() => {
+    async function fetchAllLabels() {
+      if (!userInfo?.userId || !userInfo?.familyCode || !language) return;
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const apiLanguage = language === 'tamil' ? 'ta' : language;
+      try {
+        const res = await fetch(`${baseUrl}/custom-labels/all?language=${apiLanguage}&creatorId=${userInfo.userId}&familyCode=${userInfo.familyCode}`);
+        const data = await res.json();
+        setLabels(data);
+      } catch {
+        setLabels({});
+      }
+    }
+    fetchAllLabels();
+  }, [userInfo?.userId, userInfo?.familyCode, language]);
+
+  useEffect(() => {
+    refreshLabels();
+  }, [refreshLabels]);
+
+  // Helper to get a label for a code
+  const getLabel = (code) => {
+    return labels[code] || getUniversalRelationshipLabel(code, language);
+  };
+
   const [people, setPeople] = useState(() => {
     // Start with a root person
     const root = createPerson({ name: 'You', gender: 'male', age: 30 }, 1, 0);
@@ -283,10 +313,14 @@ export const FamilyTreeProvider = ({ children }) => {
       redo,
       canUndo,
       canRedo,
+      labels,
+      getLabel,
+      refreshLabels,
     }}>
       {children}
     </FamilyTreeContext.Provider>
   );
 };
 
-export const useFamilyTreeContext = () => useContext(FamilyTreeContext); 
+export const useFamilyTreeContext = () => useContext(FamilyTreeContext);
+export const useFamilyTreeLabels = () => useContext(FamilyTreeContext); 
