@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   FiHome,
   FiUser,
@@ -40,6 +40,10 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
         { id: 'myFamily', label: 'My Family', route: '/my-family', icon: <FiUsers size={17} /> },
         { id: 'myFamilyMembers', label: 'All Members', route: '/my-family-member', icon: <FiUsers size={17} /> },
         { id: 'pendingRequests', label: 'Pending Requests', route: '/pending-request', icon: <FiClock size={17} />, requiresApproval: true },
+        // Only show Suggestion Approving for admins
+        ...(userInfo?.role === 2 || userInfo?.role === 3 ? [
+          { id: 'suggestionApproving', label: 'Suggestion Approving', route: '/suggestion-approving', icon: <FiClock size={17} /> }
+        ] : []),
       ]
     },
     { id: 'posts', label: 'Posts & Stories', route: '/posts-and-feeds', icon: <FiShare2 size={19} /> },

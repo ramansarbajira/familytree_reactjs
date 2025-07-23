@@ -1,0 +1,96 @@
+import React, { useEffect, useState } from "react";
+
+const FamilyPreviewModal = ({ familyCode, familyName, onClose }) => {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFamily = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("access_token");
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/family/member/${familyCode}`,
+          {
+            headers: {
+              accept: "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          }
+        );
+        const data = await res.json();
+        setMembers(data.data || []);
+      } catch {
+        setMembers([]);
+      }
+      setLoading(false);
+    };
+    if (familyCode) fetchFamily();
+  }, [familyCode]);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-6 max-w-2xl w-full shadow-lg relative">
+        <button
+          className="absolute top-2 right-2 text-gray-400 text-2xl"
+          onClick={onClose}
+        >
+          &times;
+        </button>
+        <h2 className="text-2xl font-bold mb-2 text-center">{familyName || 'Family'}</h2>
+        <div className="text-gray-500 text-center mb-4">Family Members</div>
+        {loading ? (
+          <div className="text-center py-8">Loading...</div>
+        ) : (
+          <div className="py-4" style={{ maxHeight: 350, overflowY: 'auto' }}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {members.map((m) => {
+                const user = m.user || {};
+                const profile = user.userProfile || {};
+                // Calculate age from dob if available
+                let age = '';
+                if (profile.dob) {
+                  const dobDate = new Date(profile.dob);
+                  const now = new Date();
+                  age = now.getFullYear() - dobDate.getFullYear();
+                  const mDiff = now.getMonth() - dobDate.getMonth();
+                  if (mDiff < 0 || (mDiff === 0 && now.getDate() < dobDate.getDate())) {
+                    age--;
+                  }
+                }
+                return (
+                  <div key={m.id} className="flex flex-col items-center min-w-[100px]">
+                    <img
+                      src={user.profileImage || '/public/assets/user.png'}
+                      alt={profile.firstName}
+                      className="w-20 h-20 rounded-full object-cover border mb-2"
+                    />
+                    <div className="text-sm font-semibold text-gray-700 text-center">
+                      {profile.firstName}
+                    </div>
+                    {profile.gender && (
+                      <div className="text-xs text-gray-500 capitalize">{profile.gender}</div>
+                    )}
+                    {age && (
+                      <div className="text-xs text-gray-500">Age: {age}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <div className="mt-6 text-center">
+          <button
+            className="bg-primary-500 text-white px-6 py-2 rounded mr-4"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FamilyPreviewModal; 

@@ -9,6 +9,7 @@ import CreateFamilyModal from '../Components/CreateFamilyModal';
 import { useUser } from '../Contexts/UserContext';
 import FamilyOverView from '../Components/FamilyOverView';
 import { FiLoader } from 'react-icons/fi';
+import SuggestFamilyModal from '../Components/SuggestFamilyModal';
 
 const FamilyHubPage = () => {
   const navigate = useNavigate();
@@ -27,6 +28,9 @@ const FamilyHubPage = () => {
   const [error, setError] = useState(null);
   const [showCopyMessage, setShowCopyMessage] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [suggestedFamilies, setSuggestedFamilies] = useState([]);
+  const [showSuggestModal, setShowSuggestModal] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   useEffect(() => {
       const storedToken = localStorage.getItem('access_token');
@@ -84,7 +88,37 @@ const FamilyHubPage = () => {
     };
   }, [userInfo?.familyCode, userInfo?.approveStatus, userLoading]);
 
-  const handleCreateFamily = () => {
+  const handleCreateFamily = async () => {
+    setLoadingSuggestions(true);
+    setShowSuggestModal(true);
+    try {
+      let userId = userInfo?.id;
+      if (!userId) {
+        const storedUserInfo = localStorage.getItem('userInfo');
+        if (storedUserInfo) {
+          const parsed = JSON.parse(storedUserInfo);
+          userId = parsed?.id;
+        }
+      }
+      if (!userId) throw new Error('User ID not found');
+      const accessToken = localStorage.getItem('access_token');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/family/member/suggest-family/${userId}`, {
+        headers: {
+          'accept': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
+        }
+      });
+      const data = await response.json();
+      setSuggestedFamilies(data.data || []);
+    } catch (err) {
+      setSuggestedFamilies([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const handleCreateNewFamily = () => {
+    setShowSuggestModal(false);
     setIsCreateFamilyModalOpen(true);
   };
 
@@ -268,6 +302,16 @@ const FamilyHubPage = () => {
         }}>
           Copied to clipboard!
         </div>
+      )}
+
+      {showSuggestModal && (
+        <SuggestFamilyModal
+          families={suggestedFamilies}
+          loading={loadingSuggestions}
+          onClose={() => setShowSuggestModal(false)}
+          onCreateNew={handleCreateNewFamily}
+          onJoinFamily={() => {}} // No join logic for now
+        />
       )}
     </Layout>
   );

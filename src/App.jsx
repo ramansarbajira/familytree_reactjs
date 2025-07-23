@@ -18,6 +18,7 @@ import FamilyGalleryPage from './Pages/FamilyGalleryPage';
 import GiftListingPage from './Pages/GiftListingPage'; 
 import EventsPage from './Pages/EventsPage'; 
 import OrderManagementPage from './Pages/OrderManagementPage'; 
+import SuggestionApproving from './Pages/SuggestionApproving';
 
 
 import { UserProvider } from './Contexts/UserContext';
@@ -65,6 +66,7 @@ function App() {
           <Route path="/gifts-memories" element={<PrivateRoute><LanguageProvider><GiftListingPage /></LanguageProvider></PrivateRoute>} />
           <Route path="/events" element={<PrivateRoute><LanguageProvider><EventsPage /></LanguageProvider></PrivateRoute>} />
           <Route path="/orders" element={<PrivateRoute><AdminRoute><LanguageProvider><OrderManagementPage /></LanguageProvider></AdminRoute></PrivateRoute>} />
+          <Route path="/suggestion-approving" element={<PrivateRoute><LanguageProvider><SuggestionApproving /></LanguageProvider></PrivateRoute>} />
 
         </Routes>
       </Router>

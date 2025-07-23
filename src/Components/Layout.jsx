@@ -81,6 +81,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('userInfo');
     navigate('/login');
   };
 
