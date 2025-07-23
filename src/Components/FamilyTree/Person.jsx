@@ -3,10 +3,12 @@ import RelationshipCalculator from '../../utils/relationshipCalculator';
 import { getTranslation } from '../../utils/languageTranslations';
 import { fetchCustomLabel } from '../../utils/fetchCustomLabel'; // <-- import the new util
 import { useFamilyTreeLabels } from '../../Contexts/FamilyTreeContext';
+import { useUser } from '../../Contexts/UserContext';
 
 const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSelected, currentUserId, currentFamilyId }) => {
     // Dynamic sizing based on tree size
     const memberCount = tree ? tree.people.size : 0;
+    const { userInfo } = useUser();
     
     const cardDimensions = useMemo(() => {
         if (memberCount > 100) {
@@ -98,8 +100,9 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                     custom_label: editLabelValue,
                     creatorId: currentUserId, // FIXED: use correct param name
                     familyCode: currentFamilyId, // FIXED: use correct param name
-                    scope: 'user' // or 'family'/'global' as needed
-                })
+                    scope: 'user', // or 'family'/'global' as needed
+                    gender: userInfo?.gender
+                })           
             });
             if (refreshLabels) refreshLabels();
             setIsEditingLabel(false);

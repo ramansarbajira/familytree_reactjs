@@ -1,4 +1,4 @@
-export async function fetchCustomLabel({ relationshipKey, language, creatorId, familyCode }) {
+export async function fetchCustomLabel({ relationshipKey, language, creatorId, familyCode, gender }) {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
     try {
         const res = await fetch(`${baseUrl}/custom-labels?relationshipKey=${encodeURIComponent(relationshipKey)}&language=${encodeURIComponent(language)}&creatorId=${encodeURIComponent(creatorId)}&familyCode=${encodeURIComponent(familyCode)}`);
