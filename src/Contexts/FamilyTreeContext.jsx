@@ -80,7 +80,7 @@ export const FamilyTreeProvider = ({ children, language }) => {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
       const apiLanguage = language === 'tamil' ? 'ta' : language;
       try {
-        const res = await fetch(`${baseUrl}/custom-labels/all?language=${apiLanguage}&creatorId=${userInfo.userId}&familyCode=${userInfo.familyCode}`);
+        const res = await fetch(`${baseUrl}/custom-labels/all?language=${apiLanguage}&creatorId=${userInfo.userId}&familyCode=${userInfo.familyCode}&gender=${userInfo.gender}`);
         const data = await res.json();
         setLabels(data);
       } catch {
@@ -88,7 +88,7 @@ export const FamilyTreeProvider = ({ children, language }) => {
       }
     }
     fetchAllLabels();
-  }, [userInfo?.userId, userInfo?.familyCode, language]);
+  }, [userInfo?.userId, userInfo?.familyCode, language, userInfo.gender]);
 
   useEffect(() => {
     refreshLabels();
