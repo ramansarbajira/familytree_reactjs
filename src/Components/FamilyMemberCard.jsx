@@ -37,7 +37,13 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
         id: item.id,
         memberId: item.memberId,
         userId: item.user.id,
-        name: item.user.fullName || 'Unknown Name',
+        name: (item.user.fullName && !/\bnull\b|\bundefined\b/i.test(item.user.fullName))
+          ? item.user.fullName.replace(/\bnull\b|\bundefined\b/gi, '').replace(/\s+/g, ' ').trim()
+          : (
+              [item.user.userProfile?.firstName, item.user.userProfile?.lastName]
+                .filter(val => val && val !== 'null' && val !== 'undefined')
+                .join(' ') || 'Unknown Name'
+            ),
         gender: item.user.userProfile?.gender || 'N/A',
         role: roleMapping[item.user.role] || 'Member',
         contact: item.user.userProfile?.contactNumber,

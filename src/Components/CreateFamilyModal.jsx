@@ -98,6 +98,7 @@ const CreateFamilyModal = ({ isOpen, onClose, token, onFamilyCreated, mode = "cr
               }
               onFamilyCreated(data);
               onClose();
+              window.location.href = '/my-family';
             }
         } catch (err) {
             Swal.fire({

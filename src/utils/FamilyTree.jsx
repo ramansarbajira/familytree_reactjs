@@ -106,20 +106,36 @@ export class FamilyTree {
     }
     
     getStats() {
-        let male = 0, female = 0;
-        const generations = new Set();
+        let total = 0, male = 0, female = 0;
+        let minGeneration = Infinity;
+        let maxGeneration = -Infinity;
         
-        this.people.forEach(p => {
-            if (p.gender === 'male') male++;
-            else female++;
-            if(p.generation !== null) generations.add(p.generation);
-        });
+        for (const person of this.people.values()) {
+            total++;
+            const gender = (person.gender || '').toLowerCase();
+            if (gender === 'male') male++;
+            else if (gender === 'female') female++;
+            
+            if (person.generation !== null && person.generation !== undefined) {
+                if (person.generation < minGeneration) {
+                    minGeneration = person.generation;
+                }
+                if (person.generation > maxGeneration) {
+                    maxGeneration = person.generation;
+                }
+            }
+        }
+        
+        // Calculate total generations as the range between min and max + 1
+        const totalGenerations = (minGeneration !== Infinity && maxGeneration !== -Infinity) 
+            ? (maxGeneration - minGeneration + 1) 
+            : 1;
         
         return {
-            total: this.people.size,
+            total,
             male,
             female,
-            generations: this.people.size > 0 ? (Math.max(...[...generations]) - Math.min(...[...generations]) + 1) : 0
+            generations: totalGenerations
         };
     }
 } 

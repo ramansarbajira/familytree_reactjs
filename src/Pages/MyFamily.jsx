@@ -10,6 +10,7 @@ import { useUser } from '../Contexts/UserContext';
 import FamilyOverView from '../Components/FamilyOverView';
 import { FiLoader } from 'react-icons/fi';
 import SuggestFamilyModal from '../Components/SuggestFamilyModal';
+import { jwtDecode } from 'jwt-decode';
 
 const FamilyHubPage = () => {
   const navigate = useNavigate();
@@ -92,12 +93,12 @@ const FamilyHubPage = () => {
     setLoadingSuggestions(true);
     setShowSuggestModal(true);
     try {
-      let userId = userInfo?.id;
+      let userId = userInfo?.userId;
       if (!userId) {
-        const storedUserInfo = localStorage.getItem('userInfo');
-        if (storedUserInfo) {
-          const parsed = JSON.parse(storedUserInfo);
-          userId = parsed?.id;
+        const accessToken = localStorage.getItem('access_token');
+        if (accessToken) {
+          const decoded = jwtDecode(accessToken);
+          userId = decoded?.id || decoded?.userId || decoded?.sub;
         }
       }
       if (!userId) throw new Error('User ID not found');

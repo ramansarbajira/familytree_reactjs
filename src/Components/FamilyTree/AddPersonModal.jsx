@@ -287,7 +287,8 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                         generation = action.person ? action.person.generation : 1;
                         gender = formData.get(`gender_0`);
                     }
-                    persons.push({
+                    // --- FIX: Add id and memberId for edit ---
+                    const personObj = {
                         name: name.trim(),
                         gender: gender || 'male',
                         age: formData.get(`age_${form.index}`),
@@ -295,7 +296,12 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                         img: imageData[form.index] || '', // File object or empty string
                         imgPreview: imagePreview[form.index] || '',
                         birthOrder: parseInt(formData.get(`birthOrder_${form.index}`)) || 1,
-                    });
+                    };
+                    if (action.type === 'edit' && action.person) {
+                        personObj.id = action.person.id;
+                        if (action.person.memberId) personObj.memberId = action.person.memberId;
+                    }
+                    persons.push(personObj);
                     hasValidPerson = true;
                 }
             }

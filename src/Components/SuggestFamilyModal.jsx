@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import FamilyPreviewModal from "./FamilyPreviewModal";
+import { jwtDecode } from 'jwt-decode';
 
 // Helper to fetch user's first name from profile
 async function fetchUserFirstName(userId, accessToken) {
@@ -27,10 +28,16 @@ const SuggestFamilyModal = ({
   // Handler to send join request notification to family admins
   const handleJoinFamily = async (familyCode) => {
     try {
-      const userInfo = JSON.parse(localStorage.getItem('userInfo'));
       const accessToken = localStorage.getItem('access_token');
-      // Fetch the user's first name from their profile
-      const firstName = await fetchUserFirstName(userInfo.id, accessToken);
+      let userId = null;
+      let firstName = '';
+      if (accessToken) {
+        const decoded = jwtDecode(accessToken);
+        userId = decoded?.id || decoded?.userId || decoded?.sub;
+        // Fetch the user's first name from their profile
+        firstName = await fetchUserFirstName(userId, accessToken);
+      }
+      if (!userId) throw new Error('User ID not found');
       // 1. Get admin user IDs for the family
       const adminRes = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/notifications/${familyCode}/admins`,
@@ -55,7 +62,7 @@ const SuggestFamilyModal = ({
           title: 'New Family Join Request',
           message: `${firstName} has requested to join your family using the code ${familyCode}.`,
           familyCode,
-          referenceId: userInfo.id,
+          referenceId: userId,
           userIds: adminIds,
         }),
       });
@@ -138,7 +145,7 @@ const SuggestFamilyModal = ({
             ))}
           </div>
         )}
-        {!loading && (
+        {!loading && families.length > 0 && (
           <div className="mt-8 text-center">
             <button
               className="bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold shadow hover:bg-primary-700 transition"

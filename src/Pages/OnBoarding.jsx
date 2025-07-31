@@ -301,7 +301,8 @@ const OnBoarding = () => {
         allowEscapeKey: false
       }).then((result) => {
         if (result.isConfirmed) {
-          navigate('/myprofile');
+          // navigate('/myprofile');
+          window.location.href = '/myprofile';
         }
       });
     } catch (error) {

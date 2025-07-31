@@ -216,13 +216,21 @@ export default class RelationshipCalculator {
         case 'sibling':
           const fromPerson = this.people.get(step.from);
           const elderYounger = this.determineElderYounger(fromPerson, targetPerson);
-          
           if (targetPerson.gender === 'male') {
             code += elderYounger === 'elder' ? 'B+' : 'B-';
           } else {
             code += elderYounger === 'elder' ? 'Z+' : 'Z-';
           }
           break;
+      }
+    }
+
+    // Add + or - for cousin codes based on age
+    const cousinCodes = ['FB-D', 'FB-S', 'MB-D', 'MB-S', 'FZ-D', 'FZ-S', 'MZ-D', 'MZ-S'];
+    if (cousinCodes.includes(code)) {
+      if (person1.age && person2.age) {
+        if (person2.age > person1.age) return code + '+';
+        if (person2.age < person1.age) return code + '-';
       }
     }
     
