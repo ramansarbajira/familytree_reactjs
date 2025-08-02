@@ -101,3 +101,34 @@ export async function updateRelationshipLabel(code, description, labels) {
   if (!res.ok) throw new Error('Failed to update relationship label');
   return await res.json();
 } 
+
+// Fetch all family codes (main + associated) for a user
+export async function fetchUserFamilyCodes(userId) {
+  const res = await fetch(`/family/user/${userId}/families`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to fetch user family codes');
+  return await res.json();
+}
+
+// Fetch all relationships for a user
+export async function fetchUserRelationships(userId) {
+  const res = await fetch(`/family/user/${userId}/relationships`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to fetch user relationships');
+  return await res.json();
+}
+
+// Add a spouse relationship
+export async function addSpouseRelationship(userId, spouseUserId) {
+  const res = await fetch(`/family/user/${userId}/add-spouse`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ spouseUserId }),
+  });
+  if (!res.ok) throw new Error('Failed to add spouse relationship');
+  return await res.json();
+} 

@@ -4,8 +4,11 @@ import { getTranslation } from '../../utils/languageTranslations';
 import { fetchCustomLabel } from '../../utils/fetchCustomLabel'; // <-- import the new util
 import { useFamilyTreeLabels } from '../../Contexts/FamilyTreeContext';
 import { useUser } from '../../Contexts/UserContext';
+import { FiEye } from 'react-icons/fi';
+import Swal from 'sweetalert2';
+import { useNavigate } from 'react-router-dom';
 
-const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSelected, currentUserId, currentFamilyId }) => {
+const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSelected, currentUserId, currentFamilyId, viewOnly }) => {
     // Dynamic sizing based on tree size
     const memberCount = tree ? tree.people.size : 0;
     const { userInfo } = useUser();
@@ -130,10 +133,82 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
         onClick(person.id);
     };
 
+    // Determine if this person has an associated family tree
+    const getAssociatedCodes = () => {
+        let codes = [];
+        if (Array.isArray(person.associatedFamilyCodes)) {
+            codes = person.associatedFamilyCodes.filter(code => code && !code.startsWith('REL_'));
+        } else if (typeof person.associatedFamilyCodes === 'string' && person.associatedFamilyCodes) {
+            try {
+                const arr = JSON.parse(person.associatedFamilyCodes);
+                if (Array.isArray(arr)) codes = arr.filter(code => code && !code.startsWith('REL_'));
+            } catch {
+                if (!person.associatedFamilyCodes.startsWith('REL_')) codes = [person.associatedFamilyCodes];
+            }
+        }
+        return Array.from(new Set(codes));
+    };
+
+    const hasAssociatedTree = Boolean(person.memberId) || getAssociatedCodes().length > 0;
+
+    // Handler for viewing family tree
+    const handleViewAssociatedFamilyTree = (e) => {
+        e.stopPropagation();
+        
+        // Get all associated family codes
+        const associatedCodes = getAssociatedCodes();
+        const familyCode = person.familyCode || (person.member && person.member.familyCode);
+        
+        // If no family code is found, show error
+        if (!familyCode && associatedCodes.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Family Tree Not Available',
+                text: 'No family tree found for this member.',
+                confirmButtonColor: '#3f982c',
+            });
+            return;
+        }
+        
+        // Combine all possible family codes (main + associated)
+        const allFamilyCodes = [
+            familyCode,
+            ...associatedCodes.filter(code => code && code !== familyCode)
+        ].filter(Boolean); // Remove any null/undefined values
+        
+        // If only one family code exists, navigate directly
+        if (allFamilyCodes.length === 1) {
+            navigate(`/family-tree/${allFamilyCodes[0]}`);
+            return;
+        }
+        
+        // If multiple family codes, show a dropdown to select
+        Swal.fire({
+            title: 'Select Family Tree',
+            text: 'This member is part of multiple family trees. Please select one to view:',
+            input: 'select',
+            inputOptions: allFamilyCodes.reduce((acc, code) => {
+                acc[code] = `Family: ${code}`;
+                return acc;
+            }, {}),
+            inputPlaceholder: 'Select a family tree',
+            showCancelButton: true,
+            confirmButtonColor: '#3f982c',
+            cancelButtonText: 'Cancel',
+            confirmButtonText: 'View Tree'
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                navigate(`/family-tree/${result.value}`);
+            }
+        });
+    };
+
     // Optimize rendering for large trees
     const isLargeTree = memberCount > 50;
     const cardOpacity = isLargeTree ? 0.95 : 1;
     const shadowIntensity = isLargeTree ? 0.05 : 0.08;
+
+    const navigate = useNavigate();
 
     return (
         <div
@@ -188,25 +263,43 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 overflow: 'visible',
                 opacity: cardOpacity,
             }}
-            onClick={handleCardClick}
+            onClick={viewOnly ? undefined : handleCardClick}
             data-person-id={person.id}
         >
-            {/* Radial Menu Button - Top Right Corner */}
-            <button
-                className="radial-menu-button absolute top-1 right-1 w-5 h-5 bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-lg hover:shadow-xl transition-all duration-200 z-10 border border-white"
-                onClick={handleRadialMenuClick}
-                style={{
-                    boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
-                    width: memberCount > 50 ? '16px' : '24px',
-                    height: memberCount > 50 ? '16px' : '24px',
-                    top: memberCount > 50 ? '2px' : '8px',
-                    right: memberCount > 50 ? '2px' : '8px',
-                }}
-                title="Add family member"
-            >
-                +
-            </button>
-
+            {/* Eye Icon for Associated Family Tree (only if person has one and not viewOnly) */}
+            {!viewOnly && (
+                <button
+                    className="absolute top-1 left-1 w-6 h-6 bg-white/80 hover:bg-green-100 text-green-700 rounded-full flex items-center justify-center shadow-md transition-all duration-200 z-10 border border-green-200"
+                    onClick={handleViewAssociatedFamilyTree}
+                    title="View Associated Family Tree"
+                    style={{
+                        width: '24px',
+                        height: '24px',
+                        top: memberCount > 50 ? '2px' : '8px',
+                        left: memberCount > 50 ? '2px' : '8px',
+                    }}
+                >
+                    <FiEye size={16} />
+                </button>
+            )}
+            {/* Radial Menu Button - Top Right Corner (hide in viewOnly mode) */}
+            {!viewOnly && (
+                <button
+                    className="radial-menu-button absolute top-1 right-1 w-5 h-5 bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-lg hover:shadow-xl transition-all duration-200 z-10 border border-white"
+                    onClick={handleRadialMenuClick}
+                    style={{
+                        boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+                        width: memberCount > 50 ? '16px' : '24px',
+                        height: memberCount > 50 ? '16px' : '24px',
+                        top: memberCount > 50 ? '2px' : '8px',
+                        right: memberCount > 50 ? '2px' : '8px',
+                    }}
+                    title="Add family member"
+                >
+                    +
+                </button>
+            )}
+            {/* Profile pic and info (always show) */}
             <div className="profile-pic-container flex items-center justify-center relative">
                 <div 
                     className={`profile-pic-circle rounded-full overflow-hidden bg-gray-100 border-4 ${isRoot ? 'border-yellow-400 shadow-yellow-200' : person.gender === 'male' ? 'border-blue-300' : person.gender === 'female' ? 'border-pink-200' : 'border-gray-300'} shadow-lg group-hover:shadow-2xl transition-all duration-200`}
@@ -225,14 +318,13 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                         }}
                     />
                 </div>
-                {isNew && (
+                {isNew && !viewOnly && (
                   <span className="absolute -top-1 -right-1 bg-gradient-to-br from-green-400 to-teal-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold text-xs shadow-md">+</span>
                 )}
-                {isSelected && !isNew && (
+                {isSelected && !isNew && !viewOnly && (
                   <span className="absolute -top-1 -right-1 bg-gradient-to-br from-green-500 to-green-700 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold text-xs shadow-md">✓</span>
                 )}
             </div>
-            
             {/* All info inside the card */}
             <div className="mt-1 w-full flex flex-col items-center justify-center">
                 <span 
@@ -264,7 +356,8 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 >
                     {person.gender.charAt(0).toUpperCase() + person.gender.slice(1)}{ageText}
                 </span>
-                {relationshipText && !isEditingLabel && (
+                {/* Hide edit label in viewOnly mode */}
+                {relationshipText && !isEditingLabel && !viewOnly && (
                     <span 
                         className="relationship inline-block px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold text-center tracking-wide shadow-sm mt-1 cursor-pointer hover:bg-green-200 transition"
                         style={{
@@ -279,32 +372,18 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                         {relationshipText} ✏️
                     </span>
                 )}
-                {isEditingLabel && (
+                {/* Hide editing UI in viewOnly mode */}
+                {isEditingLabel && !viewOnly && (
                     <span className="relationship-edit inline-flex items-center mt-1">
                         <input
                             type="text"
                             className="px-2 py-0.5 rounded-l bg-white border border-green-300 text-green-700 font-semibold text-center tracking-wide shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                            style={{ fontSize: `${fontSizeRelationship}px`, width: memberCount > 50 ? '60px' : '80px' }}
                             value={editLabelValue}
                             onChange={e => setEditLabelValue(e.target.value)}
-                            autoFocus
+                            style={{fontSize: `${fontSizeRelationship}px`}}
                         />
-                        <button
-                            className="px-1 py-0.5 bg-green-500 text-white rounded-r hover:bg-green-600 focus:outline-none"
-                            style={{ fontSize: `${fontSizeRelationship}px` }}
-                            onClick={handleSaveLabel}
-                            title="Save label"
-                        >
-                            ✔
-                        </button>
-                        <button
-                            className="px-1 py-0.5 bg-gray-300 text-gray-700 rounded ml-1 hover:bg-gray-400 focus:outline-none"
-                            style={{ fontSize: `${fontSizeRelationship}px` }}
-                            onClick={handleCancelEdit}
-                            title="Cancel"
-                        >
-                            ✖
-                        </button>
+                        <button className="px-2 py-0.5 rounded-r bg-green-500 text-white font-bold" onClick={handleSaveLabel}>Save</button>
+                        <button className="px-2 py-0.5 rounded-r bg-gray-300 text-gray-700 font-bold" onClick={handleCancelEdit}>Cancel</button>
                     </span>
                 )}
             </div>

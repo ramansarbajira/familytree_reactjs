@@ -21,6 +21,47 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
     // Add state for relationships
     const [relationshipTypes, setRelationshipTypes] = useState([]);
 
+    // ===== Mobile invite state (for spouse) =====
+    const [phoneInvite, setPhoneInvite] = useState({ phone: '', loading: false, result: null, sending: false });
+
+    const phoneRegex = /^[0-9]{10}$/;
+
+    const handlePhoneSearch = async () => {
+        if (!phoneRegex.test(phoneInvite.phone)) return;
+        setPhoneInvite(prev => ({ ...prev, loading: true, result: null }));
+        try {
+            const token = localStorage.getItem('access_token');
+            const res = await fetch(`http://localhost:3000/user/lookup?phone=${phoneInvite.phone}`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+            const data = await res.json();
+            setPhoneInvite(prev => ({ ...prev, result: data, loading: false }));
+        } catch (err) {
+            setPhoneInvite(prev => ({ ...prev, loading: false }));
+            alert('Lookup failed');
+        }
+    };
+
+    const handleSendInvite = async () => {
+        try {
+            setPhoneInvite(prev => ({ ...prev, sending: true }));
+            const token = localStorage.getItem('access_token');
+            const res = await fetch('http://localhost:3000/invites', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                body: JSON.stringify({ phone: phoneInvite.phone, inviterId: action.person?.userId || null })
+            });
+            const data = await res.json();
+            const inviteLink = `${window.location.origin}/accept-invite/${data.token}`;
+            window.open(`https://wa.me/91${phoneInvite.phone}?text=${encodeURIComponent('Hi! Join our family tree: ' + inviteLink)}`, '_blank');
+            setPhoneInvite({ phone: '', loading: false, result: null, sending: false });
+        } catch (err) {
+            alert('Failed to send invite');
+            setPhoneInvite(prev => ({ ...prev, sending: false }));
+        }
+    };
+
+
     // Fetch relationship types on mount
     useEffect(() => {
         fetchRelationships()
@@ -107,6 +148,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
             );
         } else if (action.type === 'spouse') {
             newForms.push({ type: 'spouse', index: 0 });
+            setPhoneInvite({}); // initialize phone invite state
         } else if (action.type === 'edit') {
             newForms.push({ type: 'edit', index: 0 });
         } else {
@@ -817,36 +859,84 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                 <div className="person-form-upgraded" style={{ 
                                     background: '#f6fdf7',
                                     borderRadius: 16, 
-                                    padding: 24, 
                                     marginBottom: 0, 
-                                    boxShadow: `0 4px 20px ${PRIMARY_COLOR}10`,
                                     border: `1px solid ${PRIMARY_COLOR}10`
                                 }}>
                                     {form.type === 'spouse' && (
-                                        <h4 style={{ 
-                                            marginBottom: 16, 
-                                            fontWeight: 700, 
-                                            fontSize: 18,
-                                            color: '#333',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 8
-                                        }}>
-                                            💕 Spouse
-                                        </h4>
-                                    )}
+                                         <>
+                                         <h4 style={{ 
+                                             marginBottom: 16, 
+                                             fontWeight: 700, 
+                                             fontSize: 18,
+                                             color: '#333',
+                                             display: 'flex',
+                                             alignItems: 'center',
+                                             gap: 8
+                                         }}>
+                                             💕 Spouse
+                                         </h4>
+
+                                         {/* --- Mobile Invite Section --- */}
+                                         <div style={{ marginBottom: 20, background:'#fff', padding:16, borderRadius:12, border:`1px solid ${PRIMARY_COLOR}33` }}>
+                                             <label style={{ fontWeight:600, color:'#333', display:'block', marginBottom:6 }}>Invite Spouse by Mobile Number:</label>
+                                             <div style={{ display:'flex', gap:8 }}>
+                                                 <input
+                                                     type="text"
+                                                     placeholder="10-digit mobile"
+                                                     value={phoneInvite.phone}
+                                                     maxLength={10}
+                                                     onChange={e=>setPhoneInvite(p=>({...p, phone:e.target.value}))}
+                                                     style={{ flex:1, borderRadius:8, padding:'10px 12px', border:`2px solid ${PRIMARY_COLOR}22`, outline:'none' }}
+                                                 />
+                                                 <button type="button" onClick={handlePhoneSearch} disabled={!phoneRegex.test(phoneInvite.phone) || phoneInvite.loading}
+                                                     style={{ padding:'10px 18px', background:PRIMARY_COLOR, color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:600 }}>
+                                                     {phoneInvite.loading ? 'Searching...' : 'Search'}
+                                                 </button>
+                                             </div>
+
+                                             {phoneInvite.result && (
+                                                 <div style={{ marginTop:12, fontSize:14 }}>
+                                                     {phoneInvite.result.exists ? (
+                                                         <>
+                                                             <span style={{ fontWeight:600 }}>User:</span> {phoneInvite.result.user.firstName} {phoneInvite.result.user.lastName} <br/>
+                                                             <span style={{ fontWeight:600 }}>Family Code:</span> {phoneInvite.result.user.familyCode || 'N/A'} <br/>
+                                                             {!phoneInvite.result.sameFamily && (
+                                                                 <button type="button" onClick={handleSendInvite} disabled={phoneInvite.sending}
+                                                                     style={{ marginTop:8, padding:'8px 16px', background:PRIMARY_COLOR, color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:600 }}>
+                                                                     {phoneInvite.sending ? 'Sending...' : 'Send Invite'}
+                                                                 </button>
+                                                             )}
+                                                             {phoneInvite.result.sameFamily && (
+                                                                 <span style={{ color:PRIMARY_COLOR, fontWeight:600 }}>Already in same family</span>
+                                                             )}
+                                                         </>
+                                                     ) : (
+                                                         <>
+                                                             <span>No Aalam account found.</span><br/>
+                                                             <button type="button" onClick={handleSendInvite} disabled={phoneInvite.sending}
+                                                                 style={{ marginTop:8, padding:'8px 16px', background:PRIMARY_COLOR, color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:600 }}>
+                                                                 {phoneInvite.sending ? 'Sending...' : 'Invite via WhatsApp'}
+                                                             </button>
+                                                         </>
+                                                     )}
+                                                 </div>
+                                             )}
+                                         </div>
+                                         </>
+                                     )}
                                     {form.type === 'person' && (
                                         <h4 style={{ 
                                             marginBottom: 16, 
                                             fontWeight: 700, 
-                                            fontSize: 18,
-                                            color: '#333',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 8
-                                        }}>
-                                            👤 Person {form.index + 1}
-                                        </h4>
+                                             fontSize: 18,
+                                             color: '#333',
+                                             display: 'flex',
+                                             alignItems: 'center',
+                                             gap: 8
+                                         }}>
+                                             👤 Person {form.index + 1}
+                                         </h4>
+
                                     )}
                                     <div className="form-row-upgraded" style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
                                         <div className="form-group-upgraded" style={{ flex: 1 }}>
@@ -1168,5 +1258,8 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
         </div>
     );
 };
+
+// --- Mobile invite helpers ---
+const phoneRegex = /^[0-9]{10}$/;
 
 export default AddPersonModal; 

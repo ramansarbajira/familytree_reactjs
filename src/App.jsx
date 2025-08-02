@@ -19,12 +19,14 @@ import GiftListingPage from './Pages/GiftListingPage';
 import EventsPage from './Pages/EventsPage'; 
 import OrderManagementPage from './Pages/OrderManagementPage'; 
 import SuggestionApproving from './Pages/SuggestionApproving';
+import AssociatedFamilyTreePage from './Pages/AssociatedFamilyTreePage';
 
 
 import { UserProvider } from './Contexts/UserContext';
 import { LanguageProvider } from './Contexts/LanguageContext';
 import PrivateRoute, { RoleBasedRoute } from './Routes/PrivateRoute';
 import GuestRoute from './Routes/GuestRoute';
+import { FamilyTreeProvider } from './Contexts/FamilyTreeContext';
 
 // Add a wrapper for admin-only route
 const AdminRoute = ({ children }) => {
@@ -59,6 +61,9 @@ function App() {
           <Route path="/my-family-member" element={<PrivateRoute><LanguageProvider><MyFamilyMember /></LanguageProvider></PrivateRoute>  } />
           <Route path="/my-family" element={<PrivateRoute><LanguageProvider><MyFamily /></LanguageProvider></PrivateRoute>  } />
           <Route path="/family-tree" element={<PrivateRoute><LanguageProvider><FamilyTreePage /></LanguageProvider></PrivateRoute>  } />
+          <Route path="/family-tree/:code" element={<PrivateRoute><LanguageProvider><FamilyTreePage /></LanguageProvider></PrivateRoute>  } />
+          <Route path="/associated-family-tree/:code" element={<PrivateRoute><LanguageProvider><FamilyTreeProvider><AssociatedFamilyTreePage /></FamilyTreeProvider></LanguageProvider></PrivateRoute>} />
+          <Route path="/associated-family-tree-user/:userId" element={<PrivateRoute><LanguageProvider><FamilyTreeProvider><AssociatedFamilyTreePage /></FamilyTreeProvider></LanguageProvider></PrivateRoute>} />
 
           <Route path ="/pending-request" element={<PrivateRoute><LanguageProvider><PendingFamilyRequests /></LanguageProvider></PrivateRoute>} />
           <Route path="/posts-and-feeds" element={<PrivateRoute><LanguageProvider><PostsAndFeedsPage /></LanguageProvider></PrivateRoute>} />
