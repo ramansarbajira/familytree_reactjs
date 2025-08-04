@@ -85,6 +85,11 @@ const CreateFamilyModal = ({ isOpen, onClose, token, onFamilyCreated, mode = "cr
                 showConfirmButton: false,
                 timer: 1500,
               });
+
+              if (data && data.accessToken) {
+                localStorage.setItem('access_token', data.accessToken);
+              }
+             
               // If creating (not editing), update localStorage userInfo with new familyCode
               if (data && data.familyCode) {
                 let userInfo = null;

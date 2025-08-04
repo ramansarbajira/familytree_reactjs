@@ -747,6 +747,57 @@ const FamilyTreePage = () => {
             });
             if (!response) return;
             if (!response.ok) throw new Error('Failed to save');
+            
+            // ✅ RELOAD TREE DATA FROM SERVER AFTER SUCCESSFUL SAVE
+            // This ensures the UI shows the actual saved data
+            try {
+                const treeResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/family/tree/${userInfo.familyCode}`, {
+                    headers: { 'accept': '*/*' }
+                });
+                if (treeResponse.ok) {
+                    const treeData = await treeResponse.json();
+                    if (treeData && treeData.people && treeData.people.length > 0) {
+                        // Rebuild tree from server data
+                        const newTree = new FamilyTree();
+                        newTree.people = new Map();
+                        treeData.people.forEach(person => {
+                            newTree.people.set(person.id, {
+                                ...person,
+                                memberId: person.memberId !== undefined ? person.memberId : null,
+                                parents: new Set((person.parents || []).map(id => Number(id))),
+                                children: new Set((person.children || []).map(id => Number(id))),
+                                spouses: new Set((person.spouses || []).map(id => Number(id))),
+                                siblings: new Set((person.siblings || []).map(id => Number(id)))
+                            });
+                        });
+                        newTree.nextId = Math.max(...treeData.people.map(p => parseInt(p.id))) + 1;
+                        
+                        // Set rootId to the person whose memberId matches the logged-in user's userId
+                        let rootPersonId = null;
+                        const userIdStr = String(userInfo.userId);
+                        for (const [personId, personObj] of newTree.people.entries()) {
+                            if (personObj.memberId && String(personObj.memberId) === userIdStr) {
+                                rootPersonId = personId;
+                                break;
+                            }
+                        }
+                        if (rootPersonId !== null) {
+                            newTree.rootId = rootPersonId;
+                        } else {
+                            newTree.rootId = treeData.people[0].id;
+                        }
+                        
+                        // Update the tree state with fresh server data
+                        setTree(newTree);
+                        updateStats(newTree);
+                        arrangeTree(newTree);
+                    }
+                }
+            } catch (reloadErr) {
+                console.warn('Failed to reload tree after save:', reloadErr);
+                // Continue with success status even if reload fails
+            }
+            
             setSaveStatus('success');
             setSaveMessage('Family tree saved successfully!');
         } catch (err) {
