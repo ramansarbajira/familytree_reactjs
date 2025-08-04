@@ -16,19 +16,19 @@ import {
     FiTag
 } from 'react-icons/fi';
 
-const ViewProductModal = ({ isOpen, onClose, gift, onBuyNow }) => {
-    console.log('🔍 ViewProductModal props:', { isOpen, gift: gift?.title });
+const ViewProductModal = ({ isOpen, onClose, gift, onBuyNow, initialQuantity = 1 }) => {
+    console.log('🔍 ViewProductModal props:', { isOpen, gift: gift?.title, initialQuantity });
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const [quantity, setQuantity] = useState(1);
+    const [quantity, setQuantity] = useState(initialQuantity);
     const [isZoomed, setIsZoomed] = useState(false);
 
     // Reset state when modal opens/closes
     useEffect(() => {
         if (isOpen) {
             setCurrentImageIndex(0);
-            setQuantity(1);
+            setQuantity(initialQuantity);
         }
-    }, [isOpen]);
+    }, [isOpen, initialQuantity]);
 
     // If the modal isn't open or no gift data is provided, don't render anything
     if (!isOpen || !gift) {

@@ -13,8 +13,8 @@ import RelationshipCalculator from '../utils/relationshipCalculator';
 import html2canvas from 'html2canvas';
 import LanguageSwitcher from '../Components/LanguageSwitcher';
 import Swal from 'sweetalert2';
-import { FaPlus, FaSave } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
+import { FaPlus, FaSave, FaArrowLeft, FaHome } from 'react-icons/fa';
+import { useNavigate, useParams } from 'react-router-dom';
 import { FamilyTreeProvider } from '../Contexts/FamilyTreeContext';
 
 // Utility for authenticated fetch with logout on 401 or error
@@ -72,9 +72,11 @@ const FamilyTreePage = () => {
     const { language } = useLanguage();
     const { userInfo, userLoading } = useUser();
     const navigate = useNavigate();
+    const { code } = useParams(); // Get familyCode from URL if present
 
-    // Only allow editing for role 2 or 3
-    const canEdit = userInfo && (userInfo.role === 2 || userInfo.role === 3);
+    // Allow editing only when viewing user's own birth family tree and role permits
+    const isOwnTree = !code || code === userInfo.familyCode;
+    const canEdit = isOwnTree && userInfo && (userInfo.role === 2 || userInfo.role === 3);
 
     // Check approval status and familyCode
     useEffect(() => {
@@ -120,19 +122,36 @@ const FamilyTreePage = () => {
     // Initialize tree (now with API/sample data support)
     useEffect(() => {
         const initializeTree = async () => {
-            // Fetch family data from API using familyCode
-            if (!userInfo || !userInfo.familyCode) return;
+            // Use code from URL if present, else fallback to user's main familyCode
+            const familyCodeToUse = code || (userInfo && userInfo.familyCode);
+            console.log('🔍 Debug - code from URL:', code);
+            console.log('🔍 Debug - userInfo.familyCode:', userInfo?.familyCode);
+            console.log('🔍 Debug - familyCodeToUse:', familyCodeToUse);
+            
+            if (!userInfo || !familyCodeToUse) {
+                console.log('❌ Debug - Missing userInfo or familyCodeToUse');
+                return;
+            }
             
             setTreeLoading(true);
             let data = null;
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/family/tree/${userInfo.familyCode}`, {
+                const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/family/tree/${familyCodeToUse}`;
+                console.log('🌐 Debug - Making API call to:', apiUrl);
+                
+                const response = await fetch(apiUrl, {
                     headers: { 'accept': '*/*' }
                 });
+                console.log('📡 Debug - Response status:', response.status);
+                
                 if (response.ok) {
                     data = await response.json();
+                    console.log('✅ Debug - API response data:', data);
+                } else {
+                    console.log('❌ Debug - API call failed with status:', response.status);
                 }
             } catch (err) {
+                console.log('💥 Debug - API call error:', err);
                 data = null;
             }
             if (!data || !data.people || data.people.length === 0) {
@@ -196,7 +215,7 @@ const FamilyTreePage = () => {
             setTreeLoading(false);
         };
         if (userInfo) initializeTree();
-    }, [userInfo]);
+    }, [userInfo, code]);
 
     const updateStats = (treeInstance) => {
         setStats(treeInstance.getStats());
@@ -830,10 +849,12 @@ const FamilyTreePage = () => {
             <Layout>
                 {/* Main container for tree and controls */}
                 <div className="relative flex flex-col h-[calc(100vh-56px)] w-full bg-gray-100 overflow-hidden">
+                    {/* Navigation buttons when viewing another family's tree */}
+                    
                     {canEdit && (
                         <div className="hidden sm:flex w-full justify-between items-center gap-4 px-8 py-4 bg-white border-b border-gray-200 z-40">
                             {/* Stats section */}
-                            <div className="flex gap-6 text-gray-700 text-base font-medium">
+                            <div className="flex gap-6 items-center text-gray-700 text-base font-medium">{code && code !== userInfo.familyCode && (<><button className="inline-flex items-center justify-center w-8 h-8 border border-gray-400 text-gray-700 rounded-full hover:bg-gray-100 active:scale-95 transition" onClick={() => navigate(-1)} title="Back"><FaArrowLeft /></button><button className="inline-flex items-center justify-center w-8 h-8 border border-indigo-600 text-indigo-600 rounded-full hover:bg-indigo-600 hover:text-white active:scale-95 transition" onClick={() => navigate('/family-tree')} title="My Birth Family Tree"><FaHome /></button></>)}
                                 <div>Total: <span className="font-bold">{stats.total}</span></div>
                                 <div>Male: <span className="font-bold">{stats.male}</span></div>
                                 <div>Female: <span className="font-bold">{stats.female}</span></div>
@@ -867,7 +888,7 @@ const FamilyTreePage = () => {
                     {!canEdit && (
                         <div className="hidden sm:flex w-full justify-start items-center gap-4 px-8 py-4 bg-white border-b border-gray-200 z-40">
                             {/* Stats section only */}
-                            <div className="flex gap-6 text-gray-700 text-base font-medium">
+                            <div className="flex gap-6 items-center text-gray-700 text-base font-medium">{code && code !== userInfo.familyCode && (<><button className="inline-flex items-center justify-center w-8 h-8 border border-gray-400 text-gray-700 rounded-full hover:bg-gray-100 active:scale-95 transition" onClick={() => navigate(-1)} title="Back"><FaArrowLeft /></button><button className="inline-flex items-center justify-center w-8 h-8 border border-indigo-600 text-indigo-600 rounded-full hover:bg-indigo-600 hover:text-white active:scale-95 transition" onClick={() => navigate('/family-tree')} title="My Birth Family Tree"><FaHome /></button></>)}
                                 <div>Total: <span className="font-bold">{stats.total}</span></div>
                                 <div>Male: <span className="font-bold">{stats.male}</span></div>
                                 <div>Female: <span className="font-bold">{stats.female}</span></div>

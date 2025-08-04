@@ -534,6 +534,7 @@ const GiftListingPage = () => {
                         isOpen={isViewModalOpen}
                         onClose={handleCloseViewModal}
                         gift={selectedGift}
+                        initialQuantity={quantities[selectedGift.id] || 1}
                         onBuyNow={(gift, quantity) => {
                             console.log('🔍 ViewProductModal onBuyNow called with:', { gift: gift.title, quantity });
                             console.log('🔍 Closing ViewProductModal and opening BuyConfirmationModal');

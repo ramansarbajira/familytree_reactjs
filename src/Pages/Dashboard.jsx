@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { RiUser3Line } from 'react-icons/ri';
 import Swal from 'sweetalert2';
+import { fetchUserFamilyCodes } from '../utils/familyTreeApi';
 
 const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
   // State for modal visibility
@@ -31,6 +32,8 @@ const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isCountSectionLoading, setIsCountSectionLoading] = useState(true);
   const [productCount, setProductCount] = useState(null);
+  const [userFamilyCodes, setUserFamilyCodes] = useState(null);
+  const [familyCodesLoading, setFamilyCodesLoading] = useState(true);
 
   // const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -239,6 +242,19 @@ useEffect(() => {
         setProductCount(0);
       });
   }, [apiBaseUrl]);
+
+  // Fetch main and associated family codes
+  useEffect(() => {
+    if (userInfo?.userId) {
+      setFamilyCodesLoading(true);
+      fetchUserFamilyCodes(userInfo.userId)
+        .then((codes) => {
+          setUserFamilyCodes(codes);
+          setFamilyCodesLoading(false);
+        })
+        .catch(() => setFamilyCodesLoading(false));
+    }
+  }, [userInfo?.userId]);
 
   const today = new Date();
   const formattedDate = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -786,6 +802,47 @@ console.log("token:", token);
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Associated Family Codes Section */}
+      <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-gray-100 my-8">
+        <h2 className="text-xl font-bold mb-4 text-gray-800">My Family Connections</h2>
+        {familyCodesLoading ? (
+          <div>Loading family codes...</div>
+        ) : userFamilyCodes ? (
+          <>
+            <div className="mb-2">
+              <span className="font-semibold text-gray-700">Main Family Code:</span> {userFamilyCodes.mainFamilyCode || 'N/A'}
+            </div>
+            <div>
+              <span className="font-semibold text-gray-700">Associated Families:</span>
+              {userFamilyCodes.associatedFamilyCodes && userFamilyCodes.associatedFamilyCodes.length > 0 ? (
+                <ul className="list-disc ml-6 mt-2">
+                  {userFamilyCodes.associatedFamilyCodes.map((code) => (
+                    <li key={code} className="mb-1">
+                      <span className="mr-2">{code.startsWith('REL_') ? 'Relationship' : 'Associated Family'}:</span>
+                      <span className="font-mono text-sm">{code}</span>
+                      {code.startsWith('REL_') ? (
+                        <span className="ml-2 text-gray-500">No family tree available yet</span>
+                      ) : (
+                        <button
+                          className="ml-2 px-2 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 text-xs"
+                          onClick={() => window.location.href = `/family-tree/${code}`}
+                        >
+                          View Family Tree
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span className="ml-2 text-gray-500">No associated families yet</span>
+              )}
+            </div>
+          </>
+        ) : (
+          <div>No family code data available.</div>
+        )}
       </div>
 
       {/* Create Event Modal */}

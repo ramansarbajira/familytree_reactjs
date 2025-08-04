@@ -226,7 +226,7 @@ export default class RelationshipCalculator {
     }
 
     // Add + or - for cousin codes based on age
-    const cousinCodes = ['FB-D', 'FB-S', 'MB-D', 'MB-S', 'FZ-D', 'FZ-S', 'MZ-D', 'MZ-S'];
+    const cousinCodes = ['FB-D', 'FB-S', 'MB-D', 'MB-S', 'FZ-D', 'FZ-S', 'MZ-D', 'MZ-S','FB+S','FB+D', 'MZ+S','MZ+D'];
     if (cousinCodes.includes(code)) {
       if (person1.age && person2.age) {
         if (person2.age > person1.age) return code + '+';
