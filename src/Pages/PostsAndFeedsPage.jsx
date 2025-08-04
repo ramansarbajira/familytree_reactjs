@@ -174,7 +174,7 @@ const PostsAndFeedsPage = () => {
     // Handle post creation callback
     const handlePostCreated = () => {
     // Close the modal if needed
-    setIsCreateModalOpen(false);
+    // setIsCreateModalOpen(false);
 
     // Reload the feed
     fetchPosts();

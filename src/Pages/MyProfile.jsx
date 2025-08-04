@@ -8,13 +8,14 @@ import CreateAlbumModal from '../Components/CreateAlbumModal';
 import ProfileFormModal from '../Components/ProfileFormModal';
 import GalleryViewerModal from '../Components/GalleryViewerModal';
 import PostViewerModal from '../Components/PostViewerModal';
-import { useUser } from '../Contexts/UserContext';
+import { UserProvider, useUser } from '../Contexts/UserContext';
+import { Phone, Mail } from 'lucide-react';
 
 const ProfilePage = () => {
     const [token, setToken] = useState(null);
     const [loadingUserProfile, setLoadingUserProfile] = useState(true);
     const [user, setUser] = useState(null);
-    const { userInfo, userLoading } = useUser();
+    const { userInfo, userLoading, refetchUserInfo } = useUser();
     const [userPosts, setUserPosts] = useState([]);
     const [loadingPosts, setLoadingPosts] = useState(true);
     const [loadingGalleries, setLoadingGalleries] = useState(true);
@@ -37,6 +38,9 @@ const ProfilePage = () => {
     const [postToEditDetails, setPostToEditDetails] = useState(null); // This will hold the detailed API response for edit
     const [isEditAlbumModalOpen, setIsEditAlbumModalOpen] = useState(false);
     const [albumToEdit, setAlbumToEdit] = useState(null);
+    const [isBioExpanded, setIsBioExpanded] = useState(false);
+    const toggleBioExpanded = () => setIsBioExpanded(!isBioExpanded);
+
 
     useEffect(() => {
         const storedToken = localStorage.getItem('access_token');
@@ -450,26 +454,40 @@ const ProfilePage = () => {
                                 </button>
                             </div>
 
-                            <p className="text-gray-800 leading-relaxed text-sm md:text-base whitespace-pre-wrap">{user.bio}</p>
+                            <div className="text-gray-800 leading-relaxed text-sm md:text-base whitespace-pre-wrap">
+  <p className={isBioExpanded ? '' : 'line-clamp-2'}>
+    {user.bio}
+  </p>
+  {user.bio.length > 100 && (
+   <button
+  onClick={toggleBioExpanded}
+  className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-full shadow hover:bg-primary-700 transition"
+>
+  {isBioExpanded ? 'See Less' : 'See More'}
+</button>
+  )}
+</div>
 
-                            {(user.contactNumber || user.email) && (
-                                <div className="mt-4 pt-4 border-t border-gray-100">
-                                    <h3 className="text-sm font-semibold text-gray-500 mb-2">Contact Information</h3>
-                                    <div className="flex flex-col sm:flex-row gap-4">
-                                        {user.contactNumber && (
-                                            <p className="text-gray-700 text-sm">
-                                                <span className="font-medium">Phone:</span> {user.contactNumber}
-                                            </p>
-                                        )}
-                                        {user.email && (
-                                            <p className="text-gray-700 text-sm">
-                                                <span className="font-medium">Email:</span> {user.email}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
 
+
+{(user.contactNumber || user.email) && (
+  <div className="mt-4 pt-4 border-t border-gray-100">
+    <div className="flex flex-col sm:flex-row gap-4">
+      {user.contactNumber && (
+        <div className="flex items-center gap-2 text-gray-700 text-sm">
+          <Phone size={16} className="text-gray-500" />
+          <span>{user.contactNumber}</span>
+        </div>
+      )}
+      {user.email && (
+        <div className="flex items-center gap-2 text-gray-700 text-sm">
+          <Mail size={16} className="text-gray-500" />
+          <span>{user.email}</span>
+        </div>
+      )}
+    </div>
+  </div>
+)}
                             <div className="flex justify-center md:justify-start gap-8 mt-5 pt-4 border-t border-gray-100">
                                 <div className="text-center">
                                     <span className="block font-bold text-xl md:text-2xl text-gray-900">{user.postsCount}</span>
@@ -689,7 +707,7 @@ const ProfilePage = () => {
                 isOpen={isProfileFormModalOpen}
                 onClose={() => setIsProfileFormModalOpen(false)}
                 mode="edit-profile"
-                // onProfileUpdated removed
+                onProfileUpdated={refetchUserInfo}
             />
             <CreatePostModal
                 isOpen={isCreatePostModalOpen}

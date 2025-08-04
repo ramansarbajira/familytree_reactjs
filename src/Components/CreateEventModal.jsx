@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiCalendar, FiClock, FiMapPin, FiFileText, FiImage, FiPlus, FiLoader } from 'react-icons/fi';
+import { FiX, FiCalendar, FiClock, FiMapPin, FiFileText, FiImage, FiPlus, FiLoader, FiCheckCircle } from 'react-icons/fi';
 import { jwtDecode } from 'jwt-decode';
 
 const CreateEventModal = ({
@@ -15,17 +15,31 @@ const CreateEventModal = ({
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  // NEW: State for success popup
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const [userId, setUserId] = useState(null);
   const [familyCode, setFamilyCode] = useState(null);
 
-  // Add debug logging for API base URL
   useEffect(() => {
     // console.log('🔗 API Base URL:', apiBaseUrl);
     // console.log('🌍 Environment VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
   }, [apiBaseUrl]);
 
-  // Fetch userId and familyCode when modal opens
+  // NEW: Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setTitle('');
+      setDate('');
+      setTime('');
+      setLocation('');
+      setDescription('');
+      setImages([]);
+      setImagePreviews([]);
+      setShowSuccess(false);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -135,15 +149,9 @@ const CreateEventModal = ({
 
       const resData = await response.json();
 
-      // Reset form
-      setTitle('');
-      setDate('');
-      setTime('');
-      setLocation('');
-      setDescription('');
-      setImages([]);
-      setImagePreviews([]);
-      onClose();
+      // NEW: Show success popup
+      setShowSuccess(true);
+
     } catch (err) {
       console.error('💥 Error creating event:', err);
       alert(`Something went wrong: ${err.message}`);
@@ -155,6 +163,36 @@ const CreateEventModal = ({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-inter">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl relative max-h-[95vh] flex flex-col overflow-hidden">
+        {/* NEW: Success Popup */}
+        {showSuccess && (
+          <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-10 p-6 text-center">
+            <div className="border-4 border-green-500 rounded-2xl p-8 bg-white shadow-lg max-w-md w-full">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 mx-auto">
+                <FiCheckCircle size={40} className="text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">Success!</h3>
+              <p className="text-gray-600 mb-6 text-lg">Event created successfully.</p>
+              <button
+                className="bg-green-600 text-white px-8 py-2 rounded-full font-semibold text-lg shadow hover:bg-green-700 transition"
+                onClick={() => {
+                  setShowSuccess(false);
+                  // Reset form
+                  setTitle('');
+                  setDate('');
+                  setTime('');
+                  setLocation('');
+                  setDescription('');
+                  setImages([]);
+                  setImagePreviews([]);
+                  onClose();
+                }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-4 relative">
           <button
@@ -294,7 +332,7 @@ const CreateEventModal = ({
                   <button
                     type="button"
                     onClick={() => document.getElementById('event-image-input').click()}
-                    className="w-full py-3 border-2 border-dashed border-primary-300 rounded-xl text-primary-600 hover:bg-primary-50 transition-colors flex items-center justify-center gap-2"
+                   className="w-full py-3 border-2 border-dashed border-primary-300 rounded-xl text-primary-600 bg-white hover:bg-primary-50 transition-colors flex items-center justify-center gap-2"
                   >
                     <FiPlus size={16} />
                     Add More Images

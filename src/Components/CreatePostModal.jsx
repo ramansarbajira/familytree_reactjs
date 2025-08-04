@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
     FiX, FiImage, FiVideo, FiSend,
-    FiChevronDown, FiSmile, FiTrash2, FiEdit3
+    FiChevronDown, FiSmile, FiTrash2, FiEdit3, FiCheckCircle
 } from 'react-icons/fi';
 import { FaGlobeAmericas, FaUserFriends } from 'react-icons/fa';
 import EmojiPicker from 'emoji-picker-react';
@@ -22,6 +22,7 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showPrivacyDropdown, setShowPrivacyDropdown] = useState(false);
     const [message, setMessage] = useState(''); // State for displaying messages to the user
+    const [showSuccess, setShowSuccess] = useState(false); // NEW: Success popup state
 
     // Refs for click outside functionality and input focus
     const modalRef = useRef(null);
@@ -59,6 +60,7 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
             setMessage(''); // Clear messages on open
             setShowEmojiPicker(false); // Ensure emoji picker is closed
             setShowPrivacyDropdown(false); // Ensure privacy dropdown is closed
+            setShowSuccess(false); // NEW: Reset success popup
         }
     }, [isOpen, mode, postData, currentUser, userInfo]);
 
@@ -194,13 +196,11 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
 
             // const responseData = await response.json(); // If you need response data
 
-            setMessage(`Post ${mode === 'create' ? 'created' : 'updated'} successfully!`);
-            onPostCreated(); // Notify parent component to re-fetch posts
-            
-            // Give a moment for the message to be seen, then close
-            setTimeout(() => {
-                handleClose(); 
-            }, 1000); 
+            // NEW: Show success popup instead of message
+            console.log('🔍 Setting showSuccess to true');
+            setShowSuccess(true);
+            console.log('🔍 Success popup should now be visible');
+            onPostCreated(); // Notify parent component to re-fetch posts 
 
         } catch (error) {
             console.error(`Error ${mode}ing post:`, error);
@@ -230,6 +230,7 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
         setShowEmojiPicker(false);
         setShowPrivacyDropdown(false);
         setMessage('');
+        setShowSuccess(false); // NEW: Reset success popup
     };
 
     const triggerFileInput = () => {
@@ -268,9 +269,32 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
             <div
                 ref={modalRef}
                 className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto transform transition-all duration-300 scale-100 opacity-100
-                   max-h-[90vh] overflow-hidden flex flex-col"
+                   max-h-[90vh] overflow-hidden flex flex-col relative"
                 onClick={(e) => e.stopPropagation()} // Prevent clicks inside modal from propagating to close modal
             >
+                {/* NEW: Success Popup */}
+                {showSuccess && (
+                    <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-50 p-6 text-center">
+                        <div className="border-4 border-green-500 rounded-2xl p-8 bg-white shadow-lg max-w-md w-full">
+                            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 mx-auto">
+                                <FiCheckCircle size={40} className="text-green-600" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-gray-800 mb-3">Success!</h3>
+                            <p className="text-gray-600 mb-6 text-lg">Post created successfully.</p>
+                            <button
+                                className="bg-green-600 text-white px-8 py-2 rounded-full font-semibold text-lg shadow hover:bg-green-700 transition"
+                                onClick={() => {
+                                    console.log('🔍 OK button clicked');
+                                    setShowSuccess(false);
+                                    handleClose();
+                                }}
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                )}
+                {console.log('🔍 showSuccess state:', showSuccess)}
                 {/* Header */}
                 <div className="p-5 border-b border-gray-100 flex justify-between items-center">
                     <h2 className="text-xl font-bold text-gray-800">{mode === 'create' ? 'Create New Post' : 'Edit Post'}</h2>
