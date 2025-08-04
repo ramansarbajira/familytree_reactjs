@@ -196,7 +196,8 @@ export default class RelationshipCalculator {
     
     let code = '';
     
-    for (const step of path) {
+    for (let i = 0; i < path.length; i++) {
+      const step = path[i];
       const targetPerson = this.people.get(step.to);
       if (!targetPerson) continue;
       
@@ -215,7 +216,7 @@ export default class RelationshipCalculator {
           
         case 'sibling':
           const fromPerson = this.people.get(step.from);
-          const elderYounger = this.determineElderYounger(fromPerson, targetPerson);
+          const elderYounger = this.determineElderYoungerForSiblings(fromPerson, targetPerson, path, i);
           if (targetPerson.gender === 'male') {
             code += elderYounger === 'elder' ? 'B+' : 'B-';
           } else {
@@ -225,8 +226,8 @@ export default class RelationshipCalculator {
       }
     }
 
-    // Add + or - for cousin codes based on age
-    const cousinCodes = ['FB-D', 'FB-S', 'MB-D', 'MB-S', 'FZ-D', 'FZ-S', 'MZ-D', 'MZ-S','FB+S','FB+D', 'MZ+S','MZ+D'];
+    // Add + or - for cousin codes based on age comparison between cousins
+    const cousinCodes = ['FB-D', 'FB-S', 'MZ-D', 'MZ-S','FB+S','FB+D', 'MZ+S','MZ+D'];
     if (cousinCodes.includes(code)) {
       if (person1.age && person2.age) {
         if (person2.age > person1.age) return code + '+';
@@ -244,18 +245,51 @@ export default class RelationshipCalculator {
    * @returns {string} 'elder', 'younger', or 'same'
    */
   determineElderYounger(person1, person2) {
-    // Use birth order if available
+    // First priority: Age comparison (higher age = elder)
+    if (person1.age && person2.age) {
+      if (person2.age > person1.age) return 'elder';
+      if (person2.age < person1.age) return 'younger';
+      // If ages are equal, continue to next check
+    }
+
+    // Second priority: Birth order if available (lower birth order = elder)
     if (person1.birthOrder && person2.birthOrder) {
       return person2.birthOrder < person1.birthOrder ? 'elder' : 'younger';
-  }
-
-    // Fallback to age comparison
-    if (person1.age && person2.age) {
-      return person2.age > person1.age ? 'elder' : 'younger';
     }
     
-    // Default to same if no information available
-    return 'same';
+    // Third priority: Generation as fallback
+    if (person1.generation && person2.generation) {
+      return person2.generation < person1.generation ? 'elder' : 'younger';
+    }
+    
+    // Default to younger if no information available (safer assumption)
+    return 'younger';
+  }
+
+  /**
+   * Determine elder/younger relationship for siblings with context awareness
+   * This method handles uncle/aunt relationships correctly by comparing the right people
+   * @param {Object} fromPerson - The person we're coming from in the path
+   * @param {Object} targetPerson - The sibling we're going to
+   * @param {Array} path - The full relationship path
+   * @param {number} stepIndex - Current step index in the path
+   * @returns {string} 'elder', 'younger', or 'same'
+   */
+  determineElderYoungerForSiblings(fromPerson, targetPerson, path, stepIndex) {
+    // For uncle/aunt relationships (when we came from a parent), 
+    // we need to compare the parent with their sibling, not the child with uncle/aunt
+    
+    // Check if this sibling step is creating an uncle/aunt relationship
+    // This happens when the previous step was going to a parent
+    if (stepIndex > 0 && path[stepIndex - 1].type === 'parent') {
+      // We're dealing with uncle/aunt relationship
+      // fromPerson is the parent, targetPerson is the uncle/aunt
+      // Compare the parent's age with their sibling (uncle/aunt)
+      return this.determineElderYounger(fromPerson, targetPerson);
+    }
+    
+    // For direct sibling relationships, use normal comparison
+    return this.determineElderYounger(fromPerson, targetPerson);
   }
 
   /**
