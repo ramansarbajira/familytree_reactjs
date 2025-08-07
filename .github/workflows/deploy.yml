@@ -3,28 +3,37 @@ name: Deploy React App to S3
 on:
   push:
     branches:
-      - main  # Or change to your default branch
+      - main  # Change this if your default branch is not 'main'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name:  Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name:  Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Install Dependencies
+      - name:  Install dependencies
+        working-directory: frontend
         run: npm ci
 
-      - name: Build React App
+      - name:  Build React app
+        working-directory: frontend
         run: npm run build
 
-      - name: Deploy to S3
+      - name:  List build folder contents
+        run: |
+          echo "Root:"
+          ls -al
+          echo "Build folder:"
+          ls -al frontend/build
+
+      - name:  Deploy to S3
         uses: jakejarvis/s3-sync-action@v0.5.1
         with:
           args: --delete
