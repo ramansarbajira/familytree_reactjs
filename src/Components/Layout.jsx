@@ -41,7 +41,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
   }, []);
 
   //user info
-  const { userInfo, userLoading } = useUser();
+  const { userInfo, userLoading, logout } = useUser();
   //console.log(userInfo); // This will log the user info to the console
 
   // Responsive handling
@@ -80,7 +80,7 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
 }, [sidebarOpen, profileOpen, notificationOpen]);
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
+    logout(); // Clear user state from context
     localStorage.removeItem('userInfo');
     navigate('/login');
   };

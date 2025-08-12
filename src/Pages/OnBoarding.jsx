@@ -235,6 +235,14 @@ const OnBoarding = () => {
           !key.startsWith('childName') &&
           key !== 'profile'
         ) {
+          // Skip marriageDate if maritalStatus is Single or if marriageDate is empty
+          if (key === 'marriageDate' && (formData.maritalStatus === 'Single' || !formData[key] || formData[key].trim() === '')) {
+            continue;
+          }
+          // Skip spouseName if maritalStatus is Single or if spouseName is empty
+          if (key === 'spouseName' && (formData.maritalStatus === 'Single' || !formData[key] || formData[key].trim() === '')) {
+            continue;
+          }
           formDataToSend.append(key, formData[key]);
         }
       }

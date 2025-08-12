@@ -159,7 +159,7 @@ const EditEventModal = ({
         formData.append('eventImages', img);
       });
 
-      const updateEndpoint = `${apiBaseUrl}/event/${event.id}`;
+      const updateEndpoint = `${apiBaseUrl}/event/edit/${event.id}`;
 
       const response = await fetch(updateEndpoint, {
         method: 'PUT',

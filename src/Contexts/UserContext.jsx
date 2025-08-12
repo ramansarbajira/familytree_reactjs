@@ -10,10 +10,17 @@ export const UserProvider = ({ children }) => {
     return !!localStorage.getItem('access_token');
   });
 
+  const clearUserData = useCallback(() => {
+    setUserInfo(null);
+    setUserLoading(false);
+    localStorage.removeItem('access_token');
+  }, []);
+
   const fetchUserDetails = useCallback(async () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
       console.warn('Authentication token not found.');
+      clearUserData();
       return;
     }
 
@@ -128,11 +135,42 @@ export const UserProvider = ({ children }) => {
     fetchUserDetails();
   }, [fetchUserDetails]);
 
+  // Listen for localStorage changes (when user logs in)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'access_token' && e.newValue) {
+        // New token added, fetch user details
+        fetchUserDetails();
+      } else if (e.key === 'access_token' && !e.newValue) {
+        // Token removed, clear user data
+        clearUserData();
+      }
+    };
+
+    // Listen for storage events from other tabs/windows
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also check for token changes in the same tab
+    const checkTokenInterval = setInterval(() => {
+      const currentToken = localStorage.getItem('access_token');
+      if (currentToken && !userInfo && !userLoading) {
+        // Token exists but no user info, fetch it
+        fetchUserDetails();
+      }
+    }, 1000); // Check every second
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(checkTokenInterval);
+    };
+  }, [fetchUserDetails, clearUserData, userInfo, userLoading]);
+
   const contextValue = useMemo(() => ({
     userInfo,
     userLoading,
     refetchUser: fetchUserDetails,
-  }), [userInfo, userLoading, fetchUserDetails]);
+    logout: clearUserData,
+  }), [userInfo, userLoading, fetchUserDetails, clearUserData]);
 
   return (
     <UserContext.Provider value={contextValue}>

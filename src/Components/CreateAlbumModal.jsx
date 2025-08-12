@@ -17,6 +17,7 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
     // For existing photos when in 'edit' mode
     const [currentCoverPhotoUrl, setCurrentCoverPhotoUrl] = useState(null);
     const [currentGalleryPhotos, setCurrentGalleryPhotos] = useState([]); // For existing multiple gallery photos (objects with id, url)
+    const [removedImageIds, setRemovedImageIds] = useState([]); // Track IDs of removed images
 
     const coverPhotoInputRef = useRef(null);
     const galleryPhotoInputRef = useRef(null);
@@ -71,6 +72,7 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
         setGalleryPhotoFiles([]);
         setCurrentCoverPhotoUrl(null);
         setCurrentGalleryPhotos([]);
+        setRemovedImageIds([]);
         if (coverPhotoInputRef.current) coverPhotoInputRef.current.value = '';
         if (galleryPhotoInputRef.current) galleryPhotoInputRef.current.value = '';
     };
@@ -103,17 +105,19 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
 
     const handleRemoveGalleryPhoto = (indexToRemove, isExisting = false) => {
         if (isExisting) {
-            // For existing photos, filter them out locally.
-            // A more robust solution would involve sending these IDs to the backend for deletion.
-            setCurrentGalleryPhotos((prevPhotos) =>
-                prevPhotos.filter((_, index) => index !== indexToRemove)
+            // For existing photos, add their IDs to removedImageIds
+            const photoToRemove = currentGalleryPhotos[indexToRemove];
+            if (photoToRemove?.id) {
+                setRemovedImageIds(prev => [...prev, photoToRemove.id]);
+            }
+            // Remove from current view
+            setCurrentGalleryPhotos(prev => 
+                prev.filter((_, index) => index !== indexToRemove)
             );
-            // Optionally, you might want to collect IDs of deleted existing photos to send to backend
-            // For now, we are assuming backend update handles changes or needs separate delete calls.
         } else {
             // For newly selected files
-            setGalleryPhotoFiles((prevFiles) =>
-                prevFiles.filter((_, index) => index !== indexToRemove)
+            setGalleryPhotoFiles(prev => 
+                prev.filter((_, index) => index !== indexToRemove)
             );
         }
     };
@@ -155,14 +159,19 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
         }
         
 
-        // Only append coverPhoto if a new file is selected
+        // Handle cover photo - if new file is selected or existing is removed
         if (coverPhotoFile) {
+            // New cover photo selected
             formData.append('coverPhoto', coverPhotoFile);
-        } 
-        
-        else if (mode === 'edit' && currentCoverPhotoUrl === null && albumData?.coverPhotoUrl) {
-             formData.append('coverPhoto', ''); // Or a specific indicator your API understands for deletion
+        } else if (mode === 'edit' && currentCoverPhotoUrl === null && albumData?.coverPhoto) {
+            // Existing cover photo was removed
+            formData.append('coverPhoto', 'REMOVE');
         }
+
+        // Add removed image IDs for the backend to delete
+        removedImageIds.forEach(id => {
+            formData.append('removedImageIds', id.toString());
+        });
 
 
         // Append newly added gallery photo files
