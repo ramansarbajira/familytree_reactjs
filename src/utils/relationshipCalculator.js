@@ -203,21 +203,21 @@ export default class RelationshipCalculator {
       
       switch (step.type) {
         case 'parent':
-          code += targetPerson.gender === 'male' ? 'F' : 'M';
+          code += (targetPerson.gender && targetPerson.gender.toLowerCase() === 'male') ? 'F' : 'M';
           break;
           
         case 'child':
-          code += targetPerson.gender === 'male' ? 'S' : 'D';
+          code += (targetPerson.gender && targetPerson.gender.toLowerCase() === 'male') ? 'S' : 'D';
           break;
           
         case 'spouse':
-          code += targetPerson.gender === 'male' ? 'H' : 'W';
+          code += (targetPerson.gender && targetPerson.gender.toLowerCase() === 'male') ? 'H' : 'W';
           break;
           
         case 'sibling':
           const fromPerson = this.people.get(step.from);
           const elderYounger = this.determineElderYoungerForSiblings(fromPerson, targetPerson, path, i);
-          if (targetPerson.gender === 'male') {
+          if (targetPerson.gender && targetPerson.gender.toLowerCase() === 'male') {
             code += elderYounger === 'elder' ? 'B+' : 'B-';
           } else {
             code += elderYounger === 'elder' ? 'Z+' : 'Z-';
