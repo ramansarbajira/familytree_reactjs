@@ -3,23 +3,30 @@ import {
   FiBell,
   FiX,
   FiCheck,
-  FiClock,
   FiUser,
   FiCalendar,
   FiGift,
   FiHeart,
+  FiUsers,
+  FiUserPlus,
+  FiUserX
 } from 'react-icons/fi';
-import { getNotificationType, getNotificationActions } from '../utils/notifications';
+import { getNotificationType } from '../utils/notifications';
+import AssociationRequestItem from './FamilyTree/AssociationRequestItem';
 
 const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [processingRequest, setProcessingRequest] = useState(null);
 
   const notificationTypes = {
     request: { icon: <FiUser />, color: 'from-blue-500 to-blue-300' },
     birthday: { icon: <FiGift />, color: 'from-pink-500 to-pink-300' },
     event: { icon: <FiCalendar />, color: 'from-purple-500 to-purple-300' },
     anniversary: { icon: <FiHeart />, color: 'from-red-500 to-red-300' },
+    family_association_request: { icon: <FiUsers />, color: 'from-green-500 to-green-300' },
+    family_association_accepted: { icon: <FiUserPlus />, color: 'from-teal-500 to-teal-300' },
+    family_association_rejected: { icon: <FiUserX />, color: 'from-orange-500 to-orange-300' },
   };
 
   const fetchNotifications = async (getAll = false) => {
@@ -37,12 +44,13 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
 
       const formatted = data.map((n) => ({
         id: n.id,
-        type: getNotificationType(n.type),
+        type: n.type.toLowerCase(),
         title: n.title,
         message: n.message,
         time: new Date(n.createdAt).toLocaleString(),
         read: n.isRead,
-        //actions: getNotificationActions(n),
+        data: n.data || {},
+        createdAt: n.createdAt
       }));
 
       setNotifications(formatted);
@@ -93,115 +101,237 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
 
   useEffect(() => {
     if (open) {
-      fetchNotifications(false); // Only 5 recent
+      fetchNotifications();
+      
+      // Set up automatic refresh every 30 seconds when panel is open
+      const refreshInterval = setInterval(() => {
+        fetchNotifications();
+      }, 30000); // 30 seconds
+      
+      return () => clearInterval(refreshInterval);
     }
   }, [open]);
 
   if (!open) return null;
 
+  // Filter out association requests to handle them separately
+  const associationRequests = notifications.filter(n => n.type === 'family_association_request');
+  const otherNotifications = notifications.filter(n => n.type !== 'family_association_request');
+
+  const handleAcceptRequest = async (notification) => {
+    try {
+      setProcessingRequest(notification.id);
+      
+      // Extract required data from notification
+      const requestData = notification.data || {};
+      
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/respond`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notificationId: notification.id,
+          action: 'accept',
+          userId: notification.triggeredBy
+        })
+      });
+
+      if (response.ok) {
+        // Remove the processed notification
+        setNotifications(prev => prev.filter(n => n.id !== notification.id));
+        if (onNotificationCountUpdate) onNotificationCountUpdate();
+        return true;
+      } else {
+        const errorData = await response.json();
+        console.error('Error accepting association:', errorData);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error accepting association:', error);
+      return false;
+    } finally {
+      setProcessingRequest(null);
+    }
+  };
+
+  const handleRejectRequest = async (notification) => {
+    try {
+      setProcessingRequest(notification.id);
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/respond`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notificationId: notification.id,
+          action: 'reject',
+          userId: notification.triggeredBy
+        }),
+      });
+
+      if (response.ok) {
+        // Remove the processed notification
+        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+        if (onNotificationCountUpdate) {
+          onNotificationCountUpdate();
+        }
+        return true;
+      } else {
+        const errorData = await response.json();
+        console.error('Error rejecting association:', errorData);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error rejecting association:', error);
+      return false;
+    } finally {
+      setProcessingRequest(null);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex justify-end md:pt-16">
-      <div className="absolute inset-0 bg-black bg-opacity-40" onClick={onClose} />
-      <div
-        className="relative z-50 w-full md:max-w-sm h-full md:h-[90vh] bg-white md:rounded-l-3xl rounded-t-3xl shadow-2xl overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800">Notifications</h2>
-          <div className="flex items-center gap-3">
-            {notifications.length > 0 && (
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      <div className="absolute inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
+      <div className="absolute right-0 top-0 h-full w-full max-w-md transform overflow-hidden bg-white shadow-xl transition-transform duration-300 ease-in-out">
+        <div className="flex h-full flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+            <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
+            <div className="flex items-center space-x-2">
               <button
                 onClick={markAllAsRead}
-                className="bg-unset text-sm font-medium text-primary-600 hover:underline"
+                className="text-sm text-blue-600 hover:text-blue-800"
+                disabled={notifications.length === 0 || notifications.every(n => n.read)}
               >
-                Mark all
+                Mark all as read
               </button>
-            )}
-            <button
-              onClick={onClose}
-              className="bg-unset p-2 rounded-full hover:bg-gray-100 text-black"
-            >
-              <FiX size={18} />
-            </button>
+              <button
+                onClick={onClose}
+                className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 bg-gray-50">
-          {loading ? (
-            <div className="flex justify-center items-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-t-4 border-primary-600 border-solid"></div></div>
-          ) : notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-              <FiBell size={32} />
-              <p className="mt-2">No new notifications</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {notifications.map((n) => {
-                const typeStyle = notificationTypes[n.type] || {};
-                return (
-                  <div
-                    key={n.id}
-                    className={`relative flex items-start p-4 rounded-2xl shadow-sm bg-white border transition-all duration-300 ${
-                      !n.read ? 'bg-blue-50 border-blue-300' : 'border-gray-100'
-                    }`}
-                  >
-                    <div
-                      className={`w-10 h-10 rounded-full bg-gradient-to-br ${typeStyle.color} flex items-center justify-center text-white text-sm shadow-md mr-3`}
-                    >
-                      {typeStyle.icon || <FiBell />}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start">
-                        <p className="text-sm font-semibold text-gray-800">{n.title}</p>
-                        {!n.read && (
-                          <button
-                            onClick={() => markAsRead(n.id)}
-                            className="text-xs text-white hover:text-blue-600 border border-gray-300 hover:border-white-500 px-2 py-0.5 rounded-full"
-                            title="Mark as read"
-                          >
-                            ✓
-                          </button>
-                        )}
-                      </div>
-
-                      <p className="text-sm text-gray-600 mt-1">{n.message}</p>
-
-                      <div className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                        <FiClock size={12} />
-                        <span>{n.time}</span>
-                      </div>
-
-                      {n.actions?.length > 0 && (
-                        <div className="mt-3 flex gap-2 flex-wrap">
-                          {n.actions.map((action, i) => (
-                            <button
-                              key={i}
-                              onClick={action.onClick}
-                              className={`px-3 py-1 text-xs rounded-full font-medium transition ${
-                                action.primary
-                                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                              }`}
-                            >
-                              {action.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="flex h-full items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500" />
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+                <FiBell className="mb-2 h-10 w-10 text-gray-400" />
+                <h4 className="text-lg font-medium text-gray-900">No notifications</h4>
+                <p className="mt-1 text-sm text-gray-500">We'll let you know when there's something new.</p>
+              </div>
+            ) : (
+              <>
+                {/* Association Requests Section */}
+                {associationRequests.length > 0 && (
+                  <div className="border-b border-gray-200 bg-gray-50 px-4 py-2">
+                    <h4 className="text-sm font-medium text-gray-500">Family Association Requests</h4>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                )}
+                {associationRequests.map((notification) => {
+                  // Get the requester ID and name from notification data
+                  const requesterId = notification.data?.requesterId || 
+                                   notification.sender?.id || 
+                                   notification.data?.sender?.id;
+                  
+                  const requesterName = notification.data?.requesterName || 
+                                     (notification.data?.sender?.name || 
+                                      (notification.sender?.name ? 
+                                        `${notification.sender.name.firstName || ''} ${notification.sender.name.lastName || ''}`.trim() : 
+                                        ''));
+                  
+                  const requesterFamilyCode = notification.data?.requesterFamilyCode || 
+                                           notification.data?.sender?.familyCode || 
+                                           '';
+                  
+                  return (
+                    <div key={notification.id} className="border-b border-gray-200">
+                      <AssociationRequestItem
+                        request={{
+                          ...notification, // Pass through all notification data
+                          id: notification.id,
+                          type: notification.type, // Ensure type is passed through
+                          message: notification.message, // Ensure message is passed through
+                          data: {
+                            ...notification.data, // Include all data from the notification
+                            senderId: requesterId,
+                            senderName: requesterName,
+                            senderFamilyCode: requesterFamilyCode,
+                            // Include target user info if available
+                            targetUserId: notification.data?.targetUserId,
+                            targetName: notification.data?.targetName,
+                            targetFamilyCode: notification.data?.targetFamilyCode || notification.data?.familyCode,
+                            requestType: 'family_association'
+                          },
+                          createdAt: notification.createdAt
+                        }}
+                        onAccept={() => handleAcceptRequest(notification)}
+                        onReject={() => handleRejectRequest(notification)}
+                        loading={processingRequest === notification.id}
+                      />
+                    </div>
+                  );
+                })}
 
-        <div className="px-5 py-3 border-t border-gray-200 text-center">
-          <div className="px-5 py-3 border-t border-gray-200 text-center">
+                {/* Other Notifications */}
+                {otherNotifications.length > 0 && (
+                  <div className="border-b border-gray-200 bg-gray-50 px-4 py-2">
+                    <h4 className="text-sm font-medium text-gray-500">Other Notifications</h4>
+                  </div>
+                )}
+                <ul className="divide-y divide-gray-200">
+                  {otherNotifications.map((notification) => (
+                    <li
+                      key={notification.id}
+                      className={`relative px-4 py-3 hover:bg-gray-50 ${!notification.read ? 'bg-blue-50' : ''}`}
+                      onClick={() => !notification.read && markAsRead(notification.id)}
+                    >
+                      <div className="flex items-start">
+                        <div
+                          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${notificationTypes[notification.type]?.color || 'from-gray-400 to-gray-300'}`}
+                        >
+                          {notificationTypes[notification.type]?.icon || <FiBell className="h-5 w-5 text-white" />}
+                        </div>
+                        <div className="ml-3 flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-gray-900">
+                              {notification.title || getNotificationType(notification.type)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(notification.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
+                          {!notification.read && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                                New
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+          
+          {/* Footer */}
+          <div className="border-t border-gray-200 p-4 text-center">
             <button
               onClick={() => fetchNotifications(true)}
-              className="bg-unset text-sm text-primary-600 hover:underline font-medium"
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
             >
               View all notifications
             </button>

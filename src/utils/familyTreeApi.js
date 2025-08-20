@@ -124,11 +124,12 @@ export async function fetchUserRelationships(userId) {
 
 // Add a spouse relationship
 export async function addSpouseRelationship(userId, spouseUserId) {
-  const res = await fetch(`/family/user/${userId}/add-spouse`, {
+  // Preserve signature, but route to association request workflow
+  const res = await fetch(`/family/request-association`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ spouseUserId }),
+    body: JSON.stringify({ targetUserId: spouseUserId }),
   });
-  if (!res.ok) throw new Error('Failed to add spouse relationship');
+  if (!res.ok) throw new Error('Failed to send association request');
   return await res.json();
-} 
+}

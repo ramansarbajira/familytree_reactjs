@@ -157,37 +157,30 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
         
         // Get all associated family codes
         const associatedCodes = getAssociatedCodes();
-        const familyCode = person.familyCode || (person.member && person.member.familyCode);
         
-        // If no family code is found, show error
-        if (!familyCode && associatedCodes.length === 0) {
+        // If no associated family codes, show error
+        if (associatedCodes.length === 0) {
             Swal.fire({
                 icon: 'info',
-                title: 'Family Tree Not Available',
-                text: 'No family tree found for this member.',
+                title: 'No Associated Family Tree',
+                text: 'This member is not associated with any other family trees.',
                 confirmButtonColor: '#3f982c',
             });
             return;
         }
         
-        // Combine all possible family codes (main + associated)
-        const allFamilyCodes = [
-            familyCode,
-            ...associatedCodes.filter(code => code && code !== familyCode)
-        ].filter(Boolean); // Remove any null/undefined values
-        
-        // If only one family code exists, navigate directly
-        if (allFamilyCodes.length === 1) {
-            navigate(`/family-tree/${allFamilyCodes[0]}`);
+        // If only one associated family code, navigate directly to it
+        if (associatedCodes.length === 1) {
+            navigate(`/family-tree/${associatedCodes[0]}`);
             return;
         }
         
-        // If multiple family codes, show a dropdown to select
+        // If multiple associated family codes, show a dropdown to select
         Swal.fire({
-            title: 'Select Family Tree',
-            text: 'This member is part of multiple family trees. Please select one to view:',
+            title: 'Select Associated Family Tree',
+            text: 'This member is associated with multiple family trees. Please select one to view:',
             input: 'select',
-            inputOptions: allFamilyCodes.reduce((acc, code) => {
+            inputOptions: associatedCodes.reduce((acc, code) => {
                 acc[code] = `Family: ${code}`;
                 return acc;
             }, {}),
@@ -327,18 +320,41 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             </div>
             {/* All info inside the card */}
             <div className="mt-1 w-full flex flex-col items-center justify-center">
-                <span 
-                    className="bg-white/90 px-2 py-0.5 rounded-full shadow text-gray-900 font-semibold border border-green-100 backdrop-blur-md tracking-wide text-center mb-1" 
-                    style={{
-                        lineHeight: '1.2', 
-                        fontSize: `${fontSizeName}px`, 
-                        maxWidth: memberCount > 50 ? '80px' : '120px', 
-                        overflowWrap: 'break-word', 
-                        wordBreak: 'break-word'
-                    }}
-                >
-                    {person.name}
-                </span>
+                <div className="flex flex-col items-center">
+                    <span 
+                        className="bg-white/90 px-2 py-0.5 rounded-full shadow text-gray-900 font-semibold border border-green-100 backdrop-blur-md tracking-wide text-center" 
+                        style={{
+                            lineHeight: '1.2', 
+                            fontSize: `${fontSizeName}px`, 
+                            maxWidth: memberCount > 50 ? '100px' : '140px', 
+                            overflowWrap: 'break-word', 
+                            wordBreak: 'break-word',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: 'block'
+                        }}
+                        title={person.name || [person.firstName, person.lastName].filter(Boolean).join(' ').trim() || 'Unnamed Family Member'}
+                    >
+                        {person.name || [person.firstName, person.lastName].filter(Boolean).join(' ').trim() || (language === 'tamil' ? 'பெயரில்லாத உறுப்பினர்' : 'Family Member')}
+                    </span>
+                    {relationshipText && !isEditingLabel && (
+                        <span 
+                            className="text-xs text-gray-600 font-medium mt-0.5" 
+                            style={{
+                                fontSize: `${fontSizeDetails}px`,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: '100%',
+                                display: 'block',
+                                textAlign: 'center'
+                            }}
+                        >
+                            ({relationshipText})
+                        </span>
+                    )}
+                </div>
                 {/* Show relationship code and label below name */}
                 {relationshipCode && (
                   <span className="details text-xs text-blue-700 text-center font-mono mb-1" style={{fontSize: `${fontSizeDetails}px`}}>
