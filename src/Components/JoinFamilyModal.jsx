@@ -29,13 +29,38 @@ const JoinFamilyModal = ({ isOpen, onClose, token, onFamilyJoined }) => {
       return;
     }
 
+    // Get the current user's family code
+    const currentUserResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/profile`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'accept': 'application/json'
+      }
+    });
+
+    if (!currentUserResponse.ok) {
+      throw new Error('Failed to fetch user profile');
+    }
+
+    const currentUserData = await currentUserResponse.json();
+    const currentFamilyCode = currentUserData.familyCode;
+
+    if (!currentFamilyCode) {
+      Swal.fire({
+        icon: 'error',
+        title: 'No Family Found',
+        text: 'You need to be a member of a family before you can associate with another family.',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/family/member/request-join`, {
+      // First, send the family join request
+      const joinResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/family/member/request-join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           memberId: userInfo.userId,
@@ -44,25 +69,60 @@ const JoinFamilyModal = ({ isOpen, onClose, token, onFamilyJoined }) => {
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to join family');
+      if (!joinResponse.ok) {
+        const errorData = await joinResponse.json();
+        throw new Error(errorData.message || 'Failed to send join request');
       }
 
-      const data = await response.json();
+      // Then, create a family association request
+      const associationResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: 'FAMILY_ASSOCIATION_REQUEST',
+          title: 'Family Association Request',
+          message: `${userInfo.firstName || 'A user'} wants to connect families`,
+          familyCode: familyCode.trim(),
+          referenceId: userInfo.userId,
+          data: {
+            senderId: userInfo.userId,
+            senderName: userInfo.firstName ? `${userInfo.firstName} ${userInfo.lastName || ''}`.trim() : 'A user',
+            senderFamilyCode: currentFamilyCode,
+            targetFamilyCode: familyCode.trim(),
+            requestType: 'family_association'
+          },
+          userIds: [] // This will be populated by the backend with admin users
+        }),
+      });
+
+      if (!associationResponse.ok) {
+        const errorData = await associationResponse.json();
+        console.error('Failed to create association request:', errorData);
+        // Don't fail the whole process if just the notification fails
+      }
+
+      const data = await joinResponse.json();
       
       Swal.fire({
         icon: 'success',
         title: 'Request Sent!',
-        text: 'Your request to join the family has been sent. Please wait for approval from the family administrator.',
+        html: `
+          <div class="text-left">
+            <p>Your request to join the family has been sent.</p>
+            <p class="mt-2">You'll be notified when the family administrator reviews your request.</p>
+            <p class="text-sm text-gray-600 mt-2">Note: This may take some time as the family administrator needs to approve the association between your families.</p>
+          </div>
+        `,
         confirmButtonText: 'OK',
         confirmButtonColor: '#4F46E5',
       }).then((result) => {
         if (result.isConfirmed) {
-          // Call the callback to refresh user data and close modal
           onFamilyJoined(data);
           onClose();
-          // Refresh user info and then reload page
+          // Refresh the page to update the UI
           window.location.reload();
         }
       });

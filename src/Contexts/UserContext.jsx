@@ -41,7 +41,7 @@ export const UserProvider = ({ children }) => {
     try {
       setUserLoading(true);
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/myProfile`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,

@@ -1,0 +1,205 @@
+import React, { useState, useEffect } from 'react';
+import { Bell, Loader2, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { useLanguage } from '../../Contexts/LanguageContext';
+import AssociationRequestItem from './AssociationRequestItem';
+import { getCurrentUserId } from '../../utils/auth';
+
+const AssociationRequests = () => {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const { language } = useLanguage();
+
+  useEffect(() => {
+    fetchAssociationRequests();
+  }, []);
+
+  const fetchAssociationRequests = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/notifications?type=FAMILY_ASSOCIATION_REQUEST`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'accept': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Filter for unread family association requests
+        const familyRequests = data.filter(n => 
+          !n.isRead && 
+          n.type === 'FAMILY_ASSOCIATION_REQUEST' &&
+          n.data?.requestType === 'family_association'
+        );
+        setRequests(familyRequests);
+      }
+    } catch (error) {
+      console.error('Error fetching association requests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Clear success/error messages after a delay
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
+
+  const handleResponse = async (notificationId, action) => {
+    try {
+      setProcessing(true);
+      setError(null);
+      setSuccess(null);
+      
+      const token = localStorage.getItem('access_token');
+      const userId = getCurrentUserId();
+      
+      if (!token || !userId) {
+        throw new Error('Please log in to respond to requests');
+      }
+
+      const requestId = parseInt(notificationId, 10);
+      if (isNaN(requestId)) {
+        throw new Error('Invalid request ID');
+      }
+      
+      // Get the full notification data
+      const notification = requests.find(req => req.id === notificationId);
+      if (!notification) {
+        throw new Error('Notification not found');
+      }
+      
+      // For family association requests, we need to include the family code
+      const requestData = {
+        notificationId: requestId,
+        action,
+      };
+      
+      // Add additional data for family association requests
+      if (notification.type === 'FAMILY_ASSOCIATION_REQUEST' && notification.data) {
+        requestData.senderId = notification.data.senderId;
+        requestData.senderFamilyCode = notification.data.senderFamilyCode;
+        requestData.targetFamilyCode = notification.familyCode;
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/notifications/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to process request');
+      }
+
+      // Update the UI by removing the handled request
+      setRequests(prev => prev.filter(req => req.id !== notificationId));
+      setSuccess(`Family association request ${action}ed successfully`);
+      
+    } catch (error) {
+      console.error(`Error processing request:`, error);
+      setError(error.message || 'An error occurred while processing your request');
+    } finally {
+      setProcessing(false);
+    }  
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <Loader2 className="animate-spin h-6 w-6 text-blue-500" />
+      </div>
+    );
+  }
+
+  if (requests.length === 0) {
+    return (
+      <div className="p-4 text-center text-gray-500">
+        {language === 'en' ? 'No pending association requests' : 'நிலுவையில் உள்ள இணைப்பு கோரிக்கைகள் இல்லை'}
+      </div>
+    );
+  }
+
+  // Create a handler function that will be called with the notification ID
+  const handleAccept = (notificationId) => handleResponse(notificationId, 'accept');
+  const handleReject = (notificationId) => handleResponse(notificationId, 'reject');
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setShowDropdown(!showDropdown)}
+        className="p-2 rounded-full hover:bg-gray-100 relative"
+        aria-label="Association requests"
+        aria-expanded={showDropdown}
+      >
+        <Bell className="w-6 h-6 text-gray-600" />
+        {requests.length > 0 && (
+          <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+            {requests.length}
+          </span>
+        )}
+      </button>
+
+      {showDropdown && (
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200">
+          <div className="p-3 border-b border-gray-200">
+            <h3 className="font-medium text-gray-800">Association Requests</h3>
+          </div>
+          
+          {/* Success/Error Messages */}
+          {success && (
+            <div className="p-3 bg-green-50 text-green-700 text-sm flex items-center">
+              <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+              {success}
+            </div>
+          )}
+          {error && (
+            <div className="p-3 bg-red-50 text-red-700 text-sm flex items-center">
+              <XCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+              {error}
+            </div>
+          )}
+          
+          <div className="max-h-96 overflow-y-auto">
+            {loading ? (
+              <div className="p-4 flex justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+              </div>
+            ) : requests.length === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                No pending requests
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {requests.map((request) => (
+                  <AssociationRequestItem
+                    key={request.id}
+                    request={request}
+                    onAccept={(id) => handleResponse(id, 'accept')}
+                    onReject={(id) => handleResponse(id, 'reject')}
+                    loading={processing}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AssociationRequests;
