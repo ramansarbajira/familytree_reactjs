@@ -160,13 +160,13 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
         
 
         // Handle cover photo - if new file is selected or existing is removed
-        if (coverPhotoFile) {
-            // New cover photo selected
-            formData.append('coverPhoto', coverPhotoFile);
-        } else if (mode === 'edit' && currentCoverPhotoUrl === null && albumData?.coverPhoto) {
-            // Existing cover photo was removed
-            formData.append('coverPhoto', 'REMOVE');
-        }
+if (coverPhotoFile) {
+    // New cover photo selected
+    formData.append('coverPhoto', coverPhotoFile);
+} else if (mode === 'edit' && !currentCoverPhotoUrl && albumData?.coverPhoto) {
+    // Existing cover photo was removed - send null to indicate removal
+    formData.append('coverPhoto', 'null'); // Send as string 'null' to be parsed by the backend
+}
 
         // Add removed image IDs for the backend to delete
         removedImageIds.forEach(id => {
