@@ -102,6 +102,17 @@ export async function updateRelationshipLabel(code, description, labels) {
   return await res.json();
 } 
 
+// Fetch associated family prefixes (spouse-connected)
+export async function fetchAssociatedFamilyPrefixes(userId) {
+  if (!userId) throw new Error('userId is required');
+  const res = await fetch(`/family/user/${userId}/associated-prefixes`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to fetch associated family prefixes');
+  return await res.json();
+}
+
 // Fetch all family codes (main + associated) for a user
 export async function fetchUserFamilyCodes(userId) {
   const res = await fetch(`/family/user/${userId}/families`, {

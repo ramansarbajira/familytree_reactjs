@@ -267,7 +267,7 @@ const ProfilePage = () => {
             setIsEditPostModalOpen(true);
         } catch (error) {
             console.error("Error fetching post for edit:", error);
-            alert("Failed to load post for editing.");
+            Swal.fire({ icon: 'error', title: 'Failed to load', text: 'Failed to load post for editing.' });
         }
     };
 

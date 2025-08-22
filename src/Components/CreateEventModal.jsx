@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiX, FiCalendar, FiClock, FiMapPin, FiFileText, FiImage, FiPlus, FiLoader, FiCheckCircle } from 'react-icons/fi';
 import { jwtDecode } from 'jwt-decode';
+import Swal from 'sweetalert2';
 
 const CreateEventModal = ({
   isOpen,
@@ -46,7 +47,7 @@ const CreateEventModal = ({
         const token = localStorage.getItem('access_token');
 
         if (!token) {
-          alert('No access token found.');
+          Swal.fire({ icon: 'warning', title: 'No access token', text: 'Please sign in again.' });
           return;
         }
 
@@ -54,7 +55,7 @@ const CreateEventModal = ({
 
         const uid = decoded.id || decoded.userId;
         if (!uid) {
-          alert('User ID not found in token.');
+          Swal.fire({ icon: 'error', title: 'User ID not found', text: 'Please sign in again.' });
           return;
         }
         setUserId(uid);
@@ -68,7 +69,7 @@ const CreateEventModal = ({
         if (!res.ok) {
           const errorText = await res.text();
           console.error('❌ User API failed:', errorText);
-          alert(`API Error: ${res.status} - ${errorText}`);
+          Swal.fire({ icon: 'error', title: 'API Error', text: `${res.status} - ${errorText}` });
           return;
         }
 
@@ -86,7 +87,7 @@ const CreateEventModal = ({
         }
       } catch (err) {
         console.error('💥 Fetch user error:', err);
-        alert(`Error fetching user data: ${err.message}`);
+        Swal.fire({ icon: 'error', title: 'Fetch failed', text: `Error fetching user data: ${err.message}` });
       }
     };
 
@@ -108,7 +109,7 @@ const CreateEventModal = ({
     setIsLoading(true);
 
     if (!userId || !familyCode) {
-      alert('User ID or Family Code missing.');
+      Swal.fire({ icon: 'warning', title: 'Missing info', text: 'User ID or Family Code missing.' });
       setIsLoading(false);
       return;
     }
@@ -142,7 +143,7 @@ const CreateEventModal = ({
       if (!response.ok) {
         const errText = await response.text();
         console.error('❌ Create event API error:', errText);
-        alert(`Create Event Error: ${response.status} - ${errText}`);
+        Swal.fire({ icon: 'error', title: 'Create Event Error', text: `${response.status} - ${errText}` });
         setIsLoading(false);
         return;
       }
@@ -154,7 +155,7 @@ const CreateEventModal = ({
 
     } catch (err) {
       console.error('💥 Error creating event:', err);
-      alert(`Something went wrong: ${err.message}`);
+      Swal.fire({ icon: 'error', title: 'Something went wrong', text: err.message });
     } finally {
       setIsLoading(false);
     }

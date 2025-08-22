@@ -56,13 +56,13 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
   const isLoading = loading || isAccepting || isRejecting;
 
   return (
-    <div className="p-4 hover:bg-gray-50 transition-colors duration-150">
+    <div className="p-4 hover:bg-green-50 transition-colors duration-150 border-l-4 border-green-400 bg-gradient-to-r from-green-50 to-white">
       <div className="flex items-start">
-        <div className="flex-shrink-0 bg-blue-100 rounded-full p-2">
+        <div className="flex-shrink-0 bg-green-100 rounded-full p-2 shadow-sm">
           {isFamilyJoinRequest ? (
-            <Users className="h-5 w-5 text-blue-600" />
+            <Users className="h-5 w-5 text-green-600" />
           ) : (
-            <UserPlus className="h-5 w-5 text-blue-600" />
+            <UserPlus className="h-5 w-5 text-green-600" />
           )}
         </div>
         
@@ -72,7 +72,7 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
               {message || (
                 isFamilyJoinRequest 
                   ? `${senderName} wants to join ${targetFamilyCode}`
-                  : `${senderName} wants to connect families`
+                  : `${senderName} wants to connect your family`
               )}
             </p>
             <span 
@@ -84,8 +84,8 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
           </div>
           
           {!isFamilyJoinRequest && senderFamilyCode && (
-            <p className="text-xs text-gray-500 mt-1">
-              Connect {senderFamilyCode} with {targetFamilyCode}
+            <p className="text-xs text-green-600 mt-1 font-medium">
+              Connect {senderFamilyCode} ↔ {targetFamilyCode}
             </p>
           )}
           
@@ -93,10 +93,10 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
             <button
               onClick={handleAccept}
               disabled={isLoading}
-              className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
+              className={`inline-flex items-center px-4 py-2 border border-transparent text-xs font-semibold rounded-lg shadow-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 ${
                 isLoading && !isAccepting 
                   ? 'bg-gray-300 cursor-not-allowed' 
-                  : 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
+                  : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500 hover:shadow-lg transform hover:scale-105'
               }`}
             >
               {isAccepting ? (
@@ -118,10 +118,10 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
             <button
               onClick={handleReject}
               disabled={isLoading}
-              className={`inline-flex items-center px-3 py-1.5 border text-xs font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
+              className={`inline-flex items-center px-4 py-2 border text-xs font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 ${
                 isLoading && !isRejecting
                   ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
-                  : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-blue-500'
+                  : 'border-red-300 text-red-700 bg-white hover:bg-red-50 focus:ring-red-500 hover:shadow-md transform hover:scale-105'
               }`}
             >
               {isRejecting ? (

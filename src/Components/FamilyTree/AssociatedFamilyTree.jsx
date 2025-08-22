@@ -152,7 +152,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
               tree={tree}
               isSelected={false}
               isNew={false}
-              viewOnly={true}
+              viewOnly={false}
             />
           ))}
       </div>

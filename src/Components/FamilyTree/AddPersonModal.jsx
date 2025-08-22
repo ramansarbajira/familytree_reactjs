@@ -3,6 +3,7 @@ import { getTranslation } from '../../utils/languageTranslations';
 import { useLanguage } from '../../Contexts/LanguageContext';
 import { X, UserPlus, Users, Edit, Plus, UserMinus, Camera, Save, ArrowLeft, Send } from 'lucide-react';
 import { fetchRelationships } from '../../utils/familyTreeApi';
+import Swal from 'sweetalert2';
 
 const PRIMARY_COLOR = '#3f982c';
 
@@ -53,7 +54,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
             setPhoneInvite(prev => ({ ...prev, result: { ...data, sameFamily }, loading: false }));
         } catch (err) {
             setPhoneInvite(prev => ({ ...prev, loading: false }));
-            alert('Lookup failed');
+            Swal.fire({ icon: 'error', title: 'Lookup failed', text: 'Please try again.' });
         }
     };
 
@@ -72,7 +73,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
             window.open(`https://wa.me/91${phoneInvite.phone}?text=${encodeURIComponent('Hi! Join our family tree: ' + inviteLink)}`, '_blank');
             setPhoneInvite({ phone: '', loading: false, result: null, sending: false });
         } catch (err) {
-            alert('Failed to send invite');
+            Swal.fire({ icon: 'error', title: 'Failed to send invite', text: 'Please try again.' });
             setPhoneInvite(prev => ({ ...prev, sending: false }));
         }
     };
@@ -80,7 +81,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
     const handleSendRequest = async () => {
         if (!phoneInvite.result?.exists || !phoneInvite.result?.user?.id) {
             console.error('Invalid user data for association request');
-            alert('Invalid user data for association request');
+            Swal.fire({ icon: 'warning', title: 'Invalid user data', text: 'Cannot send association request.' });
             return;
         }
         
@@ -126,22 +127,22 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
             // Show success message with person's name
             const requesterName = action.person?.name || 'You';
             const targetName = phoneInvite.result.user.name || 'the user';
-            const successMessage = `Association request sent to ${targetName} from ${requesterName}!`;
-            
-            // Display info message
+            const successMessage = `Association request sent to <b>${targetName}</b> from <b>${requesterName}</b>!`;
             const notificationMessage = `${requesterName} requested a family association with ${targetName}.`;
-            
-            alert(`${successMessage}
-            
-            They will receive this notification:
-            "${notificationMessage}"`);
-            
+
+            await Swal.fire({
+                icon: 'success',
+                title: 'Request Sent',
+                html: `${successMessage}<br/><br/><small>They will receive this notification:</small><br/><em>"${notificationMessage}"</em>`,
+                confirmButtonColor: PRIMARY_COLOR,
+            });
+
             // Refresh the page to update family tree data with new associations
             window.location.reload();
             onClose(); // Close the modal on success
         } catch (error) {
             console.error('Error sending request:', error);
-            alert(`Failed to send request: ${error.message || 'Please try again.'}`);
+            Swal.fire({ icon: 'error', title: 'Failed to send request', text: error.message || 'Please try again.' });
         } finally {
             setPhoneInvite(prev => ({ ...prev, requesting: false }));
         }
@@ -329,7 +330,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
             }
         });
         if (duplicate) {
-            alert('This user is already part of the family tree!');
+            Swal.fire({ icon: 'info', title: 'Already in tree', text: 'This user is already part of the family tree.' });
             return;
         }
         // Special handling for parents: handle both father and mother
@@ -378,7 +379,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
             });
             // Only proceed if we have at least one valid parent
             if (!hasValidParent) {
-                alert('Please fill in at least one parent\'s details. Select an existing member or add a new person.');
+                Swal.fire({ icon: 'warning', title: 'Missing details', text: 'Please fill in at least one parent\'s details.' });
                 return;
             }
             onAddPersons(parentPersons);
@@ -445,7 +446,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
         });
         // Only proceed if we have at least one valid person
         if (!hasValidPerson) {
-            alert('Please fill in at least one person\'s details. Select an existing member or add a new person.');
+            Swal.fire({ icon: 'warning', title: 'Missing details', text: 'Please fill in at least one person\'s details.' });
             return;
         }
         onAddPersons(persons);
