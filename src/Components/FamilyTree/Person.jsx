@@ -5,13 +5,20 @@ import { fetchCustomLabel } from '../../utils/fetchCustomLabel'; // <-- import t
 import { useFamilyTreeLabels } from '../../Contexts/FamilyTreeContext';
 import { useUser } from '../../Contexts/UserContext';
 import { FiEye } from 'react-icons/fi';
+import { fetchAssociatedFamilyPrefixes } from '../../utils/familyTreeApi';
 import Swal from 'sweetalert2';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
-const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSelected, currentUserId, currentFamilyId, viewOnly }) => {
+const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSelected, currentUserId, currentFamilyId, viewOnly, sourceRelationship }) => {
     // Dynamic sizing based on tree size
     const memberCount = tree ? tree.people.size : 0;
     const { userInfo } = useUser();
+    const { code } = useParams(); // Get current family code from URL
+    const navigate = useNavigate();
+    
+    // Get source relationship from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSourceRelationship = urlParams.get('source');
     
     const cardDimensions = useMemo(() => {
         if (memberCount > 100) {
@@ -69,9 +76,43 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
         return '';
     }, [isRoot, rootId, tree, person.id]);
 
-    // Use context to get label
+    // Determine if we're viewing birth family or associated family
+    const isViewingBirthFamily = useMemo(() => {
+        // If no code in URL, we're viewing user's birth family
+        if (!code) return true;
+        // If code matches user's birth family code, we're viewing birth family
+        if (code === userInfo?.familyCode) return true;
+        // Otherwise, we're viewing an associated family
+        return false;
+    }, [code, userInfo?.familyCode]);
+
+    // Enhanced relationship code display with proper family context
+    const displayRelationshipCode = useMemo(() => {
+        if (!relationshipCode) return '';
+        
+        // For birth family: show normal codes (F, M, B+, B-, etc.)
+        if (isViewingBirthFamily) {
+            return relationshipCode;
+        }
+        
+        // For associated family: use the source relationship from URL or prop
+        // If viewing from SS (Son's Son), all codes should be ASS+[original]
+        // If viewing from M (Mother), all codes should be AM+[original]
+        // If viewing from F (Father), all codes should be AF+[original]
+        
+        const sourceRel = urlSourceRelationship || sourceRelationship;
+        if (sourceRel) {
+            return `A${sourceRel}+${relationshipCode}`;
+        }
+        
+        // Fallback: use first character if no source relationship provided
+        const firstChar = relationshipCode.charAt(0);
+        return `A${firstChar}+${relationshipCode}`;
+    }, [relationshipCode, isViewingBirthFamily, urlSourceRelationship, sourceRelationship]);
+
+    // Use context to get label - use displayRelationshipCode for translation consistency
     const { getLabel, refreshLabels } = useFamilyTreeLabels();
-    const relationshipText = relationshipCode ? getLabel(relationshipCode) : '';
+    const relationshipText = displayRelationshipCode ? getLabel(displayRelationshipCode) : '';
 
     // Inline edit state for relationship label
     const [isEditingLabel, setIsEditingLabel] = useState(false);
@@ -88,7 +129,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
     const handleSaveLabel = async (e) => {
         e.stopPropagation();
         if (!currentUserId || !currentFamilyId) {
-            alert('User ID or Family Code missing. Cannot save label.');
+            Swal.fire({ icon: 'warning', title: 'Missing info', text: 'User ID or Family Code missing. Cannot save label.' });
             return;
         }
         const apiLanguage = language === 'tamil' ? 'ta' : language;
@@ -109,9 +150,9 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             });
             if (refreshLabels) refreshLabels();
             setIsEditingLabel(false);
-            alert('Label saved!');
+            Swal.fire({ icon: 'success', title: 'Saved', text: 'Label saved successfully.' });
         } catch (err) {
-            alert('Failed to save label');
+            Swal.fire({ icon: 'error', title: 'Save failed', text: 'Failed to save label.' });
         }
     };
 
@@ -151,12 +192,23 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
 
     const hasAssociatedTree = Boolean(person.memberId) || getAssociatedCodes().length > 0;
 
-    // Handler for viewing family tree
-    const handleViewAssociatedFamilyTree = (e) => {
+    // Handler for viewing family tree (uses backend prefixes)
+    const handleViewAssociatedFamilyTree = async (e) => {
         e.stopPropagation();
         
-        // Get all associated family codes
-        const associatedCodes = getAssociatedCodes();
+        // Fetch spouse-connected associated families via API (fallback to local field)
+        let associatedData = [];
+        try {
+            const uid = person.userId || person.memberId;
+            if (uid) {
+                associatedData = await fetchAssociatedFamilyPrefixes(uid);
+            }
+        } catch {}
+
+        // Convert to codes list; if API empty, derive from legacy field
+        const associatedCodes = associatedData.length
+            ? associatedData.map(d => `${d.prefix || ''}${d.prefix ? ' - ' : ''}${d.familyCode}`)
+            : getAssociatedCodes();
         
         // If no associated family codes, show error
         if (associatedCodes.length === 0) {
@@ -171,7 +223,9 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
         
         // If only one associated family code, navigate directly to it
         if (associatedCodes.length === 1) {
-            navigate(`/family-tree/${associatedCodes[0]}`);
+            const firstCode = associatedCodes[0].split(' - ').pop();
+            // Pass the current person's relationship code as source relationship
+            navigate(`/family-tree/${firstCode}?source=${encodeURIComponent(relationshipCode || 'UNKNOWN')}`);
             return;
         }
         
@@ -180,8 +234,9 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             title: 'Select Associated Family Tree',
             text: 'This member is associated with multiple family trees. Please select one to view:',
             input: 'select',
-            inputOptions: associatedCodes.reduce((acc, code) => {
-                acc[code] = `Family: ${code}`;
+            inputOptions: associatedCodes.reduce((acc, entry) => {
+            const [prefixLabel, code] = entry.split(' - ').length === 2 ? entry.split(' - ') : ['', entry];
+            acc[entry] = prefixLabel ? `${prefixLabel} → ${code}` : `Family: ${code}`;
                 return acc;
             }, {}),
             inputPlaceholder: 'Select a family tree',
@@ -191,7 +246,11 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             confirmButtonText: 'View Tree'
         }).then((result) => {
             if (result.isConfirmed && result.value) {
-                navigate(`/family-tree/${result.value}`);
+                // Extract familyCode after optional prefix label
+                const parts = result.value.split(' - ');
+                const selectedCode = parts.length === 2 ? parts[1] : parts[0];
+                // Pass the current person's relationship code as source relationship
+                navigate(`/family-tree/${selectedCode}?source=${encodeURIComponent(relationshipCode || 'UNKNOWN')}`);
             }
         });
     };
@@ -201,7 +260,6 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
     const cardOpacity = isLargeTree ? 0.95 : 1;
     const shadowIntensity = isLargeTree ? 0.05 : 0.08;
 
-    const navigate = useNavigate();
 
     return (
         <div
@@ -264,13 +322,15 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 <button
                     className="absolute top-1 left-1 w-6 h-6 bg-white/80 hover:bg-green-100 text-green-700 rounded-full flex items-center justify-center shadow-md transition-all duration-200 z-10 border border-green-200"
                     onClick={handleViewAssociatedFamilyTree}
-                    title="View Associated Family Tree"
+                    title={`View Associated Family Tree${hasAssociatedTree ? '' : ' (No associated families)'}`}
                     style={{
                         width: '24px',
                         height: '24px',
                         top: memberCount > 50 ? '2px' : '8px',
                         left: memberCount > 50 ? '2px' : '8px',
+                        opacity: hasAssociatedTree ? 1 : 0.3
                     }}
+                    disabled={!hasAssociatedTree}
                 >
                     <FiEye size={16} />
                 </button>
@@ -338,35 +398,14 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                     >
                         {person.name || [person.firstName, person.lastName].filter(Boolean).join(' ').trim() || (language === 'tamil' ? 'பெயரில்லாத உறுப்பினர்' : 'Family Member')}
                     </span>
-                    {relationshipText && !isEditingLabel && (
-                        <span 
-                            className="text-xs text-gray-600 font-medium mt-0.5" 
-                            style={{
-                                fontSize: `${fontSizeDetails}px`,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                maxWidth: '100%',
-                                display: 'block',
-                                textAlign: 'center'
-                            }}
-                        >
-                            ({relationshipText})
-                        </span>
-                    )}
-                </div>
+                                    </div>
                 {/* Show relationship code and label below name */}
                 {relationshipCode && (
                   <span className="details text-xs text-blue-700 text-center font-mono mb-1" style={{fontSize: `${fontSizeDetails}px`}}>
-                    {relationshipCode}
+                    {displayRelationshipCode}
                   </span>
                 )}
-                {relationshipText && !isEditingLabel && (
-                  <span className="details text-xs text-gray-600 text-center font-medium mb-1" style={{fontSize: `${fontSizeDetails}px`}}>
-                    {relationshipText}
-                  </span>
-                )}
-                <span 
+                                <span 
                     className="details text-xs text-gray-600 text-center font-medium mb-1" 
                     style={{fontSize: `${fontSizeDetails}px`}}
                 >
@@ -375,7 +414,11 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 {/* Hide edit label in viewOnly mode */}
                 {relationshipText && !isEditingLabel && !viewOnly && (
                     <span 
-                        className="relationship inline-block px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold text-center tracking-wide shadow-sm mt-1 cursor-pointer hover:bg-green-200 transition"
+                        className={`relationship inline-block px-2 py-0.5 rounded-full font-semibold text-center tracking-wide shadow-sm mt-1 cursor-pointer transition ${
+                            isViewingBirthFamily 
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                                : 'bg-green-200 text-green-800 hover:bg-green-300 border border-green-400'
+                        }`}
                         style={{
                             fontSize: `${fontSizeRelationship}px`, 
                             maxWidth: memberCount > 50 ? '60px' : '80px', 

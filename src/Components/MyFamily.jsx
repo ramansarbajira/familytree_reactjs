@@ -4,6 +4,7 @@ import FamilyView from '../Components/FamilyView'; // The new FamilyView compone
 import NoFamilyView from '../Components/NoFamilyView'; // The new NoFamilyView component
 import { useNavigate } from 'react-router-dom';
 import ProfileFormModal from '../Components/ProfileFormModal'; // Re-use for creating/editing family
+import Swal from 'sweetalert2';
 
 const FamilyHubPage = () => {
   const navigate = useNavigate();
@@ -73,7 +74,12 @@ const FamilyHubPage = () => {
 
   const handleJoinFamily = () => {
     // Implement logic for joining family, e.g., open a different modal
-    alert("Join Family functionality coming soon!");
+    Swal.fire({
+      icon: 'info',
+      title: 'Coming soon',
+      text: 'Join Family functionality coming soon!',
+      confirmButtonColor: '#3b82f6',
+    });
   };
 
   const handleFamilyCreated = (newFamilyDetails) => {
@@ -93,7 +99,12 @@ const FamilyHubPage = () => {
     };
     setFamilyData(mockCreatedFamily);
     setIsCreateFamilyModalOpen(false);
-    alert(`Family "${newFamilyDetails.familyName}" created successfully!`);
+    Swal.fire({
+      icon: 'success',
+      title: 'Family created',
+      text: `Family "${newFamilyDetails.familyName}" created successfully!`,
+      confirmButtonColor: '#16a34a',
+    });
   };
 
   // Handlers for FamilyView actions (passed down to FamilyView component)
@@ -102,13 +113,31 @@ const FamilyHubPage = () => {
   };
 
   const handleEditFamily = () => {
-    alert("Edit family profile functionality!");
+    Swal.fire({
+      icon: 'info',
+      title: 'Edit Family',
+      text: 'Edit family profile functionality!',
+    });
     // You might want to open the same ProfileFormModal in 'edit' mode here
   };
 
   const handleShareFamilyCode = () => {
-    navigator.clipboard.writeText(familyData.familyCode);
-    alert(`Family Code "${familyData.familyCode}" copied to clipboard!`);
+    navigator.clipboard.writeText(familyData.familyCode)
+      .then(() => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Copied!',
+          text: `Family Code "${familyData.familyCode}" copied to clipboard!`,
+          confirmButtonColor: '#16a34a',
+        });
+      })
+      .catch(() => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Copy failed',
+          text: 'Unable to copy to clipboard. Please try manually.',
+        });
+      });
   };
 
   return (

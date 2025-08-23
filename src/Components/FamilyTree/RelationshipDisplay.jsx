@@ -4,6 +4,7 @@ import { useLanguage } from '../../Contexts/LanguageContext';
 import RelationshipCalculator from '../../utils/relationshipCalculator';
 import { useFamilyTreeLabels } from '../../Contexts/FamilyTreeContext';
 import { updateRelationshipLabel } from '../../utils/familyTreeApi';
+import Swal from 'sweetalert2';
 
 const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
   const { language, changeLanguage } = useLanguage();
@@ -71,7 +72,7 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
       // Optionally, trigger a refresh here
       window.location.reload();
     } catch (err) {
-      alert('Failed to update label');
+      Swal.fire({ icon: 'error', title: 'Update failed', text: 'Failed to update label' });
     }
     setUpdating(false);
   };

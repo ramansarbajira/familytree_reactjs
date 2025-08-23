@@ -50,7 +50,8 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
         time: new Date(n.createdAt).toLocaleString(),
         read: n.isRead,
         data: n.data || {},
-        createdAt: n.createdAt
+        createdAt: n.createdAt,
+        triggeredBy: n.triggeredBy,
       }));
 
       setNotifications(formatted);
@@ -133,8 +134,7 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
         },
         body: JSON.stringify({
           notificationId: notification.id,
-          action: 'accept',
-          userId: notification.triggeredBy
+          action: 'accept'
         })
       });
 
@@ -167,14 +167,13 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
         },
         body: JSON.stringify({
           notificationId: notification.id,
-          action: 'reject',
-          userId: notification.triggeredBy
+          action: 'reject'
         }),
       });
 
       if (response.ok) {
         // Remove the processed notification
-        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+        setNotifications(prev => prev.filter(n => n.id !== notification.id));
         if (onNotificationCountUpdate) {
           onNotificationCountUpdate();
         }
@@ -243,15 +242,13 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
                                    notification.sender?.id || 
                                    notification.data?.sender?.id;
                   
-                  const requesterName = notification.data?.requesterName || 
-                                     (notification.data?.sender?.name || 
-                                      (notification.sender?.name ? 
-                                        `${notification.sender.name.firstName || ''} ${notification.sender.name.lastName || ''}`.trim() : 
-                                        ''));
+                  const requesterName = notification.data?.senderName || 
+                                     notification.data?.requesterName || 
+                                     'Someone';
                   
-                  const requesterFamilyCode = notification.data?.requesterFamilyCode || 
-                                           notification.data?.sender?.familyCode || 
-                                           '';
+                  const requesterFamilyCode = notification.data?.senderFamilyCode || 
+                                           notification.data?.requesterFamilyCode || 
+                                           'Their Family';
                   
                   return (
                     <div key={notification.id} className="border-b border-gray-200">

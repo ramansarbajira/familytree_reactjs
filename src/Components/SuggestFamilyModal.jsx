@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import FamilyPreviewModal from "./FamilyPreviewModal";
 import { jwtDecode } from 'jwt-decode';
+import Swal from 'sweetalert2';
 
 // Helper to fetch user's first name from profile
 async function fetchUserFirstName(userId, accessToken) {
@@ -66,9 +67,14 @@ const SuggestFamilyModal = ({
           userIds: adminIds,
         }),
       });
-      alert('Join request sent to family admins!');
+      await Swal.fire({
+        icon: 'success',
+        title: 'Join Request Sent',
+        text: 'Your request was sent to the family admins.',
+        confirmButtonColor: '#3f982c'
+      });
     } catch (err) {
-      alert('Failed to send join request.');
+      Swal.fire({ icon: 'error', title: 'Failed to send join request', text: 'Please try again.' });
     }
   };
 

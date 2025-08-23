@@ -11,6 +11,7 @@ import FamilyOverView from '../Components/FamilyOverView';
 import { FiLoader } from 'react-icons/fi';
 import SuggestFamilyModal from '../Components/SuggestFamilyModal';
 import { jwtDecode } from 'jwt-decode';
+import Swal from 'sweetalert2';
 
 const FamilyHubPage = () => {
   const navigate = useNavigate();
@@ -166,7 +167,7 @@ const FamilyHubPage = () => {
           setTimeout(() => setShowCopyMessage(false), 2000);
         })
         .catch(() => {
-          alert('Copy failed!');
+          Swal.fire({ icon: 'error', title: 'Copy failed', text: 'Unable to copy to clipboard. Please try manually.' });
         });
     }
   };
