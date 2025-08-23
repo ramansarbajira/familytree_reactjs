@@ -44,7 +44,7 @@ const FamilyMemberListing = () => {
     } catch {
       return;
     }
-    fetch(`${import.meta.env.VITE_API_BASE_URL}/user/${userId}`, {
+    fetch(`${import.meta.env.VITE_API_BASE_URL}/user/profile/${userId}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())

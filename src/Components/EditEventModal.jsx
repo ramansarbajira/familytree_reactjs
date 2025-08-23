@@ -66,7 +66,7 @@ const EditEventModal = ({
         }
         setUserId(uid);
 
-        const userEndpoint = `${apiBaseUrl}/user/${uid}`;
+        const userEndpoint = `${apiBaseUrl}/user/profile/${uid}`;
         const res = await fetch(userEndpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
