@@ -1,66 +1,41 @@
 // BottomNavBar.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faUser,
-  faCalendarAlt,
-  faSitemap,
-  faHourglassHalf,
-  faGift,
-} from '@fortawesome/free-solid-svg-icons';
-
-const iconMap = {
-  profile: faUser,
-  upcomingEvent: faCalendarAlt,
-  familyTree: faSitemap,
-  pendingApprovals: faHourglassHalf,
-  gifts: faGift,
-};
+import { FiHome, FiCalendar, FiShare2, FiGift, FiUser } from 'react-icons/fi';
 
 const BottomNavBar = ({ activeTab, setActiveTab }) => {
   const navigate = useNavigate();
 
-  const bottomMenuItems = [
-    { id: 'profile', label: 'Profile', route: '/myprofile' },
-    { id: 'upcomingEvent', label: 'Events', route: '/upcoming-events' },
-    { id: 'familyTree', label: 'Tree', route: '/family-tree' },
-    { id: 'pendingApprovals', label: 'Approvals', route: '/pending-approvals' },
-    { id: 'gifts', label: 'Gifts', route: '/gifts' },
+  const tabs = [
+    { id: 'home', label: 'Home', icon: <FiHome size={20} />, path: '/dashboard' },
+    { id: 'upcomingEvent', label: 'Events', icon: <FiCalendar size={20} />, path: '/events' },
+    { id: 'postsStories', label: 'Posts', icon: <FiShare2 size={20} />, path: '/posts-and-feeds' },
+    { id: 'gifts', label: 'Gifts', icon: <FiGift size={20} />, path: '/gifts-memories' },
+    { id: 'profile', label: 'Profile', icon: <FiUser size={20} />, path: '/myprofile' },
   ];
 
   const handleItemClick = (item) => {
     setActiveTab(item.id);
-    if (item.route) {
-      navigate(item.route);
+    if (item.path) {
+      navigate(item.path);
     }
   };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-primary z-50 w-full max-w-full">
       <div className="flex justify-between items-center px-2 py-1">
-        {bottomMenuItems.map((item) => {
+        {tabs.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <div
               key={item.id}
               onClick={() => handleItemClick(item)}
-              className="flex flex-col items-center justify-center text-white cursor-pointer"
+              className="flex flex-col items-center justify-center flex-1 py-1 cursor-pointer"
             >
-              <div
-                className={`flex items-center justify-center p-[6px] text-sm transition-all duration-150 ease-in-out ${
-                  isActive
-                    ? 'text-primary-800 rounded-md'
-                    : 'text-white'
-                }`}
-              >
-                <FontAwesomeIcon icon={iconMap[item.id]} className="text-base" />
+              <div className={`p-1 ${isActive ? 'text-white' : 'text-white/80'}`}>
+                {item.icon}
               </div>
-              <span
-                className={`mt-0.5 text-[10px] ${
-                  isActive ? 'text-white font-bold' : 'font-medium text-white/80'
-                }`}
-              >
+              <span className={`text-xs mt-0.5 ${isActive ? 'text-white font-semibold' : 'text-white/80'}`}>
                 {item.label}
               </span>
             </div>

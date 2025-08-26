@@ -19,7 +19,24 @@ import ProfileFormModal from './ProfileFormModal';
 import NotificationPanel from './NotificationPanel';
 import { getNotificationType, getNotificationActions } from '../utils/notifications';
 
-const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
+const Layout = ({ children }) => {
+  const [activeTab, setActiveTab] = useState('profile'); // Default to 'profile' tab
+  const location = useLocation();
+
+  // Sync activeTab with current route
+  useEffect(() => {
+    const pathToTabId = {
+      '/dashboard': 'home',
+      '/myprofile': 'profile',
+      '/events': 'upcomingEvent',
+      '/upcoming-events': 'upcomingEvent',
+      '/posts-and-feeds': 'postsStories',
+      '/gifts': 'gifts',
+      '/gifts-memories': 'gifts',
+    };
+    const tabId = pathToTabId[location.pathname];
+    if (tabId) setActiveTab(tabId);
+  }, [location.pathname]);
   const [token, setToken] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -31,7 +48,6 @@ const Layout = ({ children, activeTab = 'home', setActiveTab }) => {
   const profileRef = useRef(null);
   
   const navigate = useNavigate();
-  const location = useLocation(); // Add this line
 
   useEffect(() => {
       const storedToken = localStorage.getItem('access_token');

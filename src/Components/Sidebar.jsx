@@ -16,7 +16,7 @@ import { RiGitMergeLine } from 'react-icons/ri';
 import { FaTimes } from 'react-icons/fa';
 import { useUser } from '../Contexts/UserContext';
 
-const Sidebar = ({ isMobile, onCloseMobile }) => {
+const Sidebar = ({ isMobile, onCloseMobile, setActiveTab, activeTab }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedParents, setExpandedParents] = useState({});
@@ -132,6 +132,21 @@ const Sidebar = ({ isMobile, onCloseMobile }) => {
     }
 
     if (item.route) {
+      // Sync with bottom nav tab if applicable
+      if (setActiveTab) {
+        // Map sidebar menu ids to bottom nav tab ids
+        const routeToTabId = {
+          '/myprofile': 'profile',
+          '/upcoming-events': 'upcomingEvent',
+          '/events': 'upcomingEvent',
+          '/posts-and-feeds': 'postsStories',
+          '/pending-approvals': 'pendingApprovals',
+          '/gifts': 'gifts',
+          '/gifts-memories': 'gifts',
+        };
+        const tabId = routeToTabId[item.route];
+        if (tabId) setActiveTab(tabId);
+      }
       navigate(item.route);
     }
 

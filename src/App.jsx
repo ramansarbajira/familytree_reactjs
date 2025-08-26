@@ -65,11 +65,14 @@ function App() {
           <Route path="/associated-family-tree/:code" element={<PrivateRoute><LanguageProvider><FamilyTreeProvider><AssociatedFamilyTreePage /></FamilyTreeProvider></LanguageProvider></PrivateRoute>} />
           <Route path="/associated-family-tree-user/:userId" element={<PrivateRoute><LanguageProvider><FamilyTreeProvider><AssociatedFamilyTreePage /></FamilyTreeProvider></LanguageProvider></PrivateRoute>} />
 
-          <Route path ="/pending-request" element={<PrivateRoute><LanguageProvider><PendingFamilyRequests /></LanguageProvider></PrivateRoute>} />
+          <Route path="/pending-request" element={<PrivateRoute><LanguageProvider><PendingFamilyRequests /></LanguageProvider></PrivateRoute>} />
+          <Route path="/pending-approvals" element={<PrivateRoute><LanguageProvider><PendingFamilyRequests /></LanguageProvider></PrivateRoute>} />
           <Route path="/posts-and-feeds" element={<PrivateRoute><LanguageProvider><PostsAndFeedsPage /></LanguageProvider></PrivateRoute>} />
           <Route path="/family-gallery" element={<PrivateRoute><LanguageProvider><FamilyGalleryPage /></LanguageProvider></PrivateRoute>} />
           <Route path="/gifts-memories" element={<PrivateRoute><LanguageProvider><GiftListingPage /></LanguageProvider></PrivateRoute>} />
+          <Route path="/gifts" element={<PrivateRoute><LanguageProvider><GiftListingPage /></LanguageProvider></PrivateRoute>} />
           <Route path="/events" element={<PrivateRoute><LanguageProvider><EventsPage /></LanguageProvider></PrivateRoute>} />
+          <Route path="/upcoming-events" element={<PrivateRoute><LanguageProvider><EventsPage /></LanguageProvider></PrivateRoute>} />
           <Route path="/orders" element={<PrivateRoute><AdminRoute><LanguageProvider><OrderManagementPage /></LanguageProvider></AdminRoute></PrivateRoute>} />
           <Route path="/suggestion-approving" element={<PrivateRoute><LanguageProvider><SuggestionApproving /></LanguageProvider></PrivateRoute>} />
 
