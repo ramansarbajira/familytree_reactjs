@@ -139,7 +139,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    relationshipKey: relationshipCode,
+                    relationshipKey: displayRelationshipCode,
                     language: apiLanguage,
                     custom_label: editLabelValue,
                     creatorId: currentUserId, // FIXED: use correct param name
