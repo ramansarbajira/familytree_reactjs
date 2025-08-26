@@ -63,8 +63,8 @@ const Login = () => {
       const data = await response.json();
       localStorage.clear();
       localStorage.setItem('access_token', data.accessToken);
-      localStorage.setItem('userInfo', JSON.stringify(data.user)); // <-- ADD THIS LINE
-      navigate('/myprofile');
+      localStorage.setItem('userInfo', JSON.stringify(data.user));
+      navigate('/dashboard'); // Redirect to home page after login
     } catch (error) {
       setApiError('Login failed. Please check your network or credentials.');
     } finally {
