@@ -83,7 +83,7 @@ export async function saveFamilyTree(people, familyCode) {
 
 // Fetch all relationships with multilingual descriptions
 export async function fetchRelationships() {
-  const res = await fetch('/api/relationships', {
+  const res = await fetch(`${API_BASE}/relationships`, {
     method: 'GET',
     headers: authHeaders(),
   });

@@ -363,7 +363,7 @@ const OnBoarding = () => {
       
       try {
         setUserLoading(true);
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/${userId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/profile/${userId}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

@@ -122,9 +122,10 @@ const FamilyMemberListing = () => {
 
   const fetchMemberDetails = async (userId) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/profile/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
 

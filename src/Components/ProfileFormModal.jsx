@@ -104,8 +104,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
 
           if (!sourceDataRaw) return;
           
-
-          
           // Handle children names from either raw.childrenNames or individual childName fields
           let childrenNames = [];
           if (sourceDataRaw.childrenNames) {
@@ -147,48 +145,67 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
             }
           }
 
+          // Helper function to safely get string values
+          const safeString = (value) => value ? String(value) : '';
+          const safeNumber = (value) => value ? Number(value) : 0;
+
           const newFormData = {
             ...initialFormData,
             ...sourceDataRaw,
             // Handle raw nested data if it exists
             ...(sourceDataRaw.raw || {}),
+            // Ensure all fields have proper default values to prevent undefined
+            email: sourceDataRaw.email || '',
+            mobile: mobile || '',
+            firstName: sourceDataRaw.firstName || '',
+            lastName: sourceDataRaw.lastName || '',
+            gender: sourceDataRaw.gender || '',
+            address: sourceDataRaw.address || '',
+            maritalStatus: sourceDataRaw.maritalStatus || '',
+            spouseName: sourceDataRaw.spouseName || '',
+            fatherName: sourceDataRaw.fatherName || '',
+            motherName: sourceDataRaw.motherName || '',
+            caste: sourceDataRaw.caste || '',
+            kuladevata: sourceDataRaw.kuladevata || '',
+            region: sourceDataRaw.region || '',
+            hobbies: sourceDataRaw.hobbies || '',
+            likes: sourceDataRaw.likes || '',
+            dislikes: sourceDataRaw.dislikes || '',
+            favoriteFoods: sourceDataRaw.favoriteFoods || '',
+            bio: sourceDataRaw.bio || '',
             dob: sourceDataRaw.dob ? new Date(sourceDataRaw.dob).toISOString().split('T')[0] : '',
             marriageDate: sourceDataRaw.marriageDate
               ? new Date(sourceDataRaw.marriageDate).toISOString().split('T')[0]
               : '',
             childrenNames,
-            childrenCount: sourceDataRaw.childrenCount || childrenNames.length,
+            childrenCount: sourceDataRaw.childrenCount || childrenNames.length || 0,
             profileImageUrl: sourceDataRaw.profileUrl || sourceDataRaw.profile || '',
             profileImageFile: null,
             familyCode: sourceDataRaw.familyCode || (sourceDataRaw.raw?.familyMember?.familyCode || ''),
             countryCode,
-            mobile,
-            status: sourceDataRaw.status ? String(sourceDataRaw.status) : '1',
-            role: sourceDataRaw.role ? String(sourceDataRaw.role) : '1',
-            religionId: sourceDataRaw.religionId 
-              ? String(sourceDataRaw.religionId) 
-              : sourceDataRaw.raw?.userProfile?.religionId
-              ? String(sourceDataRaw.raw.userProfile.religionId)
-              : '',
-            languageId: sourceDataRaw.languageId
-              ? String(sourceDataRaw.languageId)
-              : sourceDataRaw.motherTongue
-              ? String(sourceDataRaw.motherTongue)
-              : sourceDataRaw.raw?.userProfile?.languageId
-              ? String(sourceDataRaw.raw.userProfile.languageId)
-              : '',
-            gothramId: sourceDataRaw.gothramId
-              ? String(sourceDataRaw.gothramId)
-              : sourceDataRaw.gothram
-              ? String(sourceDataRaw.gothram)
-              : sourceDataRaw.raw?.userProfile?.gothramId
-              ? String(sourceDataRaw.raw.userProfile.gothramId)
-              : sourceDataRaw.raw?.gothramId
-              ? String(sourceDataRaw.raw.gothramId)
-              : '',
+            status: safeString(sourceDataRaw.status || '1'),
+            role: safeString(sourceDataRaw.role || '1'),
+            religionId: safeString(
+              sourceDataRaw.religionId || 
+              sourceDataRaw.raw?.userProfile?.religionId || 
+              ''
+            ),
+            languageId: safeString(
+              sourceDataRaw.languageId ||
+              sourceDataRaw.motherTongue ||
+              sourceDataRaw.raw?.userProfile?.languageId ||
+              ''
+            ),
+            gothramId: safeString(
+              sourceDataRaw.gothramId ||
+              sourceDataRaw.gothram ||
+              sourceDataRaw.raw?.userProfile?.gothramId ||
+              sourceDataRaw.raw?.gothramId ||
+              ''
+            ),
+            // Add age calculation here to prevent the loop
+            age: sourceDataRaw.age ? String(sourceDataRaw.age) : '',
           };
-
-
 
           setFormData(newFormData);
           lastMemberDataRef.current = { ...sourceDataRaw };
@@ -211,25 +228,26 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     }
   }, [isOpen, mode, memberData, userInfo]);
 
-  //console.log(formData);
-
-  // Effect to calculate age based on DOB
+  // FIXED: Age calculation useEffect - removed formData.age from dependencies
   useEffect(() => {
     if (formData.dob) {
       const birthDate = new Date(formData.dob);
       const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
+        calculatedAge--;
       }
-      if (formData.age !== age.toString()) {
-        setFormData((prevData) => ({ ...prevData, age: age.toString() }));
+      
+      // Only update if the calculated age is different from current formData.age
+      const ageString = calculatedAge.toString();
+      if (formData.age !== ageString) {
+        setFormData((prevData) => ({ ...prevData, age: ageString }));
       }
     } else if (formData.age !== '') {
       setFormData((prevData) => ({ ...prevData, age: '' }));
     }
-  }, [formData.dob, formData.age]);
+  }, [formData.dob]); // Only depend on dob, not age
 
   // Enhanced fetchDropdownData function with error handling
   const fetchDropdownData = async () => {
@@ -277,39 +295,36 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     }
   }, [isOpen]);
 
-  // Effect to update form data when dropdown data is loaded
+  // FIXED: Improved dropdown data effect to prevent unnecessary updates
   useEffect(() => {
     if (!dropdownData.loading && dropdownData.gothrams.length > 0 && (mode === 'edit-profile' || mode === 'edit-member')) {
-      // Ensure the selected values are properly set once dropdown data is loaded
-      setFormData(prevData => {
-        const updatedData = { ...prevData };
-        
-        // Update gothramId if it exists but might not be properly set
-        if (prevData.gothramId && !dropdownData.gothrams.find(g => String(g.id) === String(prevData.gothramId))) {
-          // If the current gothramId doesn't match any option, try to find it in the member data
-          const sourceDataRaw = mode === 'edit-profile' ? userInfo : memberData;
-          if (sourceDataRaw) {
-            const gothramId = sourceDataRaw.gothramId 
-              ? String(sourceDataRaw.gothramId)
-              : sourceDataRaw.gothram
-              ? String(sourceDataRaw.gothram)
-              : sourceDataRaw.raw?.userProfile?.gothramId
-              ? String(sourceDataRaw.raw.userProfile.gothramId)
-              : sourceDataRaw.raw?.gothramId
-              ? String(sourceDataRaw.raw.gothramId)
-              : '';
-            
-            if (gothramId && dropdownData.gothrams.find(g => String(g.id) === gothramId)) {
-              updatedData.gothramId = gothramId;
-            }
-          }
-        }
-        
-        return updatedData;
-      });
-    }
-  }, [dropdownData.loading, dropdownData.gothrams, mode, userInfo, memberData, formData.gothramId]);
+      const sourceDataRaw = mode === 'edit-profile' ? userInfo : memberData;
+      if (!sourceDataRaw) return;
 
+      // Only update if the current gothramId is empty or invalid
+      const currentGothramId = formData.gothramId;
+      const isValidGothram = currentGothramId && dropdownData.gothrams.find(g => String(g.id) === String(currentGothramId));
+      
+      if (!isValidGothram) {
+        const gothramId = String(
+          sourceDataRaw.gothramId || 
+          sourceDataRaw.gothram ||
+          sourceDataRaw.raw?.userProfile?.gothramId ||
+          sourceDataRaw.raw?.gothramId ||
+          ''
+        );
+        
+        if (gothramId && dropdownData.gothrams.find(g => String(g.id) === gothramId)) {
+          setFormData(prevData => ({
+            ...prevData,
+            gothramId
+          }));
+        }
+      }
+    }
+  }, [dropdownData.loading, dropdownData.gothrams.length, mode]); // Removed formData.gothramId from deps
+
+  // Rest of your component methods remain the same...
   const validate = () => {
     const newErrors = {};
 
@@ -320,7 +335,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
       newErrors.email = 'Invalid email address';
     }
 
-    
     if (mode === 'add' && !formData.password.trim()) {
       newErrors.password = 'Password is required';
     }
@@ -330,7 +344,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.gender) newErrors.gender = 'Gender is required';
     if (!formData.dob) newErrors.dob = 'Date of birth is required';
-
 
     // Family Information Validation
     if (!formData.maritalStatus) newErrors.maritalStatus = 'Marital status is required';
@@ -356,7 +369,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     const { name, value } = e.target;
     setFormData((prevData) => ({
       ...prevData,
-      [name]: value,
+      [name]: value || '', // Ensure value is never undefined
     }));
 
     setErrors((prev) => {
@@ -376,8 +389,8 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
 
     setFormData(prev => ({
       ...prev,
-      [fieldName]: mobile,
-      countryCode: dialCode  // store as 'countryCode', not 'mobileCountryCode' or 'loginCountryCode'
+      [fieldName]: mobile || '', // Ensure never undefined
+      countryCode: dialCode
     }));
 
     setErrors(prev => {
@@ -388,9 +401,8 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
   };
 
   const getFullMobile = (countryCode, mobile) => {
-    return `${countryCode.replace('+', '')}${mobile}`;
+    return `${countryCode.replace('+', '')}${mobile || ''}`;
   };
-
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -475,18 +487,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
         }
       }
     });
-
-    // if (formData.maritalStatus === 'Married' && formData.childrenCount > 0) {
-    //   const childrenNames = [];
-    //   for (let i = 0; i < formData.childrenCount; i++) {
-    //     if (formData[`childName${i}`]) {
-    //       childrenNames.push(formData[`childName${i}`]);
-    //     }
-    //   }
-    //   if (childrenNames.length > 0) {
-    //     formDataToSend.append('childrenNames', JSON.stringify(childrenNames));
-    //   }
-    // }
     
     if (!formDataToSend.has('familyCode') && userInfo?.familyCode) {
       formDataToSend.append('familyCode', userInfo.familyCode);
@@ -517,18 +517,10 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
         userId = memberData.id || memberData.userId || formData.userId || formData.id;
       }
       
-      // Debug logging to see what ID fields are available
-      console.log('ProfileFormModal Debug:', {
-        mode,
-        userInfo: { userId: userInfo?.userId, id: userInfo?.id },
-        memberData: { id: memberData?.id, userId: memberData?.userId },
-        formData: { userId: formData?.userId, id: formData?.id },
-        finalUserId: userId
-      });
-      
       // Validate that we have a valid userId
       if (!userId) {
         setApiError('User ID not found. Please refresh the page and try again.');
+        setIsLoading(false);
         return;
       }
       
@@ -798,7 +790,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     id="email"
                     name="email"
                     type="email"
-                    value={formData.email}
+                    value={formData.email || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('email')}
                     placeholder="your@email.com"
@@ -814,7 +806,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <PhoneInput
                     inputClass={errors.mobile ? 'border border-red-500 focus:border-red-500' : 'border border-gray-300'}
                     country={'in'}
-                    value={getFullMobile(formData.countryCode, formData.mobile)}
+                    value={getFullMobile(formData.countryCode || '+91', formData.mobile || '')}
                     onChange={(value, data) => handleMobileChange(value, data, 'mobile')}
                     inputProps={{
                       name: 'mobile',
@@ -837,7 +829,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                       borderRadius: '8px 0 0 8px',
                       backgroundColor: 'white',
                     }}
-                    readOnly
                   />
                   {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
                 </div>
@@ -851,7 +842,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                       <select
                         id="status"
                         name="status"
-                        value={formData.status}
+                        value={formData.status || '1'} // FIXED: Ensure never undefined
                         onChange={handleChange}
                         className={inputClassName('status')}
                       >
@@ -869,7 +860,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                       <select
                         id="role"
                         name="role"
-                        value={formData.role}
+                        value={formData.role || '1'} // FIXED: Ensure never undefined
                         onChange={handleChange}
                         className={inputClassName('role')}
                       >
@@ -890,7 +881,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                       id="password"
                       name="password"
                       type={showPassword ? 'text' : 'password'}
-                      value={formData.password}
+                      value={formData.password || ''} // FIXED: Ensure never undefined
                       onChange={handleChange}
                       className={inputClassName('password') + ' pr-10'}
                       placeholder="••••••••"
@@ -941,7 +932,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     id="firstName"
                     name="firstName"
                     type="text"
-                    value={formData.firstName}
+                    value={formData.firstName || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('firstName')}
                     placeholder="First name"
@@ -956,7 +947,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     id="lastName"
                     name="lastName"
                     type="text"
-                    value={formData.lastName}
+                    value={formData.lastName || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('lastName')}
                     placeholder="Last name"
@@ -970,7 +961,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <select
                     id="gender"
                     name="gender"
-                    value={formData.gender}
+                    value={formData.gender || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('gender')}
                   >
@@ -989,7 +980,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     id="dob"
                     name="dob"
                     type="date"
-                    value={formData.dob}
+                    value={formData.dob || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('dob')}
                   />
@@ -1003,7 +994,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     id="age"
                     name="age"
                     type="text"
-                    value={formData.age}
+                    value={formData.age || ''} // FIXED: Ensure never undefined
                     readOnly
                     className={`${inputClassName('age')} bg-gray-100 cursor-not-allowed`}
                   />
@@ -1015,8 +1006,6 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
             <div className={sectionClassName}>
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Contact Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Contact Mobile Number */}
-                
                 <div className="md:col-span-2">
                   <label htmlFor="address" className={labelClassName}>
                     Address
@@ -1024,7 +1013,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <textarea
                     id="address"
                     name="address"
-                    value={formData.address}
+                    value={formData.address || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('address')}
                     placeholder="Full address"
@@ -1045,7 +1034,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <select
                     id="maritalStatus"
                     name="maritalStatus"
-                    value={formData.maritalStatus}
+                    value={formData.maritalStatus || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('maritalStatus')}
                   >
@@ -1068,7 +1057,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                         id="marriageDate"
                         name="marriageDate"
                         type="date"
-                        value={formData.marriageDate}
+                        value={formData.marriageDate || ''} // FIXED: Ensure never undefined
                         onChange={handleChange}
                         className={inputClassName('marriageDate')}
                       />
@@ -1082,7 +1071,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                         id="spouseName"
                         name="spouseName"
                         type="text"
-                        value={formData.spouseName}
+                        value={formData.spouseName || ''} // FIXED: Ensure never undefined
                         onChange={handleChange}
                         className={inputClassName('spouseName')}
                         placeholder="Spouse's full name"
@@ -1127,10 +1116,10 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                                 id={`child-${index}`}
                                 name={`child-${index}`}
                                 type="text"
-                                value={formData.childrenNames?.[index] || ''}
+                                value={formData.childrenNames?.[index] || ''} // FIXED: Ensure never undefined
                                 onChange={(e) => {
                                   const newChildrenNames = [...(formData.childrenNames || [])];
-                                  newChildrenNames[index] = e.target.value;
+                                  newChildrenNames[index] = e.target.value || '';
                                   setFormData(prev => ({
                                     ...prev,
                                     childrenNames: newChildrenNames
@@ -1155,7 +1144,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     id="fatherName"
                     name="fatherName"
                     type="text"
-                    value={formData.fatherName}
+                    value={formData.fatherName || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('fatherName')}
                     placeholder="Father's name"
@@ -1169,7 +1158,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     id="motherName"
                     name="motherName"
                     type="text"
-                    value={formData.motherName}
+                    value={formData.motherName || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('motherName')}
                     placeholder="Mother's name"
@@ -1183,7 +1172,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     id="familyCode"
                     name="familyCode"
                     type="text"
-                    value={formData.familyCode || userInfo?.familyCode || ''}
+                    value={formData.familyCode || userInfo?.familyCode || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('familyCode')}
                     placeholder="FAM000123"
@@ -1204,7 +1193,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <select
                     id="religionId"
                     name="religionId"
-                    value={formData.religionId || ''}
+                    value={formData.religionId || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('religionId')}
                     disabled={dropdownData.loading}
@@ -1229,7 +1218,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <select
                     id="languageId"
                     name="languageId"
-                    value={formData.languageId || ''}
+                    value={formData.languageId || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('languageId')}
                     disabled={dropdownData.loading}
@@ -1255,7 +1244,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     id="caste"
                     name="caste"
                     type="text"
-                    value={formData.caste}
+                    value={formData.caste || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('caste')}
                     placeholder="Enter caste"
@@ -1270,7 +1259,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <select
                     id="gothramId"
                     name="gothramId"
-                    value={formData.gothramId || ''}
+                    value={formData.gothramId || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('gothramId')}
                     disabled={dropdownData.loading}
@@ -1295,7 +1284,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     id="kuladevata"
                     name="kuladevata"
                     type="text"
-                    value={formData.kuladevata}
+                    value={formData.kuladevata || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('kuladevata')}
                     placeholder="Family deity"
@@ -1309,7 +1298,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     id="region"
                     name="region"
                     type="text"
-                    value={formData.region}
+                    value={formData.region || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('region')}
                     placeholder="e.g., South Tamil Nadu"
@@ -1329,7 +1318,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <textarea
                     id="bio"
                     name="bio"
-                    value={formData.bio}
+                    value={formData.bio || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('bio')}
                     placeholder="Tell us about yourself..."
@@ -1343,7 +1332,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <textarea
                     id="hobbies"
                     name="hobbies"
-                    value={formData.hobbies}
+                    value={formData.hobbies || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('hobbies')}
                     placeholder="e.g., Reading, Traveling"
@@ -1357,7 +1346,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <textarea
                     id="favoriteFoods"
                     name="favoriteFoods"
-                    value={formData.favoriteFoods}
+                    value={formData.favoriteFoods || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('favoriteFoods')}
                     placeholder="e.g., Dosa, Biryani"
@@ -1371,7 +1360,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <textarea
                     id="likes"
                     name="likes"
-                    value={formData.likes}
+                    value={formData.likes || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('likes')}
                     placeholder="Things you like"
@@ -1385,7 +1374,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <textarea
                     id="dislikes"
                     name="dislikes"
-                    value={formData.dislikes}
+                    value={formData.dislikes || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
                     className={inputClassName('dislikes')}
                     placeholder="Things you dislike"

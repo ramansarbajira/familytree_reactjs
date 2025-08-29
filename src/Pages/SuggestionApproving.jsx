@@ -33,7 +33,7 @@ const SuggestionApproving = () => {
       setLoading(true);
       // 1. Fetch user profile to get familyCode
       const userRes = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/user/${userInfo.id}`,
+        `${import.meta.env.VITE_API_BASE_URL}/user/profile/${userInfo.id}`,
         {
           headers: {
             accept: 'application/json',
