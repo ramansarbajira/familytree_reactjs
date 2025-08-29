@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Loader2, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { useLanguage } from '../../Contexts/LanguageContext';
 import AssociationRequestItem from './AssociationRequestItem';
 import { getCurrentUserId } from '../../utils/auth';
 
 const AssociationRequests = () => {
+  const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [success, setSuccess] = useState(null);
+  const [error, setError] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
   const { language } = useLanguage();
 
   useEffect(() => {
@@ -31,8 +36,11 @@ const AssociationRequests = () => {
         const familyRequests = data.filter(n => 
           !n.isRead && 
           n.type === 'FAMILY_ASSOCIATION_REQUEST' &&
-          n.data?.requestType === 'family_association'
+          // Backend sets 'family_association_request'
+          n.data?.requestType === 'family_association_request'
         );
+        
+        console.log('Filtered family requests:', familyRequests); // Debug log
         setRequests(familyRequests);
       }
     } catch (error) {
@@ -78,10 +86,8 @@ const AssociationRequests = () => {
       }
       
       // For family association requests, we need to include the family code
-      const requestData = {
-        notificationId: requestId,
-        action,
-      };
+      // Family proxy endpoints expect { requestId }
+      const requestData = { requestId };
       
       // Add additional data for family association requests
       if (notification.type === 'FAMILY_ASSOCIATION_REQUEST' && notification.data) {
@@ -90,7 +96,8 @@ const AssociationRequests = () => {
         requestData.targetFamilyCode = notification.familyCode;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/notifications/respond`, {
+      const endpoint = action === 'accept' ? 'family/accept-association' : 'family/reject-association';
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +114,64 @@ const AssociationRequests = () => {
 
       // Update the UI by removing the handled request
       setRequests(prev => prev.filter(req => req.id !== notificationId));
-      setSuccess(`Family association request ${action}ed successfully`);
+
+      // Show appropriate success message based on the response
+      // Normalize payload to support both direct service response and proxy-wrapped response
+      const payload = data?.data || data;
+      if (action === 'accept' && payload?.data?.bidirectionalCardsCreated) {
+        setSuccess('Family connection established successfully with bidirectional cards created');
+      } else if (action === 'accept') {
+        setSuccess('Family connection established successfully');
+      } else {
+        setSuccess(`Family association request ${action}ed successfully`);
+      }
+
+      // After successful accept, navigate to the associated tree starting from the TARGET user (who received/accepted the request)
+      if (action === 'accept') {
+        try {
+          // Find the full notification again for reliable data access
+          const acceptedNotification = notification;
+          const senderId = acceptedNotification?.data?.senderId;
+          const targetUserId = acceptedNotification?.data?.targetUserId || acceptedNotification?.data?.targetId;
+          const senderFamilyCode = acceptedNotification?.data?.senderFamilyCode || acceptedNotification?.familyCode;
+          const targetFamilyCode = acceptedNotification?.familyCode || acceptedNotification?.data?.targetFamilyCode;
+          // Prefer TARGET (recipient/acceptor)
+          let startFromUserId = targetUserId;
+          // Fallbacks: use API response acceptingUserId, finally senderId
+          if (!startFromUserId && payload?.data?.acceptingUserId) {
+            startFromUserId = payload.data.acceptingUserId;
+          }
+          if (!startFromUserId) {
+            startFromUserId = senderId;
+          }
+
+          // Persist deterministic counterpart pair locally for focus routing on eye-icon
+          try {
+            const requesterId = senderId;
+            const acceptorId = startFromUserId;
+            if (requesterId && acceptorId && senderFamilyCode && targetFamilyCode) {
+              const storePair = (fromUserId, toFamilyCode, counterpartUserId) => {
+                const key = `assoc_pair:${fromUserId}:${toFamilyCode}`;
+                localStorage.setItem(key, String(counterpartUserId));
+              };
+              // requester -> acceptor family maps to acceptor
+              storePair(requesterId, targetFamilyCode, acceptorId);
+              // acceptor -> requester family maps to requester
+              storePair(acceptorId, senderFamilyCode, requesterId);
+            }
+          } catch (_) {}
+
+          if (startFromUserId) {
+            navigate(`/associated-family-tree-user/${startFromUserId}`);
+          } else {
+            console.warn('Association accept: could not determine target userId for navigation', {
+              senderIdFromNotif: senderId, targetUserIdFromNotif: targetUserId, resp: data?.data
+            });
+          }
+        } catch (_) {
+          // no-op if we cannot navigate
+        }
+      }
       
     } catch (error) {
       console.error(`Error processing request:`, error);

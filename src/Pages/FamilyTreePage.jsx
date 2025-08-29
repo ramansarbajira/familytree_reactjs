@@ -179,6 +179,16 @@ const FamilyTreePage = () => {
             console.log('🔍 Debug - code from URL:', code);
             console.log('🔍 Debug - userInfo.familyCode:', userInfo?.familyCode);
             console.log('🔍 Debug - familyCodeToUse:', familyCodeToUse);
+            // Read optional focus user from query string (use local var; state would be async)
+            let focusFromQuery = null;
+            let focusNameFromQuery = null;
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const focus = params.get('focus');
+                focusFromQuery = focus ? String(focus) : null;
+                const fName = params.get('focusName');
+                focusNameFromQuery = fName ? String(fName) : null;
+            } catch {}
             
             if (!userInfo || !familyCodeToUse) {
                 console.log('❌ Debug - Missing userInfo or familyCodeToUse');
@@ -191,7 +201,7 @@ const FamilyTreePage = () => {
                 const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/family/tree/${familyCodeToUse}`;
                 console.log('🌐 Debug - Making API call to:', apiUrl);
                 
-                const response = await fetch(apiUrl, {
+                const response = await authFetch(apiUrl, {
                     headers: { 'accept': '*/*' }
                 });
                 console.log('📡 Debug - Response status:', response.status);
@@ -229,6 +239,10 @@ const FamilyTreePage = () => {
                     newTree.people.set(person.id, {
                         ...person,
                         memberId: person.memberId !== undefined ? person.memberId : null,
+                        // Preserve userId explicitly for robust matching
+                        userId: person.userId !== undefined ? person.userId : (person.memberId !== undefined ? person.memberId : null),
+                        // Normalize name for matching
+                        name: typeof person.name === 'string' ? person.name.trim() : person.name,
                         parents: new Set((person.parents || []).map(id => Number(id))),
                         children: new Set((person.children || []).map(id => Number(id))),
                         spouses: new Set((person.spouses || []).map(id => Number(id))),
@@ -236,13 +250,55 @@ const FamilyTreePage = () => {
                     });
                 });
                 newTree.nextId = Math.max(...data.people.map(p => parseInt(p.id))) + 1;
-                // Set rootId to the person whose memberId matches the logged-in user's userId (robust string comparison)
+                // Set rootId priority: focus param -> logged-in user's userId -> name match -> first person
                 let rootPersonId = null;
-                const userIdStr = String(userInfo.userId);
-                for (const [personId, personObj] of newTree.people.entries()) {
-                    if (personObj.memberId && String(personObj.memberId) === userIdStr) {
-                        rootPersonId = personId;
-                        break;
+                const focusStr = focusFromQuery;
+                if (focusStr) {
+                    for (const [personId, personObj] of newTree.people.entries()) {
+                        // Prefer memberId match (this is the canonical user id in most payloads), then fallback to userId
+                        if ((personObj.memberId && String(personObj.memberId) === focusStr) ||
+                            (personObj.userId && String(personObj.userId) === focusStr)) {
+                            rootPersonId = personId;
+                            break;
+                        }
+                    }
+                }
+                // Fallback: focus by name if id-based match fails
+                if (rootPersonId === null && focusNameFromQuery) {
+                    const targetName = String(focusNameFromQuery).trim().toLowerCase();
+                    // Exact (case-insensitive) match
+                    for (const [personId, personObj] of newTree.people.entries()) {
+                        if (personObj.name && String(personObj.name).trim().toLowerCase() === targetName) {
+                            rootPersonId = personId;
+                            break;
+                        }
+                    }
+                    // StartsWith match
+                    if (rootPersonId === null) {
+                        for (const [personId, personObj] of newTree.people.entries()) {
+                            if (personObj.name && String(personObj.name).trim().toLowerCase().startsWith(targetName)) {
+                                rootPersonId = personId;
+                                break;
+                            }
+                        }
+                    }
+                    // Includes match
+                    if (rootPersonId === null) {
+                        for (const [personId, personObj] of newTree.people.entries()) {
+                            if (personObj.name && String(personObj.name).trim().toLowerCase().includes(targetName)) {
+                                rootPersonId = personId;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (rootPersonId === null) {
+                    const userIdStr = String(userInfo.userId);
+                    for (const [personId, personObj] of newTree.people.entries()) {
+                        if (personObj.memberId && String(personObj.memberId) === userIdStr) {
+                            rootPersonId = personId;
+                            break;
+                        }
                     }
                 }
                 // Fallback: match by name if memberId is missing or not matched
@@ -256,8 +312,10 @@ const FamilyTreePage = () => {
                 }
                 // Final fallback: use the first person in the data
                 if (rootPersonId !== null) {
+                    console.log('Focus selection -> using root person', { rootPersonId, focusFromQuery, focusNameFromQuery });
                     newTree.rootId = rootPersonId;
                 } else {
+                    console.warn('Focus selection -> falling back to first person', { focusFromQuery, focusNameFromQuery });
                     newTree.rootId = data.people[0].id;
                 }
                 setTree(newTree);
@@ -822,7 +880,7 @@ const FamilyTreePage = () => {
             // ✅ RELOAD TREE DATA FROM SERVER AFTER SUCCESSFUL SAVE
             // This ensures the UI shows the actual saved data
             try {
-                const treeResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/family/tree/${userInfo.familyCode}`, {
+                const treeResponse = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/family/tree/${userInfo.familyCode}`, {
                     headers: { 'accept': '*/*' }
                 });
                 if (treeResponse.ok) {

@@ -18,6 +18,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
   const [rootId, setRootId] = useState(null);
   const [familyCodes, setFamilyCodes] = useState([]);
   const [totalConnections, setTotalConnections] = useState(0);
+  const [hasScrolledToRoot, setHasScrolledToRoot] = useState(false);
 
   useEffect(() => {
     const fetchTree = async () => {
@@ -55,7 +56,12 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
         (data.people || []).forEach(person => {
           newTree.people.set(person.id, {
             ...person,
-            memberId: person.memberId !== undefined ? person.memberId : null,
+            // Ensure memberId is available even if API only provided userId
+            memberId: person.memberId !== undefined && person.memberId !== null
+              ? person.memberId
+              : (person.userId !== undefined ? person.userId : null),
+            // Preserve userId explicitly for robust matching
+            userId: person.userId !== undefined ? person.userId : person.memberId,
             parents: new Set((person.parents || []).map(id => Number(id))),
             children: new Set((person.children || []).map(id => Number(id))),
             spouses: new Set((person.spouses || []).map(id => Number(id))),
@@ -63,13 +69,20 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
           });
         });
         newTree.nextId = data.people && data.people.length > 0 ? Math.max(...data.people.map(p => parseInt(p.id))) + 1 : 1;
-        // Find the rootId: person whose memberId matches logged-in user's userId or rootUserId from API
+        // Find the rootId: prefer explicit userId prop, then API-provided rootUserId, then logged-in user's userId
         let foundRootId = null;
-        const targetUserId = data.rootUserId || (userInfo && userInfo.userId);
+        // IMPORTANT: prioritize the route/userId (navigation intent) over API-provided rootUserId
+        const targetUserId = userId || data.rootUserId || (userInfo && userInfo.userId);
         
         if (targetUserId) {
           for (const person of newTree.people.values()) {
+            // Try matching by memberId first
             if (person.memberId && String(person.memberId) === String(targetUserId)) {
+              foundRootId = person.id;
+              break;
+            }
+            // Then try matching by userId (if memberId is absent/mismatched)
+            if (person.userId && String(person.userId) === String(targetUserId)) {
               foundRootId = person.id;
               break;
             }
@@ -97,6 +110,16 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
     };
     if (familyCode || userId) fetchTree();
   }, [familyCode, userId, userInfo]);
+
+  // After tree and rootId are set, auto-scroll the root person into view once
+  useEffect(() => {
+    if (!tree || !rootId || hasScrolledToRoot) return;
+    const el = document.getElementById(`person-${rootId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      setHasScrolledToRoot(true);
+    }
+  }, [tree, rootId, hasScrolledToRoot]);
 
   if (treeLoading) return <div>Loading associated family tree...</div>;
   if (error) return <div className="text-red-500">{error}</div>;
@@ -150,7 +173,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
               isRoot={person.id === rootId}
               rootId={rootId}
               tree={tree}
-              isSelected={false}
+              isSelected={person.id === rootId}
               isNew={false}
               viewOnly={false}
             />
