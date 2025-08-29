@@ -42,11 +42,18 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           SOURCE_DIR: dist
 
+      # ✅ Configure AWS CLI credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: ♻️ Override Cache-Control for index.html
         run: |
           aws s3 cp dist/index.html s3://${{ secrets.S3_BUCKET_NAME }}/index.html \
-            --cache-control "no-cache, no-store, must-revalidate" \
-            --region ${{ secrets.AWS_REGION }}
+            --cache-control "no-cache, no-store, must-revalidate"
 
       - name: 🔄 Invalidate CloudFront Cache
         uses: chetan/invalidate-cloudfront-action@v2
