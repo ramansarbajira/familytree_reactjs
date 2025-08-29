@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import RelationshipCalculator from '../../utils/relationshipCalculator';
 import { getTranslation } from '../../utils/languageTranslations';
-import { fetchCustomLabel } from '../../utils/fetchCustomLabel'; // <-- import the new util
+import { fetchCustomLabel } from '../../utils/fetchCustomLabel';
 import { useFamilyTreeLabels } from '../../Contexts/FamilyTreeContext';
 import { useUser } from '../../Contexts/UserContext';
 import { FiEye } from 'react-icons/fi';
@@ -199,7 +199,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
         // Fetch spouse-connected associated families via API (fallback to local field)
         let associatedData = [];
         try {
-            const uid = person.userId || person.memberId;
+            const uid = person.memberId || person.userId;
             if (uid) {
                 associatedData = await fetchAssociatedFamilyPrefixes(uid);
             }
@@ -221,11 +221,39 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             return;
         }
         
+        // Helper: resolve counterpart (spouse) to their userId/memberId for cross-family focus
+        const resolveCounterpartUserId = (targetFamilyCode) => {
+            try {
+                const meUserId = person.memberId || person.userId;
+                if (meUserId && targetFamilyCode) {
+                    const key = `assoc_pair:${meUserId}:${targetFamilyCode}`;
+                    const stored = localStorage.getItem(key);
+                    if (stored) return Number(stored);
+                }
+            } catch (_) {}
+            const spouseIds = person.spouses instanceof Set
+                ? Array.from(person.spouses)
+                : Array.isArray(person.spouses)
+                    ? person.spouses
+                    : [];
+            if (!spouseIds || spouseIds.length === 0) return null;
+            const spousePersonId = Number(spouseIds[0]);
+            const spouse = tree && tree.people ? tree.people.get(spousePersonId) : null;
+            return spouse ? (spouse.memberId || spouse.userId || null) : null;
+        };
+
         // If only one associated family code, navigate directly to it
         if (associatedCodes.length === 1) {
             const firstCode = associatedCodes[0].split(' - ').pop();
-            // Pass the current person's relationship code as source relationship
-            navigate(`/family-tree/${firstCode}?source=${encodeURIComponent(relationshipCode || 'UNKNOWN')}`);
+            // Prefer focusing counterpart (spouse) when jumping to associated family (convert spouse personId -> userId)
+            const counterpartUserId = resolveCounterpartUserId(firstCode);
+            const uid = counterpartUserId || (person.userId || person.memberId);
+            // Pass focus user id so the other tree highlights counterpart, and include relationship code as source
+            const query = new URLSearchParams({
+                source: String(relationshipCode || 'UNKNOWN'),
+                focus: uid ? String(uid) : ''
+            }).toString();
+            navigate(`/family-tree/${firstCode}?${query}`);
             return;
         }
         
@@ -249,8 +277,14 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 // Extract familyCode after optional prefix label
                 const parts = result.value.split(' - ');
                 const selectedCode = parts.length === 2 ? parts[1] : parts[0];
-                // Pass the current person's relationship code as source relationship
-                navigate(`/family-tree/${selectedCode}?source=${encodeURIComponent(relationshipCode || 'UNKNOWN')}`);
+                // Pass relationship code; prefer focusing counterpart (spouse) when changing family (convert spouse personId -> userId)
+                const counterpartUserId = resolveCounterpartUserId(selectedCode);
+                const uid = counterpartUserId || (person.userId || person.memberId);
+                const query = new URLSearchParams({
+                    source: String(relationshipCode || 'UNKNOWN'),
+                    focus: uid ? String(uid) : ''
+                }).toString();
+                navigate(`/family-tree/${selectedCode}?${query}`);
             }
         });
     };
@@ -262,61 +296,61 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
 
 
     return (
-        <div
-            className={`person ${person.gender} ${isRoot ? 'root' : ''} ${isNew ? 'person-new' : ''} ${isSelected ? 'person-selected' : ''} group transition-transform duration-200 hover:scale-105 hover:shadow-2xl hover:ring-4 hover:ring-green-200`}
-            style={{
-                left: `${person.x - width / 2}px`,
-                top: `${person.y - height / 2}px`,
-                position: 'absolute',
-                minWidth: width,
-                maxWidth: memberCount > 50 ? 200 : 250,
-                width: 'fit-content',
-                minHeight: height,
-                margin: margin,
-                padding: padding,
-                background: isRoot
-                  ? 'linear-gradient(135deg, #fceabb 0%, #f8b500 100%)' // gold gradient for root
-                  : isNew
-                  ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' // pink to red gradient for new
-                  : person.gender === 'male'
-                  ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' // blue gradient for males
-                  : person.gender === 'female'
-                  ? 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' // pink to yellow gradient for females
-                  : 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', // soft teal to pink for others
-                border: isRoot
-                  ? '4px solid #f8b500' // gold border for root
-                  : isNew
-                  ? '2.5px dashed #f093fb' // pink border for new
-                  : isSelected
-                  ? '3px solid #4facfe' // blue border for selected
-                  : person.gender === 'male'
-                  ? '2.5px solid #4facfe' // blue border for males
-                  : person.gender === 'female'
-                  ? '2.5px solid #fa709a' // pink border for females
-                  : '2.5px solid #a8edea', // teal border for others
-                borderRadius: memberCount > 50 ? 12 : 18,
-                boxShadow: isRoot
-                  ? '0 0 0 8px rgba(248, 181, 0, 0.25), 0 12px 36px rgba(248, 181, 0.18)'
-                  : isSelected
-                  ? '0 12px 36px rgba(79, 172, 254, 0.13)'
-                  : person.gender === 'male'
-                  ? `0 6px 24px rgba(79, 172, 254, ${shadowIntensity})`
-                  : person.gender === 'female'
-                  ? `0 6px 24px rgba(250, 112, 154, ${shadowIntensity})`
-                  : `0 6px 24px rgba(168, 237, 234, ${shadowIntensity})`,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                zIndex: 2,
-                fontFamily: 'Poppins, Arial, sans-serif',
-                transition: 'box-shadow 0.18s, border 0.18s, background 0.18s',
-                overflow: 'visible',
-                opacity: cardOpacity,
-            }}
-            onClick={viewOnly ? undefined : handleCardClick}
-            data-person-id={person.id}
-        >
+        <div id={`person-${person.id}`} className="person-container" style={{ position: 'absolute', left: `${person.x - width / 2}px`, top: `${person.y - height / 2}px` }}>
+            {/* Main Person Card */}
+            <div
+                className={`person ${person.gender} ${isRoot ? 'root' : ''} ${isNew ? 'person-new' : ''} ${isSelected ? 'person-selected' : ''} group transition-transform duration-200 hover:scale-105 hover:shadow-2xl hover:ring-4 hover:ring-green-200`}
+                style={{
+                    position: 'relative',
+                    minWidth: width,
+                    maxWidth: memberCount > 50 ? 200 : 250,
+                    width: 'fit-content',
+                    minHeight: height,
+                    margin: margin,
+                    padding: padding,
+                    background: isRoot
+                      ? 'linear-gradient(135deg, #fceabb 0%, #f8b500 100%)' // gold gradient for root
+                      : isNew
+                      ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' // pink to red gradient for new
+                      : person.gender === 'male'
+                      ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' // blue gradient for males
+                      : person.gender === 'female'
+                      ? 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' // pink to yellow gradient for females
+                      : 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', // soft teal to pink for others
+                    border: isRoot
+                      ? '4px solid #f8b500' // gold border for root
+                      : isNew
+                      ? '2.5px dashed #f093fb' // pink border for new
+                      : isSelected
+                      ? '3px solid #4facfe' // blue border for selected
+                      : person.gender === 'male'
+                      ? '2.5px solid #4facfe' // blue border for males
+                      : person.gender === 'female'
+                      ? '2.5px solid #fa709a' // pink border for females
+                      : '2.5px solid #a8edea', // teal border for others
+                    borderRadius: memberCount > 50 ? 12 : 18,
+                    boxShadow: isRoot
+                      ? '0 0 0 8px rgba(248, 181, 0, 0.25), 0 12px 36px rgba(248, 181, 0.18)'
+                      : isSelected
+                      ? '0 12px 36px rgba(79, 172, 254, 0.13)'
+                      : person.gender === 'male'
+                      ? `0 6px 24px rgba(79, 172, 254, ${shadowIntensity})`
+                      : person.gender === 'female'
+                      ? `0 6px 24px rgba(250, 112, 154, ${shadowIntensity})`
+                      : `0 6px 24px rgba(168, 237, 234, ${shadowIntensity})`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    zIndex: 2,
+                    fontFamily: 'Poppins, Arial, sans-serif',
+                    transition: 'box-shadow 0.18s, border 0.18s, background 0.18s',
+                    overflow: 'visible',
+                    opacity: cardOpacity,
+                }}
+                onClick={viewOnly ? undefined : handleCardClick}
+                data-person-id={person.id}
+            >
             {/* Eye Icon for Associated Family Tree (only if person has one and not viewOnly) */}
             {!viewOnly && (
                 <button
@@ -398,14 +432,14 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                     >
                         {person.name || [person.firstName, person.lastName].filter(Boolean).join(' ').trim() || (language === 'tamil' ? 'பெயரில்லாத உறுப்பினர்' : 'Family Member')}
                     </span>
-                                    </div>
+                </div>
                 {/* Show relationship code and label below name */}
                 {relationshipCode && (
                   <span className="details text-xs text-blue-700 text-center font-mono mb-1" style={{fontSize: `${fontSizeDetails}px`}}>
                     {displayRelationshipCode}
                   </span>
                 )}
-                                <span 
+                <span 
                     className="details text-xs text-gray-600 text-center font-medium mb-1" 
                     style={{fontSize: `${fontSizeDetails}px`}}
                 >
@@ -447,7 +481,8 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 )}
             </div>
         </div>
+        </div>
     );
 };
 
-export default Person; 
+export default Person;

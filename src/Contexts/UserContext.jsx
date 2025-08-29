@@ -48,8 +48,17 @@ export const UserProvider = ({ children }) => {
           'Content-Type': 'application/json',
         },
       });
-      if (response.status === 401) {
+      if (response.status === 401 || response.status === 400) {
+        // Treat 400 from myProfile as invalid session as well to avoid loops
+        try {
+          const errJson = await response.json();
+          console.error('User session error:', errJson?.message || errJson);
+        } catch (_) {
+          // ignore json parse errors
+        }
         localStorage.removeItem('access_token');
+        setUserInfo(null);
+        setUserLoading(false);
         window.location.href = '/login';
         return;
       }
