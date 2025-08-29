@@ -369,7 +369,7 @@ console.log("token:", token);
         {/* Dashboard Header - Enhanced with Search and Notifications */}
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
           <div className="flex-grow">
-            <h1 className="text-4xl font-extrabold text-gray-900 leading-tight">Your Family Hubssssss</h1>
+            <h1 className="text-4xl font-extrabold text-gray-900 leading-tight">Your Family Hub test</h1>
               <p className="text-gray-600 mt-2 text-lg">
                  Welcome, {userInfo?.firstName || 'User'} {userInfo?.lastName || ''} ! Here's what's happening today, 
                  <span className="font-semibold text-primary-700">{formattedDate}</span>.
