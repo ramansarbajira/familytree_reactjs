@@ -87,9 +87,10 @@ const ProfilePage = () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const data = await response.json();
+            const json = await response.json();
+            const list = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
 
-            const formattedPosts = data.map((post) => ({
+            const formattedPosts = list.map((post) => ({
                 id: post.id,
                 type: 'image',
                 url: post.postImage, // This is the relative path from the API
@@ -128,9 +129,10 @@ const ProfilePage = () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const data = await response.json();
+            const json = await response.json();
+            const list = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
 
-            const formattedGalleries = data.map((gallery) => ({
+            const formattedGalleries = list.map((gallery) => ({
                 id: gallery.id,
                 title: gallery.galleryTitle,
                 description: gallery.galleryDescription,
@@ -158,9 +160,13 @@ const ProfilePage = () => {
     };
 
     useEffect(() => {
-    if (userInfo?.userId && token) {
+        if (userInfo?.userId && token) {
             fetchPosts();
             fetchGalleries();
+        } else {
+            // Avoid infinite spinners when prerequisites are missing
+            setLoadingPosts(false);
+            setLoadingGalleries(false);
         }
     }, [userInfo, token]);
 

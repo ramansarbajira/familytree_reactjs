@@ -13,32 +13,50 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name:  Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name:  Install dependencies
+      - name: Install dependencies
         run: npm ci
 
       - name: 🛠️ Build Vite app
         run: npm run build
 
-      - name:  Show dist folder contents
+      - name: Show dist folder contents
         run: |
           echo "Root contents:"
           ls -al
           echo "Dist contents:"
           ls -al dist
 
-      - name:  Deploy to S3
+      - name: 🚀 Deploy to S3 (with cache headers for assets)
         uses: jakejarvis/s3-sync-action@v0.5.1
         with:
-          args: --delete
+          args: --delete --exact-timestamps --cache-control "max-age=31536000,public"
         env:
           AWS_S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           SOURCE_DIR: dist
+
+      # ✅ Configure AWS CLI
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: ♻️ Override Cache-Control for index.html
+        run: |
+          aws s3 cp dist/index.html s3://${{ secrets.S3_BUCKET_NAME }}/index.html \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+      - name: 🔄 Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"

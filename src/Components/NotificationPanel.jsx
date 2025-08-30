@@ -126,15 +126,14 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
       // Extract required data from notification
       const requestData = notification.data || {};
       
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/respond`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/family/accept-association`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          notificationId: notification.id,
-          action: 'accept'
+          requestId: notification.id
         })
       });
 
@@ -159,15 +158,14 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
   const handleRejectRequest = async (notification) => {
     try {
       setProcessingRequest(notification.id);
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/respond`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/family/reject-association`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          notificationId: notification.id,
-          action: 'reject'
+          requestId: notification.id
         }),
       });
 
