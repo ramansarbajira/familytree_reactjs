@@ -369,7 +369,7 @@ console.log("token:", token);
         {/* Dashboard Header - Enhanced with Search and Notifications */}
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
           <div className="flex-grow">
-            <h1 className="text-4xl font-extrabold text-gray-900 leading-tight">Your Family Hubssssss</h1>
+            <h1 className="text-4xl font-extrabold text-gray-900 leading-tight">Your Family Hub</h1>
               <p className="text-gray-600 mt-2 text-lg">
                  Welcome, {userInfo?.firstName || 'User'} {userInfo?.lastName || ''} ! Here's what's happening today, 
                  <span className="font-semibold text-primary-700">{formattedDate}</span>.
@@ -550,7 +550,7 @@ console.log("token:", token);
 
         {/* Quick Actions - Responsive Grid, all Primary Themed, with subtle animations */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-             {/* Show Add New Member button only for Admin (role 2) and Superadmin (role 3) */}
+             {/* Temporarily commented out as per user request
              {(userInfo?.role === 2 || userInfo?.role === 3) && (
                <button 
                  onClick={handleOpenProfileModal}
@@ -560,6 +560,7 @@ console.log("token:", token);
                  <span className="font-semibold">Add New Member</span>
                </button>
              )}
+             */}
           <button  onClick={handleOpenCreateAlbumModal}
           className="bg-primary-600 text-white rounded-xl py-3.5 px-4 flex items-center justify-center gap-2 shadow-lg hover:bg-primary-700 transition duration-300 transform hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-opacity-75 text-sm sm:text-base group">
             <FiImage size={20} className="group-hover:scale-110 transition-transform duration-300" /> <span className="font-semibold">Upload Photo</span>
