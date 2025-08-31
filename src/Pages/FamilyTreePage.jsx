@@ -1099,7 +1099,7 @@ const FamilyTreePage = () => {
                     </div>
 
                     {canEdit && (
-                        <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-around items-center py-3 z-50 sm:hidden">
+                        <div className="fixed left-0 w-full bg-white border-t border-gray-200 flex justify-around items-center py-3 z-50 sm:hidden" style={{ bottom: '60px' }}>
                             <button
                                 className="flex items-center gap-2 px-6 py-2 bg-green-500 text-white rounded-lg shadow-md text-lg font-semibold active:scale-95 transition"
                                 onClick={resetTree}

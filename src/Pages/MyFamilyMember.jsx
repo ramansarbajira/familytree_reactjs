@@ -277,7 +277,7 @@ const FamilyMemberListing = () => {
         <FamilyOverView familyCode={userInfo?.familyCode} token={token} />
 
         {/* Show Add New Member button only for Admin (role 2) and Superadmin (role 3) */}
-        {(userInfo?.role === 2 || userInfo?.role === 3) && (
+        {/* {(userInfo?.role === 2 || userInfo?.role === 3) && (
           <div className="flex justify-end mb-4">
             <button
               onClick={handleOpenModal}
@@ -286,7 +286,7 @@ const FamilyMemberListing = () => {
               <FiPlus className="mr-2" /> Add New Member
             </button>
           </div>
-        )}
+        )} */}
 
         <FamilyMemberCard 
           familyCode={userInfo?.familyCode} 

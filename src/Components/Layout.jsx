@@ -283,7 +283,7 @@ const Layout = ({ children }) => {
         </div>
 
         {/* Mobile Bottom Navigation */}
-        {isMobile && location.pathname !== '/family-tree' && (
+        {isMobile && (
           <BottomNavBar activeTab={activeTab} setActiveTab={setActiveTab} />
         )}
       </main>

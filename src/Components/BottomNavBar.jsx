@@ -22,7 +22,7 @@ const BottomNavBar = ({ activeTab, setActiveTab }) => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-primary z-50 w-full max-w-full">
+    <div className="fixed bottom-0 left-0 right-0 bg-primary z-[9999] w-full max-w-full shadow-lg">
       <div className="flex justify-between items-center px-2 py-1">
         {tabs.map((item) => {
           const isActive = activeTab === item.id;
