@@ -127,11 +127,11 @@ const FamilyTreePage = () => {
 
     // Zoom controls
     const zoomIn = () => setZoom(prev => Math.min(2, +(prev + 0.1).toFixed(2)));
-    const zoomOut = () => setZoom(prev => Math.max(0.5, +(prev - 0.1).toFixed(2)));
+    const zoomOut = () => setZoom(prev => Math.max(0.1, +(prev - 0.1).toFixed(2)));
     const resetZoom = () => setZoom(1);
 
     // Helpers for pinch-to-zoom on mobile
-    const clampZoom = (z) => Math.max(0.5, Math.min(2, z));
+    const clampZoom = (z) => Math.max(0.1, Math.min(2, z));
     const distance = (touches) => {
         const [a, b] = [touches[0], touches[1]];
         const dx = a.clientX - b.clientX;
@@ -1084,7 +1084,7 @@ const FamilyTreePage = () => {
                         <button
                             className="w-12 h-12 bg-white border-2 border-gray-300 rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:bg-gray-50 active:scale-95 transition-all duration-200"
                             onClick={zoomOut}
-                            disabled={zoom <= 0.5}
+                            disabled={zoom <= 0.1}
                             title="Zoom Out"
                         >
                             <FaMinus className="text-lg" />
