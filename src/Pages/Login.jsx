@@ -81,13 +81,13 @@ const Login = () => {
         </div>
 
         {/* Title */}
-        <div className="text-center mb-3">
+        <div className="text-center mb-9">
           <h2 className="text-2xl font-bold text-gray-800">Welcome back!!!</h2>
           <p className="text-sm text-gray-500 mt-1">Please enter your login details</p>
         </div>
 
         {/* Social Icons */}
-        <div className="flex justify-center gap-5 mb-3">
+        {/* <div className="flex justify-center gap-5 mb-3">
           {['google', 'twitter', 'facebook'].map((social) => (
             <button
               key={social}
@@ -96,14 +96,14 @@ const Login = () => {
               <img src={`/assets/${social}.png`} alt={social} className="w-10 h-10" />
             </button>
           ))}
-        </div>
+        </div> */}
 
         {/* Divider */}
-        <div className="flex items-center mb-6">
+        {/* <div className="flex items-center mb-6">
           <div className="flex-grow border-t border-gray-300"></div>
           <span className="px-3 text-sm text-gray-400">or</span>
           <div className="flex-grow border-t border-gray-300"></div>
-        </div>
+        </div> */}
 
         {/* API Error */}
         {apiError && (
