@@ -549,7 +549,7 @@ console.log("token:", token);
 </div>
 
         {/* Quick Actions - Responsive Grid, all Primary Themed, with subtle animations */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+       <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-8">
              {/* Temporarily commented out as per user request
              {(userInfo?.role === 2 || userInfo?.role === 3) && (
                <button 

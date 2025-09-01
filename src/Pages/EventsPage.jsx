@@ -630,48 +630,54 @@ const EventsPage = () => {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex justify-center">
-            <div className="bg-white rounded-2xl shadow-lg p-2 border border-gray-100">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setActiveTab('upcoming')}
-                  className={`flex items-center gap-3 py-3 px-8 rounded-xl font-semibold transition-all duration-300 ${
-                    activeTab === 'upcoming'
-                      ? 'bg-primary-600 text-white shadow-lg transform scale-105'
-                      : 'text-gray-600 hover:bg-primary-50'
-                  }`}
-                >
-                  <FiUpcoming size={20} /> 
-                  <span>Upcoming Events</span>
-                  {activeTab === 'upcoming' && <FiStar size={16} className="ml-1" />}
-                </button>
-                <button
-                  onClick={() => setActiveTab('my-events')}
-                  className={`flex items-center gap-3 py-3 px-8 rounded-xl font-semibold transition-all duration-300 ${
-                    activeTab === 'my-events'
-                      ? 'bg-primary-600 text-white shadow-lg transform scale-105'
-                      : 'text-gray-600 hover:bg-primary-50'
-                  }`}
-                >
-                  <FiList size={20} /> 
-                  <span>My Events</span>
-                  {activeTab === 'my-events' && <FiStar size={16} className="ml-1" />}
-                </button>
-                <button
-                  onClick={() => setActiveTab('all')}
-                  className={`flex items-center gap-3 py-3 px-8 rounded-xl font-semibold transition-all duration-300 ${
-                    activeTab === 'all'
-                      ? 'bg-primary-600 text-white shadow-lg transform scale-105'
-                      : 'text-gray-600 hover:bg-primary-50'
-                  }`}
-                >
-                  <FiGlobe size={20} /> 
-                  <span>All Events</span>
-                  {activeTab === 'all' && <FiStar size={16} className="ml-1" />}
-                </button>
-              </div>
-            </div>
-          </div>
+       <div className="flex justify-center">
+  <div className="bg-white rounded-2xl shadow-lg p-2 border border-gray-100 w-full">
+    {/* Mobile = vertical stack | Web = row */}
+    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+      
+      <button
+        onClick={() => setActiveTab('upcoming')}
+        className={`flex items-center justify-center gap-2 py-3 px-4 w-full sm:w-auto rounded-xl font-semibold transition-all duration-300 ${
+          activeTab === 'upcoming'
+            ? 'bg-primary-600 text-white shadow-lg transform scale-105'
+            : 'text-gray-600 hover:bg-primary-50'
+        }`}
+      >
+        <FiCalendar size={18} />
+        <span>Upcoming Events</span>
+        {activeTab === 'upcoming' && <FiStar size={16} />}
+      </button>
+
+      <button
+        onClick={() => setActiveTab('my-events')}
+        className={`flex items-center justify-center gap-2 py-3 px-4 w-full sm:w-auto rounded-xl font-semibold transition-all duration-300 ${
+          activeTab === 'my-events'
+            ? 'bg-primary-600 text-white shadow-lg transform scale-105'
+            : 'text-gray-600 hover:bg-primary-50'
+        }`}
+      >
+        <FiList size={18} />
+        <span>My Events</span>
+        {activeTab === 'my-events' && <FiStar size={16} />}
+      </button>
+
+      <button
+        onClick={() => setActiveTab('all')}
+        className={`flex items-center justify-center gap-2 py-3 px-4 w-full sm:w-auto rounded-xl font-semibold transition-all duration-300 ${
+          activeTab === 'all'
+            ? 'bg-primary-600 text-white shadow-lg transform scale-105'
+            : 'text-gray-600 hover:bg-primary-50'
+        }`}
+      >
+        <FiGlobe size={18} />
+        <span>All Events</span>
+        {activeTab === 'all' && <FiStar size={16} />}
+      </button>
+
+    </div>
+  </div>
+</div>
+
 
           {/* Events Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

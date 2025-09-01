@@ -1057,7 +1057,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <span>No Aalam account found.</span><br/>
+                                                                <span>No Familyss account found.</span><br/>
                                                                 <button 
                                                                     type="button" 
                                                                     onClick={handleSendInvite} 

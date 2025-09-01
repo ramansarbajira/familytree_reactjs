@@ -163,9 +163,9 @@ const Sidebar = ({ isMobile, onCloseMobile, setActiveTab, activeTab }) => {
         )}
         <div className="flex items-center gap-3 ml-auto sm:ml-0">
           <div className="w-10 h-10 flex-shrink-0"> {/* Adjusted to w-10 h-10 for consistency */}
-            <img src="/assets/logo-green-light.png" alt="Aalam Logo" className="w-full h-full object-cover rounded-full" />
+            <img src="/assets/logo-green-light.png" alt="Familyss Logo" className="w-full h-full object-cover rounded-full" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">Aalam</h2> {/* Removed hidden sm:block, assuming desktop sidebar is always wide enough */}
+          <h2 className="text-2xl font-bold text-gray-800">Familyss</h2> {/* Removed hidden sm:block, assuming desktop sidebar is always wide enough */}
         </div>
       </div>
 

@@ -6,7 +6,7 @@ const AuthLogo = () => {
       <a href='/'>
       <img
         src="/assets/logo-green-light.png"
-        alt="Aalam Logo"
+        alt="Familyss Logo"
         className="w-40 h-40"
       /></a>
     </div>
