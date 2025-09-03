@@ -165,7 +165,19 @@ HF: "மாமனார்", // Husband's father
 "WMB+W": "மாமியார் பெரிய மாமி", // Wife's mother's elder brother's wife
 "WMB-W": "மாமியார் மாமி", // Wife's mother's younger brother's wife
 "WMZ+H": "மாமியார் பெரிய மாமா", // Wife's mother's elder sister's husband
-"WMZ-H": "மாமியார் மாமா" // Wife's mother's younger sister's husband
+"WMZ-H": "மாமியார் மாமா", // Wife's mother's younger sister's husband
+
+  // UI Text Translations
+  "associatedFamilyTreesForUser": "பயனருக்கான தொடர்புடைய குடும்ப மரங்கள்",
+  "associatedFamilyTree": "தொடர்புடைய குடும்ப மரம்",
+  "showingAllFamilyTrees": "இந்த பயனருடன் உறவுகள் மற்றும் தொடர்புகள் மூலம் இணைக்கப்பட்ட அனைத்து குடும்ப மரங்களையும் காட்டுகிறது.",
+  "back": "பின்செல்",
+  "myBirthFamilyTree": "என் பிறப்பு குடும்ப மரம்",
+  "noMembersFound": "இந்த தொடர்புடைய குடும்ப மரத்தில் உறுப்பினர்கள் இல்லை.",
+  "couldNotLoadTree": "தொடர்புடைய குடும்ب மரத்தை ஏற்ற முடியவில்லை.",
+  "loadingAssociatedFamilyTree": "தொடர்புடைய குடும்ப மரம் ஏற்றப்படுகிறது...",
+  "connectedFamilyTrees": "இணைக்கப்பட்ட குடும்ப மரங்கள்",
+  "totalCrossFamilyConnections": "மொத்த குடும்பங்களுக்கிடையேயான தொடர்புகள்"
 };
 
-export default tamilRelationships; 
+export default tamilRelationships;

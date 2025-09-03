@@ -150,7 +150,18 @@ const englishRelationships = {
   "DD": "Granddaughter",
   "DS": "Grandson",
   "SD": "Granddaughter",
-  "FZ+DH": "Father's elder sister's daughter's husband"
+  "FZ+DH": "Father's elder sister's daughter's husband",
+  // UI Text Translations
+  "associatedFamilyTreesForUser": "Associated Family Trees for User",
+  "associatedFamilyTree": "Associated Family Tree",
+  "showingAllFamilyTrees": "Showing all family trees connected to this user through relationships and associations.",
+  "back": "Back",
+  "myBirthFamilyTree": "My Birth Family Tree",
+  "noMembersFound": "No members found in this associated family tree.",
+  "couldNotLoadTree": "Could not load associated family tree.",
+  "loadingAssociatedFamilyTree": "Loading associated family tree...",
+  "connectedFamilyTrees": "Connected Family Trees",
+  "totalCrossFamilyConnections": "Total cross-family connections"
 };
 
-export default englishRelationships; 
+export default englishRelationships;

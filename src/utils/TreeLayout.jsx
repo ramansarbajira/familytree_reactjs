@@ -70,7 +70,8 @@ export function autoArrange(tree) {
             const parentIds = [person.id];
             person.spouses.forEach(spouseId => {
                 const spouse = tree.people.get(spouseId);
-                const isCoParent = [...person.children].every(childId => spouse.children.has(childId));
+                if (!spouse) return; // skip if spouse not found in tree
+                const isCoParent = [...person.children].every(childId => spouse.children && spouse.children.has(childId));
                 if (isCoParent) parentIds.push(spouseId);
             });
             
@@ -96,7 +97,8 @@ export function autoArrange(tree) {
         person.spouses.forEach(spouseId => {
             if (person.id < spouseId) {
                 const spouse = tree.people.get(spouseId);
-                const commonChildren = [...person.children].filter(c => spouse.children.has(c));
+                if (!spouse) return; // spouse not found
+                const commonChildren = [...person.children].filter(c => spouse.children && spouse.children.has(c));
                 if (commonChildren.length === 0) {
                     const clusterId = `cluster-${person.id}-${spouseId}`;
                     g.setParent(person.id.toString(), clusterId);

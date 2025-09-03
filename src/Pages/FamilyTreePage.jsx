@@ -996,14 +996,16 @@ const FamilyTreePage = () => {
                         </div>
                     )}
                     {!canEdit && (
-                        <div className="hidden sm:flex w-full justify-start items-center gap-4 px-8 py-4 bg-white border-b border-gray-200 z-40">
+                        <div className="flex w-full justify-between items-center gap-4 px-4 sm:px-8 py-4 bg-white border-b border-gray-200 z-40">
                             {/* Stats section only */}
-                            <div className="flex gap-6 items-center text-gray-700 text-base font-medium">{code && code !== userInfo.familyCode && (<><button className="inline-flex items-center justify-center w-8 h-8 border border-gray-400 text-gray-700 rounded-full hover:bg-gray-100 active:scale-95 transition" onClick={() => navigate(-1)} title="Back"><FaArrowLeft /></button><button className="inline-flex items-center justify-center w-8 h-8 border border-indigo-600 text-indigo-600 rounded-full hover:bg-indigo-600 hover:text-white active:scale-95 transition" onClick={() => navigate('/family-tree')} title="My Birth Family Tree"><FaHome /></button></>)}
+                            <div className="flex gap-2 sm:gap-6 items-center text-gray-700 text-sm sm:text-base font-medium flex-wrap">{code && code !== userInfo.familyCode && (<><button className="inline-flex items-center justify-center w-8 h-8 border border-gray-400 text-gray-700 rounded-full hover:bg-gray-100 active:scale-95 transition" onClick={() => navigate(-1)} title="Back"><FaArrowLeft /></button><button className="inline-flex items-center justify-center w-8 h-8 border border-indigo-600 text-indigo-600 rounded-full hover:bg-indigo-600 hover:text-white active:scale-95 transition" onClick={() => navigate('/family-tree')} title="My Birth Family Tree"><FaHome /></button></>)}
                                 <div>Total: <span className="font-bold">{stats.total}</span></div>
                                 <div>Male: <span className="font-bold">{stats.male}</span></div>
                                 <div>Female: <span className="font-bold">{stats.female}</span></div>
                                 <div>Generations: <span className="font-bold">{stats.generations}</span></div>
                             </div>
+                            {/* Language switcher for non-edit users */}
+                            <div><LanguageSwitcher /></div>
                         </div>
                     )}
                     {/* Tree visualization area */}

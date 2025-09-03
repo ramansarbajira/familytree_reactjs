@@ -5,6 +5,8 @@ import { autoArrange } from '../../utils/TreeLayout';
 import Person from './Person';
 import TreeConnections from './TreeConnections';
 import { useUser } from '../../Contexts/UserContext';
+import { useLanguage } from '../../Contexts/LanguageContext';
+import { getTranslation } from '../../utils/languageTranslations';
 
 const AssociatedFamilyTree = ({ familyCode, userId }) => {
   const navigate = useNavigate();
@@ -15,6 +17,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
   const [dagreLayoutOffsetY, setDagreLayoutOffsetY] = useState(0);
   const [error, setError] = useState(null);
   const { userInfo } = useUser();
+  const { language } = useLanguage();
   const [rootId, setRootId] = useState(null);
   const [familyCodes, setFamilyCodes] = useState([]);
   const [totalConnections, setTotalConnections] = useState(0);
@@ -38,7 +41,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
         
         if (!data.people || data.people.length === 0) {
           setTree(null);
-          setError('No members found in this associated family tree.');
+          setError(getTranslation('noMembersFound', language));
           setTreeLoading(false);
           return;
         }
@@ -104,7 +107,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
         setTree(newTree);
       } catch (err) {
         setTree(null);
-        setError('Could not load associated family tree.');
+        setError(getTranslation('couldNotLoadTree', language));
       }
       setTreeLoading(false);
     };
@@ -121,7 +124,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
     }
   }, [tree, rootId, hasScrolledToRoot]);
 
-  if (treeLoading) return <div>Loading associated family tree...</div>;
+  if (treeLoading) return <div>{getTranslation('loadingAssociatedFamilyTree', language)}</div>;
   if (error) return <div className="text-red-500">{error}</div>;
   if (!tree) return null;
 
@@ -130,7 +133,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
       {/* Header with family codes and connection info */}
       {familyCodes.length > 0 && (
         <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <h3 className="text-lg font-semibold text-blue-800 mb-2">Connected Family Trees</h3>
+          <h3 className="text-lg font-semibold text-blue-800 mb-2">{getTranslation('connectedFamilyTrees', language)}</h3>
           <div className="flex flex-wrap gap-2 mb-2">
             {familyCodes
                 .filter(code => code !== (familyCode || userInfo?.familyCode))
@@ -150,7 +153,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
           </div>
           {totalConnections > 0 && (
             <p className="text-sm text-blue-600">
-              Total cross-family connections: {totalConnections}
+              {getTranslation('totalCrossFamilyConnections', language)}: {totalConnections}
             </p>
           )}
         </div>

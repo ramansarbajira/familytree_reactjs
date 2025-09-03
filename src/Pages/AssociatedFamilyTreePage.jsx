@@ -3,29 +3,36 @@ import { useUser } from '../Contexts/UserContext';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Layout from '../Components/Layout';
 import AssociatedFamilyTree from '../Components/FamilyTree/AssociatedFamilyTree';
+import { useLanguage } from '../Contexts/LanguageContext';
+import { getTranslation } from '../utils/languageTranslations';
+import LanguageSwitcher from '../Components/LanguageSwitcher';
 
 const AssociatedFamilyTreePage = () => {
   const { code, userId } = useParams();
   const { userInfo } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
+  const { language } = useLanguage();
   
   // Determine if this is userId-based or familyCode-based routing
   const isUserIdBased = location.pathname.includes('/associated-family-tree-user/');
   const displayTitle = isUserIdBased 
-    ? `Associated Family Trees for User: ${userId}`
-    : `Associated Family Tree: ${code}`;
+    ? `${getTranslation('associatedFamilyTreesForUser', language)}: ${userId}`
+    : `${getTranslation('associatedFamilyTree', language)}: ${code}`;
 
   return (
     <Layout>
       <div className="p-4 md:p-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-2 text-gray-800">{displayTitle}</h2>
-          {isUserIdBased && (
-            <p className="text-gray-600 text-sm">
-              Showing all family trees connected to this user through relationships and associations.
-            </p>
-          )}
+        <div className="mb-6 flex justify-between items-start">
+          <div>
+            <h2 className="text-2xl font-bold mb-2 text-gray-800">{displayTitle}</h2>
+            {isUserIdBased && (
+              <p className="text-gray-600 text-sm">
+                {getTranslation('showingAllFamilyTrees', language)}
+              </p>
+            )}
+          </div>
+          <LanguageSwitcher />
         </div>
         
         <AssociatedFamilyTree 
@@ -38,14 +45,14 @@ const AssociatedFamilyTreePage = () => {
             className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors" 
             onClick={() => navigate(-1)}
           >
-            Back
+            {getTranslation('back', language)}
           </button>
           {userInfo?.familyCode && (
             <button 
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors" 
               onClick={() => navigate('/family-tree') }
             >
-              My Birth Family Tree
+              {getTranslation('myBirthFamilyTree', language)}
             </button>
           )}
         </div>
