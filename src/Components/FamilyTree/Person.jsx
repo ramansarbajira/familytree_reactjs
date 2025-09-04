@@ -9,6 +9,51 @@ import { fetchAssociatedFamilyPrefixes } from '../../utils/familyTreeApi';
 import Swal from 'sweetalert2';
 import { useNavigate, useParams } from 'react-router-dom';
 
+// Helper function to get proper gender label
+const getGenderLabel = (person, tree, currentUserId) => {
+    if (!person.gender || person.gender === 'unknown' || person.gender === '') return '';
+    
+    // Check if this person is a spouse of the current user
+    const isSpouseOfCurrentUser = () => {
+        if (!tree || !currentUserId) return false;
+        
+        // Find current user in tree
+        const currentUser = Array.from(tree.people.values()).find(p => 
+            p.memberId === currentUserId || p.userId === currentUserId
+        );
+        
+        if (!currentUser) return false;
+        
+        // Check if person is in current user's spouse list
+        const spouses = currentUser.spouses instanceof Set 
+            ? Array.from(currentUser.spouses)
+            : Array.isArray(currentUser.spouses) 
+            ? currentUser.spouses 
+            : [];
+            
+        return spouses.includes(person.id);
+    };
+    
+    // If this person is a spouse, use H/W labels
+    if (isSpouseOfCurrentUser()) {
+        return person.gender.toLowerCase() === 'male' ? 'H' : 
+               person.gender.toLowerCase() === 'female' ? 'W' : '';
+    }
+    
+    // For non-spouses, use standard gender labels
+    switch (person.gender.toLowerCase()) {
+        case 'male':
+            return 'Male';
+        case 'female':
+            return 'Female';
+        case 'unknown':
+        case '':
+            return '';
+        default:
+            return person.gender.charAt(0).toUpperCase() + person.gender.slice(1);
+    }
+};
+
 const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSelected, currentUserId, currentFamilyId, viewOnly, sourceRelationship }) => {
     // Dynamic sizing based on tree size
     const memberCount = tree ? tree.people.size : 0;
@@ -105,10 +150,22 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             return `A${sourceRel}+${relationshipCode}`;
         }
         
-        // Fallback: use first character if no source relationship provided
-        const firstChar = relationshipCode.charAt(0);
-        return `A${firstChar}+${relationshipCode}`;
-    }, [relationshipCode, isViewingBirthFamily, urlSourceRelationship, sourceRelationship]);
+        // Fallback: use logged-in user's gender to determine H/W prefix
+        const loggedInUserGender = userInfo?.gender?.toLowerCase();
+        let genderPrefix = '';
+        
+        if (loggedInUserGender === 'male' || loggedInUserGender === 'husband') {
+            genderPrefix = 'H';
+        } else if (loggedInUserGender === 'female' || loggedInUserGender === 'wife') {
+            genderPrefix = 'W';
+        } else {
+            // If gender is unknown, try to determine from relationship code first character
+            const firstChar = relationshipCode.charAt(0);
+            genderPrefix = firstChar !== 'U' ? firstChar : 'H'; // Default to H if unknown
+        }
+        
+        return `A${genderPrefix}+${relationshipCode}`;
+    }, [relationshipCode, isViewingBirthFamily, urlSourceRelationship, sourceRelationship, userInfo?.gender]);
 
     // Use context to get label - use displayRelationshipCode for translation consistency
     const { getLabel, refreshLabels } = useFamilyTreeLabels();
@@ -248,9 +305,22 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             // Prefer focusing counterpart (spouse) when jumping to associated family (convert spouse personId -> userId)
             const counterpartUserId = resolveCounterpartUserId(firstCode);
             const uid = counterpartUserId || (person.userId || person.memberId);
+            
+            // Use logged-in user's gender to determine proper source prefix
+            const loggedInUserGender = userInfo?.gender?.toLowerCase();
+            let sourcePrefix = '';
+            
+            if (loggedInUserGender === 'male' || loggedInUserGender === 'husband') {
+                sourcePrefix = 'H';
+            } else if (loggedInUserGender === 'female' || loggedInUserGender === 'wife') {
+                sourcePrefix = 'W';
+            } else {
+                sourcePrefix = 'H'; // Default to H if unknown
+            }
+            
             // Pass focus user id so the other tree highlights counterpart, and include relationship code as source
             const query = new URLSearchParams({
-                source: String(relationshipCode || 'UNKNOWN'),
+                source: String(relationshipCode || sourcePrefix),
                 focus: uid ? String(uid) : ''
             }).toString();
             navigate(`/family-tree/${firstCode}?${query}`);
@@ -280,8 +350,21 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 // Pass relationship code; prefer focusing counterpart (spouse) when changing family (convert spouse personId -> userId)
                 const counterpartUserId = resolveCounterpartUserId(selectedCode);
                 const uid = counterpartUserId || (person.userId || person.memberId);
+                
+                // Use logged-in user's gender to determine proper source prefix
+                const loggedInUserGender = userInfo?.gender?.toLowerCase();
+                let sourcePrefix = '';
+                
+                if (loggedInUserGender === 'male' || loggedInUserGender === 'husband') {
+                    sourcePrefix = 'H';
+                } else if (loggedInUserGender === 'female' || loggedInUserGender === 'wife') {
+                    sourcePrefix = 'W';
+                } else {
+                    sourcePrefix = 'H'; // Default to H if unknown
+                }
+                
                 const query = new URLSearchParams({
-                    source: String(relationshipCode || 'UNKNOWN'),
+                    source: String(relationshipCode || sourcePrefix),
                     focus: uid ? String(uid) : ''
                 }).toString();
                 navigate(`/family-tree/${selectedCode}?${query}`);
@@ -443,7 +526,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                     className="details text-xs text-gray-600 text-center font-medium mb-1" 
                     style={{fontSize: `${fontSizeDetails}px`}}
                 >
-                    {person.gender.charAt(0).toUpperCase() + person.gender.slice(1)}{ageText}
+                    {getGenderLabel(person, tree, currentUserId)}{ageText}
                 </span>
                 {/* Hide edit label in viewOnly mode */}
                 {relationshipText && !isEditingLabel && !viewOnly && (
