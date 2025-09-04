@@ -22,38 +22,22 @@ export function autoArrange(tree) {
     const memberCount = tree.people.size;
     let nodesep, ranksep, marginx, marginy, coupleSpacing;
     
-    // More compact spacing for all tree sizes
-    if (memberCount <= 10) {
-        nodesep = 60;    // Horizontal spacing between nodes
-        ranksep = 100;   // Vertical spacing between ranks
-        coupleSpacing = 20;  // Space between couples
-        marginx = 50;
-        marginy = 50;
-    } else if (memberCount <= 25) {
+    // Dynamic spacing based on tree size
+    if (memberCount > 100) {
+        nodesep = 60;
+        ranksep = 120;
+        coupleSpacing = 40;
+    } else if (memberCount > 50) {
         nodesep = 50;
-        ranksep = 90;
-        coupleSpacing = 20;
-        marginx = 40;
-        marginy = 40;
-    } else if (memberCount <= 50) {
-        nodesep = 40;
-        ranksep = 80;
-        coupleSpacing = 15;
-        marginx = 30;
-        marginy = 30;
-    } else if (memberCount <= 100) {
-        nodesep = 30;
-        ranksep = 70;
-        coupleSpacing = 10;
-        marginx = 20;
-        marginy = 20;
+        ranksep = 110;
+        coupleSpacing = 35;
     } else {
-        nodesep = 20;
-        ranksep = 60;
-        coupleSpacing = 5;
-        marginx = 10;
-        marginy = 10;
+        nodesep = 40;
+        ranksep = 100;
+        coupleSpacing = 30;
     }
+    marginx = 50;
+    marginy = 50;
 
     g.setGraph({
         rankdir: 'TB',
@@ -63,6 +47,16 @@ export function autoArrange(tree) {
         marginy: marginy,
         // Add clustering for better organization
         compound: true,
+        // Use network-simplex for more stable layout
+        ranker: 'network-simplex',
+        // Allow edges to be very short
+        minlen: 1,
+        // Better edge routing
+        edgesep: 10,
+        // Use simpler edge routing
+        ranker: 'tight-tree',
+        // Disable complex acyclicer to prevent errors
+        acyclicer: undefined,
         // Optimize for large graphs
         orderRestarts: memberCount > 50 ? 20 : 10,
         nestingRoot: memberCount > 50 ? 'root' : undefined,
@@ -175,20 +169,24 @@ export function autoArrange(tree) {
                 const commonChildren = [...person.children].filter(c => 
                     spouse.children && spouse.children.has(c));
                 
-                // Connect spouses with a high-weight edge to keep them close
+                // Connect spouses with a very high-weight edge to keep them close
                 g.setEdge(person.id.toString(), spouseId.toString(), {
-                    weight: 50,  // Increased weight to keep spouses closer
-                    minlen: 0.5, // Reduced minimum length
-                    style: 'stroke: #ff69b4',
-                    curve: 'curveStep',  // Use step curve for spouse connections
-                    // Force horizontal alignment
+                    weight: 1000,  // Very high weight to keep spouses together
+                    minlen: 0.1,   // Minimal length
+                    style: 'stroke: #ff69b4, stroke-width: 2',
+                    curve: 'line', // Use straight line for spouse connections
                     labelpos: 'c',
                     labeloffset: 0,
-                    // Add invisible edge to help with layout
                     edgeLabel: '',
                     edgeLabelStyle: 'opacity:0',
+                    // Add constraints to keep them on same rank
+                    constraint: true,
                     // Add some padding to prevent overlap
-                    padding: 10
+                    padding: 5,
+                    // Add invisible edge to help with layout
+                    edgeStyle: 'invis',
+                    // Force horizontal alignment
+                    rank: 'same'
                 });
                 
                 // If they have no common children, create a special cluster
@@ -227,66 +225,56 @@ export function autoArrange(tree) {
 
     // Process each couple
     coupleNodes.forEach(([id1, id2]) => {
-        const coupleId = `couple-${id1}-${id2}`;
-        
-        // Create a cluster for this couple
-        g.setNode(coupleId, {
-            cluster: true,
-            label: '',
-            style: 'fill: none',
-            margin: 0,
-            padding: 0,
-            rank: 'same',
-            // Force horizontal alignment
-            rankdir: 'LR',
-            // Make the cluster as small as possible
-            width: 0,
-            height: 0
+        // Simple connection between spouses
+        g.setEdge(id1.toString(), id2.toString(), {
+            weight: 1000,  // Very high weight to keep them together
+            minlen: 1,     // Minimum length of 1
+            style: 'stroke: #ff69b4, stroke-width: 2px',
+            curve: 'line', // Straight line
+            arrowhead: 'none',
+            // Add invisible edge to help with layout
+            edgeLabel: '',
+            edgeLabelStyle: 'opacity:0',
+            // Add some padding
+            padding: 5,
+            // Make sure this edge doesn't affect the rank
+            constraint: false
         });
         
-        // Add both spouses to the cluster
-        g.setParent(id1.toString(), coupleId);
-        g.setParent(id2.toString(), coupleId);
-        
-        // Position the second spouse to the right of the first
+        // Add them to the same rank
         g.setNode(id1.toString(), {
             ...g.node(id1.toString()),
-            // Add some padding to the node
-            padding: 10,
-            // Force position constraints
-            constraint: true,
-            // Make sure they stay on the same rank
-            rank: 'same',
-            // Add some spacing between the couple
-            margin: { left: 0, right: coupleSpacing }
+            rank: 'same'
         });
         
         g.setNode(id2.toString(), {
             ...g.node(id2.toString()),
-            // Add some padding to the node
-            padding: 10,
-            // Force position constraints
-            constraint: true,
-            // Make sure they stay on the same rank
-            rank: 'same',
-            // Add some spacing between the couple
-            margin: { left: coupleSpacing, right: 0 }
+            rank: 'same'
         });
         
-        // Connect the couple with a strong edge
-        g.setEdge(id1.toString(), id2.toString(), {
-            weight: 1000,  // Extremely high weight to keep them together
-            minlen: 0,     // No minimum length
-            style: 'stroke: #ff69b4, stroke-width: 2px',
-            curve: 'curveStep',
-            // Make the connection straight
-            curve: 'line',
-            // Add arrow in the middle
-            arrowhead: 'none',
-            // Add some spacing
-            padding: 10,
-            // Make sure the edge doesn't affect layout too much
-            constraint: false
+        // Add constraints to keep them on the same level
+        g.setNode(id1.toString(), {
+            ...g.node(id1.toString()),
+            rank: 'same',
+            // Keep nodes close together
+            width: 100,
+            height: 40,
+            // Add some padding
+            padding: 5,
+            // Force position
+            fixed: false
+        });
+        
+        g.setNode(id2.toString(), {
+            ...g.node(id2.toString()),
+            rank: 'same',
+            // Keep nodes close together
+            width: 100,
+            height: 40,
+            // Add some padding
+            padding: 5,
+            // Force position
+            fixed: false
         });
     });
 
@@ -334,11 +322,24 @@ export function autoArrange(tree) {
         acyclicer: 'greedy',
         ranker: 'tight-tree',
         align: 'UL',
+        edgesep: nodesep / 3,  // Tighter edge separation
         ranksep: ranksep,
-        edgesep: nodesep / 2,
-        ranker: 'longest-path',
-        maxiter: 2000,  // Increased iterations for better layout
-        compound: true
+        ranker: 'network-simplex',  // Better for complex trees
+        maxiter: 3000,  // More iterations for better layout
+        compound: true,
+        // Improved layout parameters
+        ranksep: ranksep * 1.2,  // Slightly more vertical space
+        edgesep: 30,  // Fixed edge separation
+        ranksep: 80,  // Fixed rank separation
+        // Better node positioning
+        nodeRankFactor: 1.5,
+        // Improved edge routing
+        acyclicer: 'greedy',
+        // Better spacing control
+        ranksep: ranksep,
+        nodesep: nodesep,
+        // Improved convergence
+        tolerance: 0.001
     };
     
     // Apply the layout
