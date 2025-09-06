@@ -10,7 +10,7 @@ import { useUser } from '../Contexts/UserContext';
 import FamilyOverView from '../Components/FamilyOverView';
 import { FiLoader } from 'react-icons/fi';
 import SuggestFamilyModal from '../Components/SuggestFamilyModal';
-import { jwtDecode } from 'jwt-decode';
+import jwtDecode from 'jwt-decode';
 import Swal from 'sweetalert2';
 
 const FamilyHubPage = () => {

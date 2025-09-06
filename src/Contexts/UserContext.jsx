@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
-import { jwtDecode } from 'jwt-decode';
+import jwtDecode  from 'jwt-decode';
 
 const UserContext = createContext();
 
@@ -48,7 +48,7 @@ export const UserProvider = ({ children }) => {
           'Content-Type': 'application/json',
         },
       });
-      if (response.status === 401 || response.status === 400) {
+      if (response.status === 401) {
         // Treat 400 from myProfile as invalid session as well to avoid loops
         try {
           const errJson = await response.json();

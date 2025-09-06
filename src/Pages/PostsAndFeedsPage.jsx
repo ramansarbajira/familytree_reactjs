@@ -3,7 +3,7 @@ import Layout from '../Components/Layout';
 import CreatePostModal from '../Components/CreatePostModal';
 import PostViewerModal from '../Components/PostViewerModal';
 import { useUser } from '../Contexts/UserContext';
-import { jwtDecode } from 'jwt-decode';
+import jwtDecode from 'jwt-decode';
 
 import {
     FiImage, FiEdit3, FiTrash2, FiGlobe, FiUsers, FiPlusCircle, FiFeather, FiSearch, FiBell,

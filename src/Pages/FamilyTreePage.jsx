@@ -855,10 +855,16 @@ const FamilyTreePage = () => {
                 formData.append(`person_${index}_siblings`, person.siblings ? Array.from(person.siblings).join(',') : '');
                 formData.append(`person_${index}_relationshipCode`, person.relationshipCode || '');
                 // For image
-                if (person.img instanceof File) {
-                    formData.append(`person_${index}_img`, person.img);
-                } else if (typeof person.img === 'string') {
-                    formData.append(`person_${index}_img`, person.img);
+                if (person.img) {
+                    if (person.img instanceof File) {
+                        formData.append(`person_${index}_img`, person.img);
+                    } else if (typeof person.img === 'string') {
+                        // Extract filename from URL if it's a URL, otherwise use as is
+                        const imgValue = person.img.includes('/') 
+                            ? person.img.split('/').pop() 
+                            : person.img;
+                        formData.append(`person_${index}_img`, imgValue);
+                    }
                 }
                 index++;
             }

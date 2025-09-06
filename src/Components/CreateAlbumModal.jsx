@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaTimes, FaUpload, FaImage, FaTrashAlt, FaPlus } from 'react-icons/fa'; // Added FaPlus for new photo input
+import { FaTimes, FaUpload, FaImage, FaTrashAlt, FaPlus } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { useUser } from '../Contexts/UserContext';
 
@@ -7,17 +7,20 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
     const { userInfo } = useUser();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [privacy, setPrivacy] = useState('family'); // Default to 'family'
-    const [familyCode, setFamilyCode] = useState(''); // State for familyCode
+    const [privacy, setPrivacy] = useState('family');
+    const [familyCode, setFamilyCode] = useState('');
 
     // For new file uploads
     const [coverPhotoFile, setCoverPhotoFile] = useState(null);
-    const [galleryPhotoFiles, setGalleryPhotoFiles] = useState([]); // For new multiple gallery photos
+    const [galleryPhotoFiles, setGalleryPhotoFiles] = useState([]);
 
     // For existing photos when in 'edit' mode
     const [currentCoverPhotoUrl, setCurrentCoverPhotoUrl] = useState(null);
-    const [currentGalleryPhotos, setCurrentGalleryPhotos] = useState([]); // For existing multiple gallery photos (objects with id, url)
-    const [removedImageIds, setRemovedImageIds] = useState([]); // Track IDs of removed images
+    const [currentGalleryPhotos, setCurrentGalleryPhotos] = useState([]);
+    const [removedImageIds, setRemovedImageIds] = useState([]);
+
+    // Duplicate prevention state
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const coverPhotoInputRef = useRef(null);
     const galleryPhotoInputRef = useRef(null);
@@ -28,36 +31,30 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
             if (mode === 'edit' && albumData) {
                 setTitle(albumData.title || '');
                 setDescription(albumData.description || '');
-                // Map backend 'private' to local 'family' if necessary
                 setPrivacy(albumData.privacy === 'private' ? 'family' : albumData.privacy || 'family');
                 setFamilyCode(albumData.familyCode || '');
 
-                // Set existing cover photo URL (assuming full URL from parent or construct here)
                 setCurrentCoverPhotoUrl(albumData.coverPhotoUrl ? 
                                          albumData.coverPhotoUrl : null);
                 
-                // Set existing gallery photos (construct full URLs if necessary)
                 const formattedExistingPhotos = albumData.galleryPhotos?.map(photo => ({
                     ...photo,
                     url: photo.url
                 })) || [];
                 setCurrentGalleryPhotos(formattedExistingPhotos);
 
-                // Clear new file inputs when editing an existing album
                 setCoverPhotoFile(null);
                 setGalleryPhotoFiles([]);
                 if (coverPhotoInputRef.current) coverPhotoInputRef.current.value = '';
                 if (galleryPhotoInputRef.current) galleryPhotoInputRef.current.value = '';
-            } else { // 'create' mode
-                resetForm(); // Call reset to clear all states for a fresh form
-                // Set default family code for new albums
+            } else {
+                resetForm();
                 setFamilyCode(currentUser?.familyCode || userInfo?.familyCode || '');
                 
-                // Set privacy based on user approval status
                 if (userInfo?.approveStatus === 'approved') {
-                    setPrivacy('family'); // Allow private option
+                    setPrivacy('family');
                 } else {
-                    setPrivacy('public'); // Only public option for non-approved users
+                    setPrivacy('public');
                 }
             }
         }
@@ -73,25 +70,29 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
         setCurrentCoverPhotoUrl(null);
         setCurrentGalleryPhotos([]);
         setRemovedImageIds([]);
+        setIsSubmitting(false); // Reset submission state
         if (coverPhotoInputRef.current) coverPhotoInputRef.current.value = '';
         if (galleryPhotoInputRef.current) galleryPhotoInputRef.current.value = '';
     };
 
     const handleClose = () => {
-        resetForm();
-        onClose();
+        // Only allow close if not submitting
+        if (!isSubmitting) {
+            resetForm();
+            onClose();
+        }
     };
 
     const handleCoverPhotoChange = (e) => {
         if (e.target.files && e.target.files[0]) {
             setCoverPhotoFile(e.target.files[0]);
-            setCurrentCoverPhotoUrl(null); // Clear existing cover photo if new one is selected
+            setCurrentCoverPhotoUrl(null);
         }
     };
 
     const handleRemoveCoverPhoto = () => {
         setCoverPhotoFile(null);
-        setCurrentCoverPhotoUrl(null); // Remove both new preview and existing URL
+        setCurrentCoverPhotoUrl(null);
         if (coverPhotoInputRef.current) coverPhotoInputRef.current.value = '';
     };
 
@@ -99,23 +100,20 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
         if (e.target.files) {
             const newFiles = Array.from(e.target.files);
             setGalleryPhotoFiles((prevFiles) => [...prevFiles, ...newFiles]);
-            e.target.value = null; // Clear the input value so the same file(s) can be selected again
+            e.target.value = null;
         }
     };
 
     const handleRemoveGalleryPhoto = (indexToRemove, isExisting = false) => {
         if (isExisting) {
-            // For existing photos, add their IDs to removedImageIds
             const photoToRemove = currentGalleryPhotos[indexToRemove];
             if (photoToRemove?.id) {
                 setRemovedImageIds(prev => [...prev, photoToRemove.id]);
             }
-            // Remove from current view
             setCurrentGalleryPhotos(prev => 
                 prev.filter((_, index) => index !== indexToRemove)
             );
         } else {
-            // For newly selected files
             setGalleryPhotoFiles(prev => 
                 prev.filter((_, index) => index !== indexToRemove)
             );
@@ -124,6 +122,12 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Prevent double submission
+        if (isSubmitting) {
+            console.log('Form submission already in progress...');
+            return;
+        }
 
         if (!title.trim()) {
             Swal.fire({
@@ -145,38 +149,32 @@ const CreateAlbumModal = ({ isOpen, onClose, onCreateAlbum, currentUser, authTok
             return;
         }
 
+        // Set submitting state to prevent duplicates
+        setIsSubmitting(true);
 
         const formData = new FormData();
         formData.append('galleryTitle', title);
         formData.append('galleryDescription', description || '');
-        formData.append('privacy', privacy === 'family' ? 'private' : privacy); // Map 'family' to 'private' for backend
+        formData.append('privacy', privacy === 'family' ? 'private' : privacy);
         formData.append('status', 1);
-        formData.append('createdBy', currentUser?.userId || ''); // Ensure correct user ID prop
+        formData.append('createdBy', currentUser?.userId || '');
         
-        // Only append familyCode when privacy is set to 'family' (private)
         if (privacy === 'family') {
             formData.append('familyCode', familyCode);
         }
-        
 
-        // Handle cover photo - if new file is selected or existing is removed
-if (coverPhotoFile) {
-    // New cover photo selected
-    formData.append('coverPhoto', coverPhotoFile);
-} else if (mode === 'edit' && !currentCoverPhotoUrl && albumData?.coverPhoto) {
-    // Existing cover photo was removed - send null to indicate removal
-    formData.append('coverPhoto', 'null'); // Send as string 'null' to be parsed by the backend
-}
+        if (coverPhotoFile) {
+            formData.append('coverPhoto', coverPhotoFile);
+        } else if (mode === 'edit' && !currentCoverPhotoUrl && albumData?.coverPhoto) {
+            formData.append('coverPhoto', 'null');
+        }
 
-        // Add removed image IDs for the backend to delete
         removedImageIds.forEach(id => {
             formData.append('removedImageIds', id.toString());
         });
 
-
-        // Append newly added gallery photo files
         galleryPhotoFiles.forEach((file) => {
-            formData.append('images', file); // key `images` must match backend for new files
+            formData.append('images', file);
         });
 
         let url = `${import.meta.env.VITE_API_BASE_URL}/gallery`;
@@ -208,8 +206,9 @@ if (coverPhotoFile) {
 
             console.log(`Album ${mode === 'create' ? 'Created' : 'Updated'}:`, result);
 
-            onCreateAlbum(result); // Notify parent to refresh listing
-            handleClose(); // Close modal
+            // Only proceed if still mounted and not cancelled
+            onCreateAlbum(result);
+            handleClose();
 
             Swal.fire({
                 icon: 'success',
@@ -227,9 +226,11 @@ if (coverPhotoFile) {
                 text: err.message || 'Something went wrong.',
                 confirmButtonColor: '#d33',
             });
+        } finally {
+            // Always reset submitting state
+            setIsSubmitting(false);
         }
     };
-
 
     if (!isOpen) return null;
 
@@ -241,8 +242,11 @@ if (coverPhotoFile) {
                     <h2 className="text-xl font-bold text-gray-800">{mode === 'create' ? 'Create New Album' : 'Edit Album'}</h2>
                     <button
                         onClick={handleClose}
-                        className="bg-unset text-black-500 p-1.5 rounded-full transition-colors"
-                        title="Close"
+                        disabled={isSubmitting}
+                        className={`bg-unset text-black-500 p-1.5 rounded-full transition-colors ${
+                            isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+                        }`}
+                        title={isSubmitting ? "Cannot close while saving..." : "Close"}
                     >
                         <FaTimes size={20} />
                     </button>
@@ -260,7 +264,10 @@ if (coverPhotoFile) {
                             id="albumTitle"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 text-gray-800 placeholder-gray-400 transition-all"
+                            disabled={isSubmitting}
+                            className={`w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 text-gray-800 placeholder-gray-400 transition-all ${
+                                isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
                             placeholder="E.g., Summer Vacation 2024"
                             required
                         />
@@ -275,8 +282,11 @@ if (coverPhotoFile) {
                             id="albumDescription"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
+                            disabled={isSubmitting}
                             rows="3"
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 text-gray-800 placeholder-gray-400 resize-none transition-all"
+                            className={`w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 text-gray-800 placeholder-gray-400 resize-none transition-all ${
+                                isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
                             placeholder="Describe your album..."
                         ></textarea>
                     </div>
@@ -297,8 +307,9 @@ if (coverPhotoFile) {
                                             value="family"
                                             checked={privacy === 'family'}
                                             onChange={(e) => setPrivacy(e.target.value)}
+                                            disabled={isSubmitting}
                                         />
-                                        <span className="ml-2 text-gray-700">Private</span>
+                                        <span className={`ml-2 text-gray-700 ${isSubmitting ? 'opacity-50' : ''}`}>Private</span>
                                     </label>
                                     <label className="inline-flex items-center">
                                         <input
@@ -308,8 +319,9 @@ if (coverPhotoFile) {
                                             value="public"
                                             checked={privacy === 'public'}
                                             onChange={(e) => setPrivacy(e.target.value)}
+                                            disabled={isSubmitting}
                                         />
-                                        <span className="ml-2 text-gray-700">Public</span>
+                                        <span className={`ml-2 text-gray-700 ${isSubmitting ? 'opacity-50' : ''}`}>Public</span>
                                     </label>
                                 </>
                             ) : (
@@ -328,8 +340,8 @@ if (coverPhotoFile) {
                         </div>
                     </div>
 
-                     {/* Family Code Input (conditionally rendered) */}
-                     {privacy === 'family' && (
+                    {/* Family Code Input */}
+                    {privacy === 'family' && (
                         <div>
                             <label htmlFor="familyCode" className="block text-sm font-medium text-gray-700 mb-2">
                                 Family Code <span className="text-red-500">*</span>
@@ -339,7 +351,10 @@ if (coverPhotoFile) {
                                 id="familyCode"
                                 value={familyCode}
                                 onChange={(e) => setFamilyCode(e.target.value)}
-                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 text-gray-800 placeholder-gray-400 transition-all"
+                                disabled={isSubmitting}
+                                className={`w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 text-gray-800 placeholder-gray-400 transition-all ${
+                                    isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                                 placeholder="Enter family code"
                                 required={privacy === 'family'}
                                 readOnly
@@ -359,12 +374,16 @@ if (coverPhotoFile) {
                             ref={coverPhotoInputRef}
                             onChange={handleCoverPhotoChange}
                             accept="image/*"
+                            disabled={isSubmitting}
                             className="hidden"
                         />
                         <button
                             type="button"
                             onClick={() => coverPhotoInputRef.current.click()}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 flex items-center justify-center"
+                            disabled={isSubmitting}
+                            className={`w-full p-3 bg-gray-50 border border-gray-200 rounded-lg transition-colors text-gray-700 flex items-center justify-center ${
+                                isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+                            }`}
                         >
                             <FaUpload className="mr-2 h-5 w-5 text-gray-500" />
                             {currentCoverPhotoUrl || coverPhotoFile ? 'Change Cover Photo' : 'Choose Cover Photo'}
@@ -379,7 +398,10 @@ if (coverPhotoFile) {
                                 <button
                                     type="button"
                                     onClick={handleRemoveCoverPhoto}
-                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                    disabled={isSubmitting}
+                                    className={`absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 transition-colors ${
+                                        isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
+                                    }`}
                                     title="Remove cover photo"
                                 >
                                     <FaTimes size={12} />
@@ -400,12 +422,16 @@ if (coverPhotoFile) {
                             onChange={handleGalleryPhotosChange}
                             accept="image/*"
                             multiple
+                            disabled={isSubmitting}
                             className="hidden"
                         />
                         <button
                             type="button"
                             onClick={() => galleryPhotoInputRef.current.click()}
-                            className="w-full p-3 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors text-primary-700 flex items-center justify-center"
+                            disabled={isSubmitting}
+                            className={`w-full p-3 bg-primary-50 border border-primary-200 rounded-lg transition-colors text-primary-700 flex items-center justify-center ${
+                                isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-100'
+                            }`}
                         >
                             <FaPlus className="mr-2 h-5 w-5" />
                             Add More Photos
@@ -426,7 +452,10 @@ if (coverPhotoFile) {
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveGalleryPhoto(index, true)}
-                                                className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                                disabled={isSubmitting}
+                                                className={`bg-red-500 text-white rounded-full p-1 transition-colors ${
+                                                    isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
+                                                }`}
                                                 title="Remove photo"
                                             >
                                                 <FaTrashAlt size={14} />
@@ -446,7 +475,10 @@ if (coverPhotoFile) {
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveGalleryPhoto(index, false)}
-                                                className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                                disabled={isSubmitting}
+                                                className={`bg-red-500 text-white rounded-full p-1 transition-colors ${
+                                                    isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
+                                                }`}
                                                 title="Remove photo"
                                             >
                                                 <FaTrashAlt size={14} />
@@ -466,22 +498,44 @@ if (coverPhotoFile) {
                         <button
                             type="button"
                             onClick={handleClose}
-                            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                            disabled={isSubmitting}
+                            className={`px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium transition-colors ${
+                                isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+                            }`}
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
-                            disabled={!title.trim()}
+                            disabled={!title.trim() || isSubmitting}
                             className={`px-4 py-2 rounded-lg font-medium text-white transition-all flex items-center gap-1 ${
-                                title.trim()
+                                title.trim() && !isSubmitting
                                     ? 'bg-primary-500 hover:bg-primary-600 shadow-md'
                                     : 'bg-gray-300 cursor-not-allowed'
                             }`}
                         >
-                            {mode === 'create' ? 'Create Album' : 'Update Album'}
+                            {isSubmitting ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1"></div>
+                                    {mode === 'create' ? 'Creating...' : 'Updating...'}
+                                </>
+                            ) : (
+                                mode === 'create' ? 'Create Album' : 'Update Album'
+                            )}
                         </button>
                     </div>
+
+                    {/* Loading overlay when submitting */}
+                    {isSubmitting && (
+                        <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-10">
+                            <div className="bg-white rounded-lg p-4 shadow-lg flex items-center">
+                                <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent mr-3"></div>
+                                <span className="text-gray-700 font-medium">
+                                    {mode === 'create' ? 'Creating album...' : 'Updating album...'}
+                                </span>
+                            </div>
+                        </div>
+                    )}
                 </form>
             </div>
         </div>
