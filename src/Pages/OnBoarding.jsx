@@ -4,7 +4,7 @@ import AuthLogo from '../Components/AuthLogo';
 import FamilyCodeAutocomplete  from '../Components/SuggestFamily';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
-import jwtDecode from 'jwt-decode';
+import {jwtDecode} from 'jwt-decode';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 

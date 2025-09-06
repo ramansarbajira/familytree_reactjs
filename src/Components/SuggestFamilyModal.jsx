@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import FamilyPreviewModal from "./FamilyPreviewModal";
-import jwtDecode from 'jwt-decode';
+import {jwtDecode} from 'jwt-decode';
 import Swal from 'sweetalert2';
 
 // Helper to fetch user's first name from profile

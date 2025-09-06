@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiX, FiCalendar, FiClock, FiMapPin, FiFileText, FiImage, FiPlus, FiLoader, FiCheckCircle } from 'react-icons/fi';
-import jwtDecode from 'jwt-decode';
+import {jwtDecode} from 'jwt-decode';
 import Swal from 'sweetalert2';
 
 const CreateEventModal = ({

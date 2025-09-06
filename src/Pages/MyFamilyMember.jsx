@@ -10,7 +10,7 @@ import PendingApprovalView from '../Components/PendingApprovalView';
 import CreateFamilyModal from '../Components/CreateFamilyModal';
 import JoinFamilyModal from '../Components/JoinFamilyModal';
 import { FiPlus, FiLoader } from 'react-icons/fi';
-import jwtDecode from 'jwt-decode';
+import {jwtDecode} from 'jwt-decode';
 
 const FamilyMemberListing = () => {
   const { userInfo, userLoading } = useUser();
