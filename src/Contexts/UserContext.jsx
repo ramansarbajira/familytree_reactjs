@@ -14,6 +14,9 @@ export const UserProvider = ({ children }) => {
     setUserInfo(null);
     setUserLoading(false);
     localStorage.removeItem('access_token');
+    localStorage.removeItem('userInfo');
+    localStorage.removeItem('stayLoggedIn');
+    sessionStorage.removeItem('tempLoginSession');
   }, []);
 
   const fetchUserDetails = useCallback(async () => {
@@ -29,12 +32,14 @@ export const UserProvider = ({ children }) => {
       decoded = jwtDecode(token);
     } catch (err) {
       console.error('Invalid JWT token');
+      clearUserData();
       return;
     }
 
     const userId = decoded?.id;
     if (!userId) {
       console.error('User ID not found in token');
+      clearUserData();
       return;
     }
 
@@ -49,24 +54,21 @@ export const UserProvider = ({ children }) => {
         },
       });
       if (response.status === 401) {
-        // Treat 400 from myProfile as invalid session as well to avoid loops
+        // Treat 401 from myProfile as invalid session
         try {
           const errJson = await response.json();
           console.error('User session error:', errJson?.message || errJson);
         } catch (_) {
           // ignore json parse errors
         }
-        localStorage.removeItem('access_token');
-        setUserInfo(null);
-        setUserLoading(false);
+        clearUserData();
         window.location.href = '/login';
         return;
       }
       if (!response.ok) throw new Error('Failed to fetch user details');
 
       const jsonData = await response.json();
-      const { userProfile, email, countryCode, mobile, status, role } = jsonData.data || {}; // Destructure additional fields here
-      //console.log(userProfile);
+      const { userProfile, email, countryCode, mobile, status, role } = jsonData.data || {};
       
       if (!userProfile) throw new Error('No user profile returned');
 
@@ -83,14 +85,13 @@ export const UserProvider = ({ children }) => {
           // Fallback: treat as comma-separated string
           childrenArray = userProfile.childrenNames.split(',').map(c => c.trim());
         }
-}
+      }
 
       const childFields = {};
       childrenArray.forEach((name, index) => {
         childFields[`childName${index}`] = name;
       });
       
-
       setUserInfo({
         userId: userProfile.userId,
         firstName: userProfile.firstName || '',
@@ -138,7 +139,7 @@ export const UserProvider = ({ children }) => {
     } finally {
       setUserLoading(false);
     }
-  }, []);
+  }, [clearUserData]);
 
   useEffect(() => {
     fetchUserDetails();
@@ -174,11 +175,48 @@ export const UserProvider = ({ children }) => {
     };
   }, [fetchUserDetails, clearUserData, userInfo, userLoading]);
 
+  // FIXED: Simplified session management - only handle actual browser close
+  useEffect(() => {
+    // Set up session management on page load
+    const handlePageLoad = () => {
+      const stayLoggedIn = localStorage.getItem('stayLoggedIn');
+      
+      // Only check if this is actually a fresh browser session
+      // Use sessionStorage to detect if this is a new browser session vs page refresh
+      if (!sessionStorage.getItem('browserSessionActive')) {
+        // This is a new browser session
+        sessionStorage.setItem('browserSessionActive', 'true');
+        
+        // If user previously chose not to stay logged in, clear the session
+        if (stayLoggedIn === 'false') {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('userInfo');
+          localStorage.removeItem('stayLoggedIn');
+          sessionStorage.removeItem('tempLoginSession');
+          clearUserData();
+          
+          // Redirect to login if on a protected page
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+            window.location.href = '/login';
+          }
+        }
+      }
+    };
+
+    // Run page load check immediately
+    handlePageLoad();
+
+    // REMOVED: beforeunload and visibility change handlers as they were causing issues
+    // The session will only be cleared when a new browser session starts (not during page refreshes or form submissions)
+
+  }, [clearUserData]);
+
   const contextValue = useMemo(() => ({
     userInfo,
     userLoading,
     refetchUser: fetchUserDetails,
     logout: clearUserData,
+    isPersistentLogin: localStorage.getItem('stayLoggedIn') === 'true',
   }), [userInfo, userLoading, fetchUserDetails, clearUserData]);
 
   return (

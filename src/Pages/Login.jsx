@@ -10,8 +10,9 @@ const Login = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // For loader
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [stayLoggedIn, setStayLoggedIn] = useState(false); // New state for checkbox
 
   const validate = () => {
     const newErrors = {};
@@ -45,7 +46,7 @@ const Login = () => {
 
     if (!validate()) return;
 
-    setIsSubmitting(true); // Show loader
+    setIsSubmitting(true);
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/login`, {
@@ -62,13 +63,26 @@ const Login = () => {
 
       const data = await response.json();
       localStorage.clear();
+      
+      // Always store in localStorage
       localStorage.setItem('access_token', data.accessToken);
       localStorage.setItem('userInfo', JSON.stringify(data.user));
-      navigate('/dashboard'); // Redirect to home page after login
+      
+      if (stayLoggedIn) {
+        // If "Stay logged in" is checked, set persistent flag
+        localStorage.setItem('stayLoggedIn', 'true');
+      } else {
+        // If "Stay logged in" is NOT checked, set temporary session flag
+        localStorage.setItem('stayLoggedIn', 'false');
+        // Set a flag to track this session for cleanup
+        sessionStorage.setItem('tempLoginSession', 'true');
+      }
+      
+      navigate('/dashboard');
     } catch (error) {
       setApiError('Login failed. Please check your network or credentials.');
     } finally {
-      setIsSubmitting(false); // Hide loader
+      setIsSubmitting(false);
     }
   };
 
@@ -85,25 +99,6 @@ const Login = () => {
           <h2 className="text-2xl font-bold text-gray-800">Welcome back!!!</h2>
           <p className="text-sm text-gray-500 mt-1">Please enter your login details</p>
         </div>
-
-        {/* Social Icons */}
-        {/* <div className="flex justify-center gap-5 mb-3">
-          {['google', 'twitter', 'facebook'].map((social) => (
-            <button
-              key={social}
-              className="w-16 h-16 flex items-center justify-center rounded-full bg-white border shadow hover:shadow-lg transition"
-            >
-              <img src={`/assets/${social}.png`} alt={social} className="w-10 h-10" />
-            </button>
-          ))}
-        </div> */}
-
-        {/* Divider */}
-        {/* <div className="flex items-center mb-6">
-          <div className="flex-grow border-t border-gray-300"></div>
-          <span className="px-3 text-sm text-gray-400">or</span>
-          <div className="flex-grow border-t border-gray-300"></div>
-        </div> */}
 
         {/* API Error */}
         {apiError && (
@@ -142,46 +137,53 @@ const Login = () => {
           </div>
 
           {/* Password */}
-         <div className="relative">
-  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-  <input
-    id="password"
-    ref={passwordRef}
-    type={showPassword ? 'text' : 'password'}
-    value={formData.password}
-    onChange={(e) => handleChange('password', e.target.value)}
-    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
-      errors.password
-        ? 'border-red-500 focus:ring-red-300'
-        : 'border-gray-300 focus:ring-[var(--color-primary)]'
-    }`}
-    placeholder="Enter password"
-  />
-  {/* Eye Icon */}
-  <button
-    type="button"
-    onClick={() => setShowPassword(!showPassword)}
-    className="absolute top-9 right-4 text-gray-500 hover:text-gray-700 focus:outline-none bg-transparent"
-  tabIndex={-1}
-  >
-    {showPassword ? (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-.898.12-1.768.345-2.592m.66-2.384a9.961 9.961 0 0115.455 2.204M9.88 9.88a3 3 0 104.24 4.24M15 12a3 3 0 01-3 3m0-6a3 3 0 013 3m-3 3a3 3 0 01-3-3" />
-      </svg>
-    ) : (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm1.45 5.33L4.98 5.86m14.09 10.09A9.953 9.953 0 0021 12c0-5.523-4.477-10-10-10-1.658 0-3.216.403-4.594 1.117" />
-      </svg>
-    )}
-  </button>
-  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-</div>
-
+        <div className="relative">
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <input
+            id="password"
+            ref={passwordRef}
+            type={showPassword ? 'text' : 'password'}
+            value={formData.password}
+            onChange={(e) => handleChange('password', e.target.value)}
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+              errors.password
+                ? 'border-red-500 focus:ring-red-300'
+                : 'border-gray-300 focus:ring-[var(--color-primary)]'
+            }`}
+            placeholder="Enter password"
+          />
+          {/* Eye Icon - Fixed SVG paths */}
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute top-9 right-4 text-gray-500 hover:text-gray-700 focus:outline-none bg-transparent"
+            tabIndex={-1}
+          >
+            {showPassword ? (
+              // Eye with slash (hide password)
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+              </svg>
+            ) : (
+              // Normal eye (show password)
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            )}
+          </button>
+          {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+        </div>
 
           {/* Options */}
           <div className="flex items-center justify-between text-sm">
             <label className="flex items-center space-x-2">
-              <input type="checkbox" className="rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
+              <input 
+                type="checkbox" 
+                checked={stayLoggedIn}
+                onChange={(e) => setStayLoggedIn(e.target.checked)}
+                className="rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" 
+              />
               <span>Stay logged in</span>
             </label>
             <a href="/forgot-password" className="text-[var(--color-primary)] hover:underline">Forgot password?</a>
