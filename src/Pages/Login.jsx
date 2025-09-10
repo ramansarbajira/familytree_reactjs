@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthLogo from '../Components/AuthLogo';
+import { setAuthData, isAuthenticated } from '../utils/auth';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -40,6 +41,13 @@ const Login = () => {
     });
   };
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setApiError('');
@@ -62,22 +70,11 @@ const Login = () => {
       }
 
       const data = await response.json();
-      localStorage.clear();
       
-      // Always store in localStorage
-      localStorage.setItem('access_token', data.accessToken);
-      localStorage.setItem('userInfo', JSON.stringify(data.user));
+      // Use our auth utility to handle all storage operations
+      setAuthData(data.accessToken, data.user, stayLoggedIn);
       
-      if (stayLoggedIn) {
-        // If "Stay logged in" is checked, set persistent flag
-        localStorage.setItem('stayLoggedIn', 'true');
-      } else {
-        // If "Stay logged in" is NOT checked, set temporary session flag
-        localStorage.setItem('stayLoggedIn', 'false');
-        // Set a flag to track this session for cleanup
-        sessionStorage.setItem('tempLoginSession', 'true');
-      }
-      
+      // Redirect to dashboard
       navigate('/dashboard');
     } catch (error) {
       setApiError('Login failed. Please check your network or credentials.');

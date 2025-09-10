@@ -29,21 +29,25 @@ const FamilyPreviewModal = ({ familyCode, familyName, onClose }) => {
   }, [familyCode]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 max-w-2xl w-full shadow-lg relative">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl p-6 max-w-2xl w-full shadow-lg relative max-h-[90vh] flex flex-col">
         <button
-          className="absolute top-2 right-2 text-gray-400 text-2xl"
+          className="absolute top-2 right-2 text-gray-400 text-2xl z-10"
           onClick={onClose}
         >
           &times;
         </button>
-        <h2 className="text-2xl font-bold mb-2 text-center">{familyName || 'Family'}</h2>
-        <div className="text-gray-500 text-center mb-4">Family Members</div>
+        
+        <div className="flex-shrink-0">
+          <h2 className="text-2xl font-bold mb-2 text-center">{familyName || 'Family'}</h2>
+          <div className="text-gray-500 text-center mb-4">Family Members</div>
+        </div>
+        
         {loading ? (
-          <div className="text-center py-8">Loading...</div>
+          <div className="text-center py-8 flex-1">Loading...</div>
         ) : (
-          <div className="py-4" style={{ maxHeight: 350, overflowY: 'auto' }}>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+          <div className="flex-1 overflow-y-auto" style={{ maxHeight: '400px' }}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 p-2">
               {members.map((m) => {
                 const user = m.user || {};
                 const profile = user.userProfile || {};
@@ -80,7 +84,8 @@ const FamilyPreviewModal = ({ familyCode, familyName, onClose }) => {
             </div>
           </div>
         )}
-        <div className="mt-6 text-center">
+        
+        <div className="mt-6 text-center flex-shrink-0">
           <button
             className="bg-primary-500 text-white px-6 py-2 rounded mr-4"
             onClick={onClose}
@@ -93,4 +98,4 @@ const FamilyPreviewModal = ({ familyCode, familyName, onClose }) => {
   );
 };
 
-export default FamilyPreviewModal; 
+export default FamilyPreviewModal;

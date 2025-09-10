@@ -1,44 +1,41 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
-import {jwtDecode}  from 'jwt-decode';
+import { 
+  getToken, 
+  getUserInfo, 
+  setAuthData, 
+  clearAuthData, 
+  isAuthenticated, 
+  initializeAuth 
+} from '../utils/auth';
 
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-  const [userInfo, setUserInfo] = useState(null);
+  const [userInfo, setUserInfo] = useState(() => {
+    // Initialize with user info from localStorage if available
+    return getUserInfo();
+  });
+  
   const [userLoading, setUserLoading] = useState(() => {
     // Initialize as true if there's a token (indicating we need to fetch user data)
-    return !!localStorage.getItem('access_token');
+    return isAuthenticated();
   });
+
+  // Initialize auth state when context mounts
+  useEffect(() => {
+    initializeAuth();
+  }, []);
 
   const clearUserData = useCallback(() => {
     setUserInfo(null);
     setUserLoading(false);
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('userInfo');
-    localStorage.removeItem('stayLoggedIn');
-    sessionStorage.removeItem('tempLoginSession');
+    clearAuthData();
   }, []);
 
   const fetchUserDetails = useCallback(async () => {
-    const token = localStorage.getItem('access_token');
+    const token = getToken();
     if (!token) {
-      console.warn('Authentication token not found.');
-      clearUserData();
-      return;
-    }
-
-    let decoded;
-    try {
-      decoded = jwtDecode(token);
-    } catch (err) {
-      console.error('Invalid JWT token');
-      clearUserData();
-      return;
-    }
-
-    const userId = decoded?.id;
-    if (!userId) {
-      console.error('User ID not found in token');
+      console.warn('Authentication token not found or expired.');
       clearUserData();
       return;
     }
@@ -162,7 +159,7 @@ export const UserProvider = ({ children }) => {
 
     // Also check for token changes in the same tab
     const checkTokenInterval = setInterval(() => {
-      const currentToken = localStorage.getItem('access_token');
+      const currentToken = getToken();
       if (currentToken && !userInfo && !userLoading) {
         // Token exists but no user info, fetch it
         fetchUserDetails();
@@ -189,10 +186,7 @@ export const UserProvider = ({ children }) => {
         
         // If user previously chose not to stay logged in, clear the session
         if (stayLoggedIn === 'false') {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('userInfo');
-          localStorage.removeItem('stayLoggedIn');
-          sessionStorage.removeItem('tempLoginSession');
+          clearAuthData();
           clearUserData();
           
           // Redirect to login if on a protected page

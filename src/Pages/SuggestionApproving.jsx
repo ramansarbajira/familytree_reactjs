@@ -3,9 +3,9 @@ import { FiClock } from 'react-icons/fi';
 import Layout from '../Components/Layout';
 
 const Modal = ({ children, onClose }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-    <div className="bg-white rounded-2xl p-8 max-w-3xl w-full shadow-2xl relative">
-      <button className="absolute top-2 right-2 text-gray-400 text-2xl" onClick={onClose}>&times;</button>
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl p-8 max-w-3xl w-full shadow-2xl relative max-h-[90vh] flex flex-col">
+      <button className="absolute top-2 right-2 text-gray-400 text-2xl z-10" onClick={onClose}>&times;</button>
       {children}
     </div>
   </div>
@@ -68,7 +68,7 @@ const SuggestionApproving = () => {
           let user = null;
           if (req.triggeredBy) {
             const userRes = await fetch(
-              `${import.meta.env.VITE_API_BASE_URL}/user/${req.triggeredBy}`,
+              `${import.meta.env.VITE_API_BASE_URL}/user/profile/${req.triggeredBy}`,
               {
                 headers: {
                   accept: 'application/json',
@@ -173,7 +173,7 @@ const SuggestionApproving = () => {
                   className="ml-auto bg-blue-500 text-white px-4 py-2 rounded mr-2"
                   onClick={async () => {
                     // Fetch full profile and show modal
-                    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/${req.triggeredBy}`,
+                    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/profile/${req.triggeredBy}`,
                       { headers: { Authorization: `Bearer ${accessToken}` } });
                     const data = await res.json();
                     setViewProfile(data.data.userProfile);
@@ -195,114 +195,133 @@ const SuggestionApproving = () => {
       {/* View Profile Modal */}
       {viewProfile && (
         <Modal onClose={() => setViewProfile(null)}>
-          <h2 className="text-xl font-bold mb-2">{viewProfile.firstName} {viewProfile.lastName}</h2>
-          <img
-            src={viewProfile.profile || '/public/assets/user.png'}
-            alt="Profile"
-            className="w-24 h-24 rounded-full object-cover border mx-auto mb-4"
-          />
-          <div className="text-sm text-gray-700 mb-1"><b>DOB:</b> {viewProfile.dob}</div>
-          <div className="text-sm text-gray-700 mb-1"><b>Gender:</b> {viewProfile.gender}</div>
-          <div className="text-sm text-gray-700 mb-1"><b>Address:</b> {viewProfile.address}</div>
-          <div className="text-sm text-gray-700 mb-1"><b>Bio:</b> {viewProfile.bio}</div>
-          <div className="text-sm text-gray-700 mb-1"><b>FatherName:</b> {viewProfile.fatherName}</div>
-          <div className="text-sm text-gray-700 mb-1"><b>MotherName:</b> {viewProfile.motherName}</div>
-          <div className="text-sm text-gray-700 mb-1"><b>SpouseName:</b> {viewProfile.spouseName}</div>
-          {/* Add more fields as needed */}
-          <button className="mt-4 bg-primary-500 text-white px-6 py-2 rounded" onClick={() => setViewProfile(null)}>Close</button>
+          <div className="overflow-y-auto max-h-full">
+            <h2 className="text-xl font-bold mb-2">{viewProfile.firstName} {viewProfile.lastName}</h2>
+            <img
+              src={viewProfile.profile || '/public/assets/user.png'}
+              alt="Profile"
+              className="w-24 h-24 rounded-full object-cover border mx-auto mb-4"
+            />
+            <div className="text-sm text-gray-700 mb-1"><b>DOB:</b> {viewProfile.dob}</div>
+            <div className="text-sm text-gray-700 mb-1"><b>Gender:</b> {viewProfile.gender}</div>
+            <div className="text-sm text-gray-700 mb-1"><b>Address:</b> {viewProfile.address}</div>
+            <div className="text-sm text-gray-700 mb-1"><b>Bio:</b> {viewProfile.bio}</div>
+            <div className="text-sm text-gray-700 mb-1"><b>FatherName:</b> {viewProfile.fatherName}</div>
+            <div className="text-sm text-gray-700 mb-1"><b>MotherName:</b> {viewProfile.motherName}</div>
+            <div className="text-sm text-gray-700 mb-1"><b>SpouseName:</b> {viewProfile.spouseName}</div>
+            <button className="mt-4 bg-primary-500 text-white px-6 py-2 rounded" onClick={() => setViewProfile(null)}>Close</button>
+          </div>
         </Modal>
       )}
       {/* Approve & Replace Modal */}
       {replaceModal.open && (
         <Modal onClose={() => { setReplaceModal({ open: false, request: null }); setViewMember(null); }}>
-          <h2 className="text-xl font-bold mb-4">Select a member to replace</h2>
-          <input
-            type="text"
-            placeholder="Search by name..."
-            className="w-full mb-4 px-3 py-2 border rounded"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setViewMember(null); }}
-          />
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
-            {filteredMembers.map(member => {
-              const user = member.user || {};
-              const profile = user.userProfile || {};
-              return (
-                <div
-                  key={member.id}
-                  className={`p-2 border rounded flex flex-col items-center cursor-pointer ${selectedMemberId === user.id ? 'border-primary-500 bg-primary-50' : ''}`}
-                  onClick={() => {
-                    setSelectedMemberId(user.id);
-                    setViewMember({ user, profile });
-                  }}
-                >
-                  <img
-                    src={user.profileImage || '/public/assets/user.png'}
-                    alt={profile.firstName}
-                    className="w-24 h-24 rounded-full object-cover border mb-2"
-                  />
-                  <div className="font-semibold text-center">{profile.firstName} {profile.lastName}</div>
-                </div>
-              );
-            })}
-          </div>
-          {viewMember && selectedMemberId === viewMember.user.id && (
-            <div className="p-4 border rounded bg-gray-50 mb-4">
-              <div className="font-bold mb-1">Selected Member Details</div>
-              <div><b>Name:</b> {viewMember.profile.firstName} {viewMember.profile.lastName}</div>
-              <div><b>Email:</b> {viewMember.user.email}</div>
-              <div><b>DOB:</b> {viewMember.profile.dob}</div>
-              <div><b>Gender:</b> {viewMember.profile.gender}</div>
-              <div><b>Address:</b> {viewMember.profile.address}</div>
-              <button className="mt-2 text-primary-600 underline" onClick={() => setViewMember(null)}>Close</button>
+          <div className="flex flex-col h-full">
+            {/* Header - Fixed */}
+            <div className="flex-shrink-0 mb-4">
+              <h2 className="text-xl font-bold mb-4">Select a member to replace</h2>
+              <input
+                type="text"
+                placeholder="Search by name..."
+                className="w-full px-3 py-2 border rounded"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setViewMember(null); }}
+              />
             </div>
-          )}
-          <button
-            className="bg-green-600 text-white px-6 py-2 rounded disabled:opacity-50"
-            disabled={!selectedMemberId || replaceLoading}
-            onClick={() => setShowConfirm(true)}
-          >
-            {replaceLoading ? 'Approving...' : 'Approve & Replace'}
-          </button>
+
+            {/* Scrollable Members Grid */}
+            <div className="flex-1 overflow-y-auto mb-4" style={{ maxHeight: '300px' }}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-2">
+                {filteredMembers.map(member => {
+                  const user = member.user || {};
+                  const profile = user.userProfile || {};
+                  return (
+                    <div
+                      key={member.id}
+                      className={`p-2 border rounded flex flex-col items-center cursor-pointer ${selectedMemberId === user.id ? 'border-primary-500 bg-primary-50' : ''}`}
+                      onClick={() => {
+                        setSelectedMemberId(user.id);
+                        setViewMember({ user, profile });
+                      }}
+                    >
+                      <img
+                        src={user.profileImage || '/public/assets/user.png'}
+                        alt={profile.firstName}
+                        className="w-20 h-20 rounded-full object-cover border mb-2"
+                      />
+                      <div className="font-semibold text-center text-sm">{profile.firstName} {profile.lastName}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Selected Member Details - Fixed */}
+            {viewMember && selectedMemberId === viewMember.user.id && (
+              <div className="flex-shrink-0 p-4 border rounded bg-gray-50 mb-4">
+                <div className="font-bold mb-1">Selected Member Details</div>
+                <div><b>Name:</b> {viewMember.profile.firstName} {viewMember.profile.lastName}</div>
+                <div><b>Email:</b> {viewMember.user.email}</div>
+                <div><b>DOB:</b> {viewMember.profile.dob}</div>
+                <div><b>Gender:</b> {viewMember.profile.gender}</div>
+                <div><b>Address:</b> {viewMember.profile.address}</div>
+                <button className="mt-2 text-primary-600 underline" onClick={() => setViewMember(null)}>Close</button>
+              </div>
+            )}
+
+            {/* Footer Button - Fixed */}
+            <div className="flex-shrink-0">
+              <button
+                className="bg-green-600 text-white px-6 py-2 rounded disabled:opacity-50"
+                disabled={!selectedMemberId || replaceLoading}
+                onClick={() => setShowConfirm(true)}
+              >
+                {replaceLoading ? 'Approving...' : 'Approve & Replace'}
+              </button>
+            </div>
+          </div>
+
           {showConfirm && (
             <Modal onClose={() => setShowConfirm(false)}>
-              <div className="text-lg font-semibold mb-4">
-                Are you sure you want to <span className="text-primary-600">approve</span> this request and replace <span className="text-primary-600">{viewMember?.profile.firstName} {viewMember?.profile.lastName}</span> with <span className="text-primary-600">{replaceModal.request?.user?.firstName} {replaceModal.request?.user?.lastName}</span>?<br/>
-                <span className="text-sm text-gray-500">This action cannot be undone.</span>
+              <div className="overflow-y-auto max-h-full">
+                <div className="text-lg font-semibold mb-4">
+                  Are you sure you want to <span className="text-primary-600">approve</span> this request and replace <span className="text-primary-600">{viewMember?.profile.firstName} {viewMember?.profile.lastName}</span> with <span className="text-primary-600">{replaceModal.request?.user?.firstName} {replaceModal.request?.user?.lastName}</span>?<br/>
+                  <span className="text-sm text-gray-500">This action cannot be undone.</span>
+                </div>
+                <button
+                  className="bg-green-600 text-white px-6 py-2 rounded mr-2"
+                  onClick={async () => {
+                    setReplaceLoading(true);
+                    await fetch(
+                      `${import.meta.env.VITE_API_BASE_URL}/user/merge`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${accessToken}`,
+                        },
+                        body: JSON.stringify({
+                          existingId: selectedMemberId,
+                          currentId: replaceModal.request.triggeredBy,
+                          notificationId: replaceModal.request.id,
+                        }),
+                      }
+                    );
+                    setReplaceLoading(false);
+                    setShowConfirm(false);
+                    setReplaceModal({ open: false, request: null });
+                    setSelectedMemberId(null);
+                    setShowSuccess(true);
+                    setTimeout(() => {
+                      setShowSuccess(false);
+                      window.location.reload();
+                    }, 2000);
+                  }}
+                >
+                  Yes, Replace
+                </button>
+                <button className="bg-gray-300 px-6 py-2 rounded" onClick={() => setShowConfirm(false)}>Cancel</button>
               </div>
-              <button
-                className="bg-green-600 text-white px-6 py-2 rounded mr-2"
-                onClick={async () => {
-                  setReplaceLoading(true);
-                  await fetch(
-                    `${import.meta.env.VITE_API_BASE_URL}/user/merge`,
-                    {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${accessToken}`,
-                      },
-                      body: JSON.stringify({
-                        existingId: selectedMemberId,
-                        currentId: replaceModal.request.triggeredBy,
-                        notificationId: replaceModal.request.id,
-                      }),
-                    }
-                  );
-                  setReplaceLoading(false);
-                  setShowConfirm(false);
-                  setReplaceModal({ open: false, request: null });
-                  setSelectedMemberId(null);
-                  setShowSuccess(true);
-                  setTimeout(() => {
-                    setShowSuccess(false);
-                    window.location.reload();
-                  }, 2000);
-                }}
-              >
-                Yes, Replace
-              </button>
-              <button className="bg-gray-300 px-6 py-2 rounded" onClick={() => setShowConfirm(false)}>Cancel</button>
             </Modal>
           )}
         </Modal>
@@ -320,4 +339,4 @@ const SuggestionApproving = () => {
   );
 };
 
-export default SuggestionApproving; 
+export default SuggestionApproving;
