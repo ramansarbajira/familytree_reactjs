@@ -24,17 +24,17 @@ export function autoArrange(tree) {
     
     // Dynamic spacing based on tree size
     if (memberCount > 100) {
+        nodesep = 80;  // Increased for better spacing
+        ranksep = 150; // Increased vertical spacing
+        coupleSpacing = 50; // More space between couples
+    } else if (memberCount > 50) {
+        nodesep = 70;
+        ranksep = 130;
+        coupleSpacing = 45;
+    } else {
         nodesep = 60;
         ranksep = 120;
         coupleSpacing = 40;
-    } else if (memberCount > 50) {
-        nodesep = 50;
-        ranksep = 110;
-        coupleSpacing = 35;
-    } else {
-        nodesep = 40;
-        ranksep = 100;
-        coupleSpacing = 30;
     }
     marginx = 50;
     marginy = 50;
@@ -172,7 +172,7 @@ export function autoArrange(tree) {
                 // Connect spouses with a very high-weight edge to keep them close
                 g.setEdge(person.id.toString(), spouseId.toString(), {
                     weight: 1000,  // Very high weight to keep spouses together
-                    minlen: 0.1,   // Minimal length
+                    minlen: 1.5,   // Increased minimal length to prevent overlap
                     style: 'stroke: #ff69b4, stroke-width: 2',
                     curve: 'line', // Use straight line for spouse connections
                     labelpos: 'c',
@@ -181,12 +181,16 @@ export function autoArrange(tree) {
                     edgeLabelStyle: 'opacity:0',
                     // Add constraints to keep them on same rank
                     constraint: true,
-                    // Add some padding to prevent overlap
-                    padding: 5,
-                    // Add invisible edge to help with layout
-                    edgeStyle: 'invis',
+                    // Add more padding to prevent overlap
+                    padding: 15,
                     // Force horizontal alignment
-                    rank: 'same'
+                    rank: 'same',
+                    // Add fixed size for consistent spacing
+                    width: 150,
+                    height: 80,
+                    // Add margin to prevent overlap with other nodes
+                    marginx: 20,
+                    marginy: 10
                 });
                 
                 // If they have no common children, create a special cluster
@@ -225,20 +229,28 @@ export function autoArrange(tree) {
 
     // Process each couple
     coupleNodes.forEach(([id1, id2]) => {
-        // Simple connection between spouses
+        // Simple connection between spouses with proper spacing
         g.setEdge(id1.toString(), id2.toString(), {
             weight: 1000,  // Very high weight to keep them together
-            minlen: 1,     // Minimum length of 1
+            minlen: 2,     // Increased minimum length to prevent overlap
             style: 'stroke: #ff69b4, stroke-width: 2px',
             curve: 'line', // Straight line
             arrowhead: 'none',
             // Add invisible edge to help with layout
             edgeLabel: '',
             edgeLabelStyle: 'opacity:0',
-            // Add some padding
-            padding: 5,
-            // Make sure this edge doesn't affect the rank
-            constraint: false
+            // Add more padding
+            padding: 20,
+            // Keep them on the same rank
+            constraint: true,
+            // Add fixed spacing
+            width: 160,
+            height: 80,
+            // Add margins
+            marginx: 15,
+            marginy: 10,
+            // Ensure they stay on the same level
+            rank: 'same'
         });
         
         // Add them to the same rank
@@ -253,28 +265,32 @@ export function autoArrange(tree) {
         });
         
         // Add constraints to keep them on the same level
+        // Set consistent node sizes and spacing for spouses
+        const nodeOptions = {
+            width: 140,  // Increased width to prevent text overlap
+            height: 60,  // Increased height for better spacing
+            padding: 10,  // More padding
+            marginx: 15,  // Horizontal margin
+            marginy: 10,  // Vertical margin
+            rank: 'same', // Keep on same rank
+            fixed: false,
+            // Add minimum spacing
+            minlen: 2,
+            // Ensure nodes don't overlap
+            overlap: false,
+            // Add some spacing around nodes
+            margin: 10
+        };
+        
+        // Apply to both nodes
         g.setNode(id1.toString(), {
             ...g.node(id1.toString()),
-            rank: 'same',
-            // Keep nodes close together
-            width: 100,
-            height: 40,
-            // Add some padding
-            padding: 5,
-            // Force position
-            fixed: false
+            ...nodeOptions
         });
         
         g.setNode(id2.toString(), {
             ...g.node(id2.toString()),
-            rank: 'same',
-            // Keep nodes close together
-            width: 100,
-            height: 40,
-            // Add some padding
-            padding: 5,
-            // Force position
-            fixed: false
+            ...nodeOptions
         });
     });
 
@@ -315,31 +331,35 @@ export function autoArrange(tree) {
     // Apply layout with better configuration
     const layoutConfig = {
         rankdir: 'TB',
-        nodesep: nodesep,
-        ranksep: ranksep,
-        marginx: marginx,
-        marginy: marginy,
+        nodesep: nodesep * 1.5,  // Increased node separation
+        ranksep: ranksep * 1.5,  // Increased rank separation
+        marginx: marginx + 50,   // Increased margins
+        marginy: marginy + 50,
         acyclicer: 'greedy',
-        ranker: 'tight-tree',
-        align: 'UL',
-        edgesep: nodesep / 3,  // Tighter edge separation
-        ranksep: ranksep,
         ranker: 'network-simplex',  // Better for complex trees
-        maxiter: 3000,  // More iterations for better layout
+        align: 'UL',
+        edgesep: nodesep / 2,  // Better edge separation
+        maxiter: 5000,  // More iterations for better layout
         compound: true,
         // Improved layout parameters
-        ranksep: ranksep * 1.2,  // Slightly more vertical space
-        edgesep: 30,  // Fixed edge separation
-        ranksep: 80,  // Fixed rank separation
-        // Better node positioning
-        nodeRankFactor: 1.5,
+        nodeRankFactor: 2.0,  // Better node positioning
         // Improved edge routing
         acyclicer: 'greedy',
         // Better spacing control
         ranksep: ranksep,
         nodesep: nodesep,
         // Improved convergence
-        tolerance: 0.001
+        tolerance: 0.0001,
+        // Prevent node overlap
+        overlap: false,
+        // Better edge routing
+        splines: 'polyline',
+        // More space between nodes
+        edgesep: 50,
+        // Better spacing for large trees
+        ranksep: memberCount > 50 ? ranksep * 1.5 : ranksep,
+        // Prevent edge crossing
+        acyclic: true
     };
     
     // Apply the layout
