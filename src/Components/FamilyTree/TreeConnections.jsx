@@ -129,50 +129,7 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
             });
         });
 
-        // Draw spouse lines with optimization and better styling
-        const clusters = dagreGraph.children().filter(clusterId => clusterId.startsWith('cluster-'));
-        clusters.forEach(clusterId => {
-            const members = dagreGraph.children(clusterId);
-            if (members.length === 2) {
-                const p1 = dagreGraph.node(members[0]);
-                const p2 = dagreGraph.node(members[1]);
-                if (p1 && p2) {
-                    // Calculate center points for smoother connections
-                    const x1 = p1.x + dagreLayoutOffsetX + (p1.width || 0) / 2;
-                    const x2 = p2.x + dagreLayoutOffsetX - (p2.width || 0) / 2;
-                    const y1 = p1.y + dagreLayoutOffsetY;
-                    const y2 = p2.y + dagreLayoutOffsetY;
-                    
-                    // Use average y-position for horizontal line
-                    const centerY = (y1 + y2) / 2;
-                    
-                    // Draw curved connection with heart symbol in the middle
-                    const d = `M ${x1} ${y1} 
-                              C ${x1 + 30} ${centerY - 30}, 
-                                ${x2 - 30} ${centerY - 30}, 
-                                ${x2} ${y2}`;
-                    
-                    // Add shadow path for better visibility
-                    svg.appendChild(svgShadowPath(d, '#ff69b4', shadowOpacity * 1.5));
-                    
-                    // Add main connection line
-                    const path = svgPath(d, '#ff69b4', 4, false, 0.9);
-                    path.setAttribute('stroke-dasharray', '0');
-                    svg.appendChild(path);
-                    
-                    // Add heart symbol in the middle
-                    const heartX = (x1 + x2) / 2;
-                    const heartY = centerY - 20;
-                    const heart = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    heart.setAttribute('d', `M${heartX},${heartY} c0,0 -10,-8 -15,-3 c-5,-5 -15,3 -15,3 s10,8 15,13 c5,-5 15,-13 15,-13 z`);
-                    heart.setAttribute('fill', '#ff69b4');
-                    heart.setAttribute('opacity', '0.9');
-                    heart.setAttribute('transform', 'scale(0.8)');
-                    heart.setAttribute('transform-origin', `${heartX} ${heartY}`);
-                    svg.appendChild(heart);
-                }
-            }
-        });
+        // Spouse connection lines removed as per user request
     }, [dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY]);
 
     // Shadow path for extra contrast
