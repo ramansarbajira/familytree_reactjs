@@ -20,21 +20,27 @@ export function autoArrange(tree) {
     
     // Dynamic spacing based on tree size
     const memberCount = tree.people.size;
-    let nodesep, ranksep, marginx, marginy, coupleSpacing;
+    let nodesep, ranksep, marginx, marginy, coupleSpacing, nodeWidth, nodeHeight;
     
     // Dynamic spacing based on tree size
     if (memberCount > 100) {
-        nodesep = 80;  // Increased for better spacing
-        ranksep = 150; // Increased vertical spacing
-        coupleSpacing = 50; // More space between couples
+        nodesep = 120;  // Increased horizontal spacing
+        ranksep = 180;  // Increased vertical spacing
+        coupleSpacing = 80;  // More space between couples
+        nodeWidth = 180;  // Increased node width
+        nodeHeight = 80;   // Increased node height
     } else if (memberCount > 50) {
-        nodesep = 70;
-        ranksep = 130;
-        coupleSpacing = 45;
+        nodesep = 100;
+        ranksep = 160;
+        coupleSpacing = 70;
+        nodeWidth = 160;
+        nodeHeight = 70;
     } else {
-        nodesep = 60;
-        ranksep = 120;
-        coupleSpacing = 40;
+        nodesep = 80;
+        ranksep = 140;
+        coupleSpacing = 60;
+        nodeWidth = 150;
+        nodeHeight = 65;
     }
     marginx = 50;
     marginy = 50;
@@ -267,19 +273,25 @@ export function autoArrange(tree) {
         // Add constraints to keep them on the same level
         // Set consistent node sizes and spacing for spouses
         const nodeOptions = {
-            width: 140,  // Increased width to prevent text overlap
-            height: 60,  // Increased height for better spacing
-            padding: 10,  // More padding
-            marginx: 15,  // Horizontal margin
-            marginy: 10,  // Vertical margin
+            width: nodeWidth,  // Increased width for better spacing
+            height: nodeHeight,  // Increased height
+            padding: 20,  // More padding
+            marginx: 30,  // More horizontal margin
+            marginy: 20,  // More vertical margin
             rank: 'same', // Keep on same rank
             fixed: false,
             // Add minimum spacing
-            minlen: 2,
+            minlen: 4,  // Increased minimum length
             // Ensure nodes don't overlap
-            overlap: false,
-            // Add some spacing around nodes
-            margin: 10
+            overlap: 'false',
+            // Add more spacing around nodes
+            margin: 20,
+            // Fixed size constraints
+            fixedsize: true,
+            // More space for labels
+            labeloffset: 15,
+            // Force node dimensions
+            nodeDimensionsIncludeLabels: true
         };
         
         // Apply to both nodes
@@ -331,35 +343,41 @@ export function autoArrange(tree) {
     // Apply layout with better configuration
     const layoutConfig = {
         rankdir: 'TB',
-        nodesep: nodesep * 1.5,  // Increased node separation
-        ranksep: ranksep * 1.5,  // Increased rank separation
-        marginx: marginx + 50,   // Increased margins
-        marginy: marginy + 50,
+        nodesep: nodesep * 2,  // Further increased node separation
+        ranksep: ranksep * 1.8,  // Further increased rank separation
+        marginx: 100,   // Fixed large margins
+        marginy: 100,
         acyclicer: 'greedy',
         ranker: 'network-simplex',  // Better for complex trees
         align: 'UL',
-        edgesep: nodesep / 2,  // Better edge separation
-        maxiter: 5000,  // More iterations for better layout
+        edgesep: nodesep / 1.5,  // Better edge separation
+        maxiter: 7000,  // Even more iterations for better layout
         compound: true,
         // Improved layout parameters
-        nodeRankFactor: 2.0,  // Better node positioning
-        // Improved edge routing
-        acyclicer: 'greedy',
+        nodeRankFactor: 2.5,  // Better node positioning
         // Better spacing control
         ranksep: ranksep,
         nodesep: nodesep,
         // Improved convergence
-        tolerance: 0.0001,
-        // Prevent node overlap
-        overlap: false,
+        tolerance: 0.00001,
+        // Prevent node overlap with more strict settings
+        overlap: 'false',
+        overlap_shrink: true,
+        overlap_scaling: 10,
         // Better edge routing
         splines: 'polyline',
         // More space between nodes
-        edgesep: 50,
+        edgesep: 80,
         // Better spacing for large trees
-        ranksep: memberCount > 50 ? ranksep * 1.5 : ranksep,
+        ranksep: memberCount > 50 ? ranksep * 2 : ranksep * 1.5,
         // Prevent edge crossing
-        acyclic: true
+        acyclic: true,
+        // Force node dimensions
+        nodeDimensionsIncludeLabels: true,
+        // Better edge routing
+        edgeWeight: 2,
+        // More space for labels
+        labeloffset: 10
     };
     
     // Apply the layout
