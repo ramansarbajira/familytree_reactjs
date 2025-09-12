@@ -36,10 +36,10 @@ export function autoArrange(tree) {
         nodeWidth = 160;
         nodeHeight = 70;
     } else {
-        nodesep = 80;
-        ranksep = 140;
-        coupleSpacing = 60;
-        nodeWidth = 150;
+        nodesep = 180;
+        ranksep = 50;
+        coupleSpacing = 0;
+        nodeWidth = 50;
         nodeHeight = 65;
     }
     marginx = 50;

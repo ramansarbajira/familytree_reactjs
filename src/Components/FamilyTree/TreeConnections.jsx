@@ -88,13 +88,13 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
             const parentY = parents[0]?.y || 0;
             const childCenterX = children.reduce((sum, c) => sum + c.x, 0) / children.length;
             const childY = children[0]?.y || 0;
+            const centerY = parentY + dagreLayoutOffsetY + (childY - parentY) / 2;
             
             // Draw connection from parents to children
             parents.forEach(parent => {
                 // Line from parent to center point
                 const startX = parent.x + dagreLayoutOffsetX;
                 const startY = parent.y + dagreLayoutOffsetY + CARD_HEIGHT / 2 - CARD_CONNECT_OFFSET;
-                const centerY = parentY + dagreLayoutOffsetY + (childY - parentY) / 2;
                 
                 // Draw vertical line down from parent
                 svg.appendChild(svgPath(
@@ -109,24 +109,45 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
                 ));
             });
             
-            // Draw center vertical line
-            const centerY = parentY + dagreLayoutOffsetY + (childY - parentY) / 2;
+            // Calculate the top position for the horizontal line above all children
+            const childrenTopY = children.reduce((minY, child) => 
+                Math.min(minY, child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2 - 20), 
+                Infinity
+            );
+            
+            // Find leftmost and rightmost children for the horizontal line
+            const leftMostChild = children.reduce((leftMost, child) => 
+                (child.x < leftMost.x ? child : leftMost), 
+                children[0]
+            );
+            const rightMostChild = children.reduce((rightMost, child) => 
+                (child.x > rightMost.x ? child : rightMost), 
+                children[0]
+            );
+            
+            // Draw the main horizontal line above all children
             svg.appendChild(svgPath(
-                `M ${parentCenterX + dagreLayoutOffsetX} ${centerY} V ${childY + dagreLayoutOffsetY - CARD_HEIGHT / 2 + CARD_CONNECT_OFFSET}`,
+                `M ${leftMostChild.x + dagreLayoutOffsetX} ${childrenTopY} H ${rightMostChild.x + dagreLayoutOffsetX}`,
                 '#34d399', 5, false, connectionOpacity
             ));
             
-            // Draw connections to children
+            // Draw vertical connections from the horizontal line to each child
             children.forEach(child => {
-                const endX = child.x + dagreLayoutOffsetX;
-                const endY = child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2 + CARD_CONNECT_OFFSET;
+                const childTopX = child.x + dagreLayoutOffsetX;
+                const childTopY = child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2 + CARD_CONNECT_OFFSET;
                 
-                // Draw horizontal line from center to child
+                // Draw vertical line from horizontal line to child
                 svg.appendChild(svgPath(
-                    `M ${parentCenterX + dagreLayoutOffsetX} ${endY} H ${endX}`,
+                    `M ${childTopX} ${childrenTopY} V ${childTopY}`,
                     '#34d399', 5, false, connectionOpacity
                 ));
             });
+            
+            // Connect the center vertical line to the horizontal line
+            svg.appendChild(svgPath(
+                `M ${parentCenterX + dagreLayoutOffsetX} ${centerY} V ${childrenTopY}`,
+                '#34d399', 5, false, connectionOpacity
+            ));
         });
 
         // Spouse connection lines removed as per user request
