@@ -8,7 +8,7 @@ import { useUser } from '../Contexts/UserContext';
 
 // ✅ WhatsApp Share Modal
 const WhatsAppShareModal = ({ onClose, familyCode, member }) => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+  const baseUrl = import.meta.env.VITE_BASE_URL || window.location.origin;
   const inviteLink = `${baseUrl}/edit-profile?familyCode=${familyCode}&memberId=${member?.memberId}`;
 
   const handleWhatsAppShare = () => {
