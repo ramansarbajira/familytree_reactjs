@@ -24,23 +24,23 @@ export function autoArrange(tree) {
     
     // Dynamic spacing based on tree size
     if (memberCount > 100) {
-        nodesep = 120;  // Increased horizontal spacing
-        ranksep = 180;  // Increased vertical spacing
-        coupleSpacing = 80;  // More space between couples
-        nodeWidth = 180;  // Increased node width
-        nodeHeight = 80;   // Increased node height
+        nodesep = 150;  // Increased horizontal spacing between nodes
+        ranksep = 180;  // Vertical spacing between generations
+        coupleSpacing = 40;  // Space between spouses (reduced for side-by-side)
+        nodeWidth = 200;  // Node width
+        nodeHeight = 80;   // Node height
     } else if (memberCount > 50) {
-        nodesep = 100;
+        nodesep = 140;
         ranksep = 160;
-        coupleSpacing = 70;
+        coupleSpacing = 40;
+        nodeWidth = 180;
+        nodeHeight = 75;
+    } else {
+        nodesep = 120;
+        ranksep = 140;
+        coupleSpacing = 40;  // Consistent spacing for side-by-side
         nodeWidth = 160;
         nodeHeight = 70;
-    } else {
-        nodesep = 180;
-        ranksep = 50;
-        coupleSpacing = 0;
-        nodeWidth = 50;
-        nodeHeight = 65;
     }
     marginx = 50;
     marginy = 50;
@@ -55,6 +55,10 @@ export function autoArrange(tree) {
         compound: true,
         // Use network-simplex for more stable layout
         ranker: 'network-simplex',
+        // Force same rank for spouses
+        align: 'UL',
+        // Edge constraints for better spacing
+        edgesep: 50,
         // Allow edges to be very short
         minlen: 1,
         // Better edge routing
@@ -171,52 +175,46 @@ export function autoArrange(tree) {
                 const spouse = tree.people.get(spouseId);
                 if (!spouse) return;
                 
-                // Create a subgraph to keep spouses on the same rank
-                const subgraphId = `spouse-group-${person.id}-${spouseId}`;
+                // Check if they have common children
+                const commonChildren = [...person.children].filter(c => 
+                    spouse.children && spouse.children.has(c));
                 
-                // Add both spouses to the same subgraph to ensure same rank
-                g.setNode(subgraphId, {
-                    rank: 'same',
-                    style: 'invis',
-                    width: 0,
-                    height: 0
-                });
-                
-                // Add both spouses to this subgraph
-                g.setParent(person.id.toString(), subgraphId);
-                g.setParent(spouseId.toString(), subgraphId);
-                
-                // Connect spouses with a high-weight edge to keep them close
+                // Connect spouses with a very high-weight edge to keep them close
                 g.setEdge(person.id.toString(), spouseId.toString(), {
                     weight: 1000,  // Very high weight to keep spouses together
-                    minlen: 2,     // Minimal length between spouses
+                    minlen: 1.5,   // Increased minimal length to prevent overlap
                     style: 'stroke: #ff69b4, stroke-width: 2',
-                    curve: 'line',
-                    arrowhead: 'none',
-                    constraint: false
-                });
-                
-                // Set node properties to ensure side-by-side layout
-                const nodeOptions = {
+                    curve: 'line', // Use straight line for spouse connections
+                    labelpos: 'c',
+                    labeloffset: 0,
+                    edgeLabel: '',
+                    edgeLabelStyle: 'opacity:0',
+                    // Add constraints to keep them on same rank
+                    constraint: true,
+                    // Add more padding to prevent overlap
+                    padding: 15,
+                    // Force horizontal alignment
                     rank: 'same',
-                    width: nodeWidth,
-                    height: nodeHeight,
-                    fixedSize: true,
+                    // Add fixed size for consistent spacing
+                    width: 150,
+                    height: 80,
+                    // Add margin to prevent overlap with other nodes
                     marginx: 20,
                     marginy: 10
-                };
-                
-                g.setNode(person.id.toString(), {
-                    ...g.node(person.id.toString()),
-                    ...nodeOptions,
-                    labelpos: 'r'
                 });
                 
-                g.setNode(spouseId.toString(), {
-                    ...g.node(spouseId.toString()),
-                    ...nodeOptions,
-                    labelpos: 'l'
-                });
+                // If they have no common children, create a special cluster
+                if (commonChildren.length === 0) {
+                    const clusterId = `spouse-cluster-${person.id}-${spouseId}`;
+                    g.setNode(clusterId, {
+                        cluster: true,
+                        label: '',
+                        style: 'fill: #fff5f7',
+                        margin: 10
+                    });
+                    g.setParent(person.id.toString(), clusterId);
+                    g.setParent(spouseId.toString(), clusterId);
+                }
             }
         });
     });
@@ -239,52 +237,42 @@ export function autoArrange(tree) {
         });
     });
 
-    // Process each couple
+    // Process each couple to position them side by side
     coupleNodes.forEach(([id1, id2]) => {
-        // Simple connection between spouses with proper spacing
+        // Create a subgraph for the couple to keep them side by side
+        const coupleCluster = `couple_${id1}_${id2}`;
+        g.setParent(id1.toString(), coupleCluster);
+        g.setParent(id2.toString(), coupleCluster);
+        
+        // Configure the couple cluster
+        g.setNode(coupleCluster, {
+            cluster: true,
+            label: '',
+            style: 'fill: none',
+            rank: 'same',
+            rankdir: 'LR',  // Left to right for side-by-side
+            margin: 30
+        });
+        
+        // Configure the edge between spouses
         g.setEdge(id1.toString(), id2.toString(), {
-            weight: 1000,  // Very high weight to keep them together
-            minlen: 2,     // Increased minimum length to prevent overlap
-            style: 'stroke: #ff69b4, stroke-width: 2px',
-            curve: 'line', // Straight line
+            weight: 1000,  // High weight to keep them together
+            minlen: 1,     // Keep them close
+            style: 'stroke: #ff69b4; stroke-width: 2px;',
             arrowhead: 'none',
-            // Add invisible edge to help with layout
-            edgeLabel: '',
-            edgeLabelStyle: 'opacity:0',
-            // Add more padding
-            padding: 20,
-            // Keep them on the same rank
-            constraint: true,
-            // Add fixed spacing
-            width: 160,
-            height: 80,
-            // Add margins
-            marginx: 15,
-            marginy: 10,
-            // Ensure they stay on the same level
-            rank: 'same'
+            rank: 'same',
+            constraint: true
         });
         
-        // Add them to the same rank
-        g.setNode(id1.toString(), {
-            ...g.node(id1.toString()),
-            rank: 'same'
-        });
-        
-        g.setNode(id2.toString(), {
-            ...g.node(id2.toString()),
-            rank: 'same'
-        });
-        
-        // Add constraints to keep them on the same level
-        // Set consistent node sizes and spacing for spouses
+        // Set node options for both spouses
         const nodeOptions = {
-            width: nodeWidth,  // Increased width for better spacing
-            height: nodeHeight,  // Increased height
-            padding: 20,  // More padding
-            marginx: 30,  // More horizontal margin
-            marginy: 20,  // More vertical margin
-            rank: 'same', // Keep on same rank
+            width: nodeWidth,  // Use the dynamic width based on tree size
+            height: nodeHeight,  // Use the dynamic height based on tree size
+            rank: 'same',
+            constraint: true,
+            marginx: 30,  // Horizontal margin
+            marginy: 20,  // Vertical margin
+            padding: 20,  // Padding around nodes
             fixed: false,
             // Add minimum spacing
             minlen: 4,  // Increased minimum length

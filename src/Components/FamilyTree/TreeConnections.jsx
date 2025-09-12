@@ -150,11 +150,57 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
             ));
         });
 
-        // Spouse connection lines removed as per user request
+        // Draw spouse connections with green lines
+        const spousePairs = new Set();
+        dagreGraph.edges().forEach(edge => {
+            const edgeData = dagreGraph.edge(edge);
+            if (edgeData && edgeData.relationship === 'spouse' && !spousePairs.has(edge.w) && !spousePairs.has(edge.v)) {
+                const source = dagreGraph.node(edge.v);
+                const target = dagreGraph.node(edge.w);
+                
+                if (source && target) {
+                    // Calculate center points
+                    const x1 = source.x + dagreLayoutOffsetX;
+                    const y1 = source.y + dagreLayoutOffsetY;
+                    const x2 = target.x + dagreLayoutOffsetX;
+                    const y2 = target.y + dagreLayoutOffsetY;
+                    
+                    // Draw a curved line between spouses
+                    const midX = (x1 + x2) / 2;
+                    const curveHeight = 20; // Height of the curve
+                    const pathData = `M ${x1} ${y1} Q ${midX} ${y1 + curveHeight}, ${x2} ${y2}`;
+                    
+                    // Add shadow for depth
+                    svg.appendChild(svgShadowPath(pathData, '#10b981', 0.3));
+                    
+                    // Add the main green line
+                    svg.appendChild(svgPath(
+                        pathData,
+                        '#10b981', // Green color
+                        3,        // Line width
+                        false,    // No arrow
+                        0.9       // Slightly transparent
+                    ));
+                    
+                    // Add small circle at the center of the curve
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', midX.toString());
+                    circle.setAttribute('cy', (y1 + curveHeight/2).toString());
+                    circle.setAttribute('r', '4');
+                    circle.setAttribute('fill', '#10b981');
+                    circle.setAttribute('opacity', '0.9');
+                    svg.appendChild(circle);
+                    
+                    // Mark these nodes as processed
+                    spousePairs.add(edge.v);
+                    spousePairs.add(edge.w);
+                }
+            }
+        });
     }, [dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY]);
 
     // Shadow path for extra contrast
-    const svgShadowPath = (d, color = '#6ee7b7', opacity = 0.18) => {
+    const svgShadowPath = (d, color = '#10b981', opacity = 0.3) => {
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', d);
         path.setAttribute('stroke', color);
@@ -162,7 +208,7 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('opacity', opacity.toString());
-        path.setAttribute('filter', 'drop-shadow(0px 2px 6px #bbf7d0)');
+        path.setAttribute('filter', 'drop-shadow(0px 2px 4px rgba(16, 185, 129, 0.3))');
         return path;
     };
 
