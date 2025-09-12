@@ -20,6 +20,7 @@ import EventsPage from './Pages/EventsPage';
 import OrderManagementPage from './Pages/OrderManagementPage'; 
 import SuggestionApproving from './Pages/SuggestionApproving';
 import AssociatedFamilyTreePage from './Pages/AssociatedFamilyTreePage';
+import ProfileModule from './Pages/ProfileFormPage';
 
 
 import { UserProvider } from './Contexts/UserContext';
@@ -53,6 +54,7 @@ function App() {
           <Route path="/forgot-password" element={ <GuestRoute> <ForgotPassword /> </GuestRoute> } />
           <Route path="/reset-password" element={ <GuestRoute> <ResetPassword /> </GuestRoute> } />
           <Route path="/verify-otp" element={ <GuestRoute> <VerifyOtp /> </GuestRoute> } />
+          <Route path="/edit-profile" element={ <GuestRoute> <ProfileModule /> </GuestRoute> } />
 
           {/* Authenticated-only route */}
           <Route path="/on-boarding" element={<PrivateRoute> <OnBoarding /> </PrivateRoute>  } />
