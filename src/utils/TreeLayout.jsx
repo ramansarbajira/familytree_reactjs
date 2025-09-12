@@ -171,46 +171,52 @@ export function autoArrange(tree) {
                 const spouse = tree.people.get(spouseId);
                 if (!spouse) return;
                 
-                // Check if they have common children
-                const commonChildren = [...person.children].filter(c => 
-                    spouse.children && spouse.children.has(c));
+                // Create a subgraph to keep spouses on the same rank
+                const subgraphId = `spouse-group-${person.id}-${spouseId}`;
                 
-                // Connect spouses with a very high-weight edge to keep them close
-                g.setEdge(person.id.toString(), spouseId.toString(), {
-                    weight: 1000,  // Very high weight to keep spouses together
-                    minlen: 1.5,   // Increased minimal length to prevent overlap
-                    style: 'stroke: #ff69b4, stroke-width: 2',
-                    curve: 'line', // Use straight line for spouse connections
-                    labelpos: 'c',
-                    labeloffset: 0,
-                    edgeLabel: '',
-                    edgeLabelStyle: 'opacity:0',
-                    // Add constraints to keep them on same rank
-                    constraint: true,
-                    // Add more padding to prevent overlap
-                    padding: 15,
-                    // Force horizontal alignment
+                // Add both spouses to the same subgraph to ensure same rank
+                g.setNode(subgraphId, {
                     rank: 'same',
-                    // Add fixed size for consistent spacing
-                    width: 150,
-                    height: 80,
-                    // Add margin to prevent overlap with other nodes
-                    marginx: 20,
-                    marginy: 10
+                    style: 'invis',
+                    width: 0,
+                    height: 0
                 });
                 
-                // If they have no common children, create a special cluster
-                if (commonChildren.length === 0) {
-                    const clusterId = `spouse-cluster-${person.id}-${spouseId}`;
-                    g.setNode(clusterId, {
-                        cluster: true,
-                        label: '',
-                        style: 'fill: #fff5f7',
-                        margin: 10
-                    });
-                    g.setParent(person.id.toString(), clusterId);
-                    g.setParent(spouseId.toString(), clusterId);
-                }
+                // Add both spouses to this subgraph
+                g.setParent(person.id.toString(), subgraphId);
+                g.setParent(spouseId.toString(), subgraphId);
+                
+                // Connect spouses with a high-weight edge to keep them close
+                g.setEdge(person.id.toString(), spouseId.toString(), {
+                    weight: 1000,  // Very high weight to keep spouses together
+                    minlen: 2,     // Minimal length between spouses
+                    style: 'stroke: #ff69b4, stroke-width: 2',
+                    curve: 'line',
+                    arrowhead: 'none',
+                    constraint: false
+                });
+                
+                // Set node properties to ensure side-by-side layout
+                const nodeOptions = {
+                    rank: 'same',
+                    width: nodeWidth,
+                    height: nodeHeight,
+                    fixedSize: true,
+                    marginx: 20,
+                    marginy: 10
+                };
+                
+                g.setNode(person.id.toString(), {
+                    ...g.node(person.id.toString()),
+                    ...nodeOptions,
+                    labelpos: 'r'
+                });
+                
+                g.setNode(spouseId.toString(), {
+                    ...g.node(spouseId.toString()),
+                    ...nodeOptions,
+                    labelpos: 'l'
+                });
             }
         });
     });
