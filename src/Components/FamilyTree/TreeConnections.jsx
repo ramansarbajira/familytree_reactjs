@@ -88,13 +88,13 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
             const parentY = parents[0]?.y || 0;
             const childCenterX = children.reduce((sum, c) => sum + c.x, 0) / children.length;
             const childY = children[0]?.y || 0;
+            const centerY = parentY + dagreLayoutOffsetY + (childY - parentY) / 2;
             
             // Draw connection from parents to children
             parents.forEach(parent => {
                 // Line from parent to center point
                 const startX = parent.x + dagreLayoutOffsetX;
                 const startY = parent.y + dagreLayoutOffsetY + CARD_HEIGHT / 2 - CARD_CONNECT_OFFSET;
-                const centerY = parentY + dagreLayoutOffsetY + (childY - parentY) / 2;
                 
                 // Draw vertical line down from parent
                 svg.appendChild(svgPath(
@@ -109,74 +109,98 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
                 ));
             });
             
-            // Draw center vertical line
-            const centerY = parentY + dagreLayoutOffsetY + (childY - parentY) / 2;
+            // Calculate the top position for the horizontal line above all children
+            const childrenTopY = children.reduce((minY, child) => 
+                Math.min(minY, child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2 - 20), 
+                Infinity
+            );
+            
+            // Find leftmost and rightmost children for the horizontal line
+            const leftMostChild = children.reduce((leftMost, child) => 
+                (child.x < leftMost.x ? child : leftMost), 
+                children[0]
+            );
+            const rightMostChild = children.reduce((rightMost, child) => 
+                (child.x > rightMost.x ? child : rightMost), 
+                children[0]
+            );
+            
+            // Draw the main horizontal line above all children
             svg.appendChild(svgPath(
-                `M ${parentCenterX + dagreLayoutOffsetX} ${centerY} V ${childY + dagreLayoutOffsetY - CARD_HEIGHT / 2 + CARD_CONNECT_OFFSET}`,
+                `M ${leftMostChild.x + dagreLayoutOffsetX} ${childrenTopY} H ${rightMostChild.x + dagreLayoutOffsetX}`,
                 '#34d399', 5, false, connectionOpacity
             ));
             
-            // Draw connections to children
+            // Draw vertical connections from the horizontal line to each child
             children.forEach(child => {
-                const endX = child.x + dagreLayoutOffsetX;
-                const endY = child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2 + CARD_CONNECT_OFFSET;
+                const childTopX = child.x + dagreLayoutOffsetX;
+                const childTopY = child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2 + CARD_CONNECT_OFFSET;
                 
-                // Draw horizontal line from center to child
+                // Draw vertical line from horizontal line to child
                 svg.appendChild(svgPath(
-                    `M ${parentCenterX + dagreLayoutOffsetX} ${endY} H ${endX}`,
+                    `M ${childTopX} ${childrenTopY} V ${childTopY}`,
                     '#34d399', 5, false, connectionOpacity
                 ));
             });
+            
+            // Connect the center vertical line to the horizontal line
+            svg.appendChild(svgPath(
+                `M ${parentCenterX + dagreLayoutOffsetX} ${centerY} V ${childrenTopY}`,
+                '#34d399', 5, false, connectionOpacity
+            ));
         });
 
-        // Draw spouse lines with optimization and better styling
-        const clusters = dagreGraph.children().filter(clusterId => clusterId.startsWith('cluster-'));
-        clusters.forEach(clusterId => {
-            const members = dagreGraph.children(clusterId);
-            if (members.length === 2) {
-                const p1 = dagreGraph.node(members[0]);
-                const p2 = dagreGraph.node(members[1]);
-                if (p1 && p2) {
-                    // Calculate center points for smoother connections
-                    const x1 = p1.x + dagreLayoutOffsetX + (p1.width || 0) / 2;
-                    const x2 = p2.x + dagreLayoutOffsetX - (p2.width || 0) / 2;
-                    const y1 = p1.y + dagreLayoutOffsetY;
-                    const y2 = p2.y + dagreLayoutOffsetY;
+        // Draw spouse connections with green lines
+        const spousePairs = new Set();
+        dagreGraph.edges().forEach(edge => {
+            const edgeData = dagreGraph.edge(edge);
+            if (edgeData && edgeData.relationship === 'spouse' && !spousePairs.has(edge.w) && !spousePairs.has(edge.v)) {
+                const source = dagreGraph.node(edge.v);
+                const target = dagreGraph.node(edge.w);
+                
+                if (source && target) {
+                    // Calculate center points
+                    const x1 = source.x + dagreLayoutOffsetX;
+                    const y1 = source.y + dagreLayoutOffsetY;
+                    const x2 = target.x + dagreLayoutOffsetX;
+                    const y2 = target.y + dagreLayoutOffsetY;
                     
-                    // Use average y-position for horizontal line
-                    const centerY = (y1 + y2) / 2;
+                    // Draw a curved line between spouses
+                    const midX = (x1 + x2) / 2;
+                    const curveHeight = 20; // Height of the curve
+                    const pathData = `M ${x1} ${y1} Q ${midX} ${y1 + curveHeight}, ${x2} ${y2}`;
                     
-                    // Draw curved connection with heart symbol in the middle
-                    const d = `M ${x1} ${y1} 
-                              C ${x1 + 30} ${centerY - 30}, 
-                                ${x2 - 30} ${centerY - 30}, 
-                                ${x2} ${y2}`;
+                    // Add shadow for depth
+                    svg.appendChild(svgShadowPath(pathData, '#10b981', 0.3));
                     
-                    // Add shadow path for better visibility
-                    svg.appendChild(svgShadowPath(d, '#ff69b4', shadowOpacity * 1.5));
+                    // Add the main green line
+                    svg.appendChild(svgPath(
+                        pathData,
+                        '#10b981', // Green color
+                        3,        // Line width
+                        false,    // No arrow
+                        0.9       // Slightly transparent
+                    ));
                     
-                    // Add main connection line
-                    const path = svgPath(d, '#ff69b4', 4, false, 0.9);
-                    path.setAttribute('stroke-dasharray', '0');
-                    svg.appendChild(path);
+                    // Add small circle at the center of the curve
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', midX.toString());
+                    circle.setAttribute('cy', (y1 + curveHeight/2).toString());
+                    circle.setAttribute('r', '4');
+                    circle.setAttribute('fill', '#10b981');
+                    circle.setAttribute('opacity', '0.9');
+                    svg.appendChild(circle);
                     
-                    // Add heart symbol in the middle
-                    const heartX = (x1 + x2) / 2;
-                    const heartY = centerY - 20;
-                    const heart = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    heart.setAttribute('d', `M${heartX},${heartY} c0,0 -10,-8 -15,-3 c-5,-5 -15,3 -15,3 s10,8 15,13 c5,-5 15,-13 15,-13 z`);
-                    heart.setAttribute('fill', '#ff69b4');
-                    heart.setAttribute('opacity', '0.9');
-                    heart.setAttribute('transform', 'scale(0.8)');
-                    heart.setAttribute('transform-origin', `${heartX} ${heartY}`);
-                    svg.appendChild(heart);
+                    // Mark these nodes as processed
+                    spousePairs.add(edge.v);
+                    spousePairs.add(edge.w);
                 }
             }
         });
     }, [dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY]);
 
     // Shadow path for extra contrast
-    const svgShadowPath = (d, color = '#6ee7b7', opacity = 0.18) => {
+    const svgShadowPath = (d, color = '#10b981', opacity = 0.3) => {
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', d);
         path.setAttribute('stroke', color);
@@ -184,7 +208,7 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('opacity', opacity.toString());
-        path.setAttribute('filter', 'drop-shadow(0px 2px 6px #bbf7d0)');
+        path.setAttribute('filter', 'drop-shadow(0px 2px 4px rgba(16, 185, 129, 0.3))');
         return path;
     };
 
