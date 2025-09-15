@@ -1,6 +1,6 @@
 import dagre from 'dagre';
 
-// Helper function to find all descendants of a person
+// Helpers function to find all descendants of a person
 function getAllDescendants(tree, personId, visited = new Set()) {
     if (visited.has(personId)) return [];
     visited.add(personId);
