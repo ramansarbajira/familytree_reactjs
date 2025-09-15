@@ -18,17 +18,28 @@ const RadialMenu = ({ isActive, position, items, onItemClick, onClose }) => {
     const itemHeight = 60;
     const gap = 12;
     const menuWidth = items.length * (itemWidth + gap);
-    const menuHeight = itemHeight + 24;
     const padding = 8;
     const isMobile = window.innerWidth < 600;
+    
+    // Calculate mobile menu height based on items
+    const mobileItemsPerRow = 2;
+    const mobileRows = Math.ceil(items.length / mobileItemsPerRow);
+    const mobileMenuHeight = (mobileRows * (itemHeight + gap)) + (gap * 2) + 40; // Extra padding
+    const menuHeight = isMobile ? mobileMenuHeight : itemHeight + 24;
 
     let x = position.x;
     let y = position.y;
 
     if (isMobile) {
-        // Centered bottom sheet for mobile
+        // Bottom sheet for mobile with proper spacing from bottom
+        // Account for mobile footer/navigation bar (typically 60-80px)
+        const footerHeight = 80;
         x = window.innerWidth / 2;
-        y = window.innerHeight - menuHeight / 2 - 16;
+        y = window.innerHeight - (mobileMenuHeight / 2) - footerHeight - 20; // Extra space for footer
+        
+        // Ensure menu doesn't go above viewport
+        const minY = mobileMenuHeight / 2 + 20;
+        y = Math.max(minY, y);
     } else {
         // Clamp to viewport
         x = Math.max(padding + menuWidth / 2, Math.min(x, window.innerWidth - menuWidth / 2 - padding));
@@ -62,23 +73,29 @@ const RadialMenu = ({ isActive, position, items, onItemClick, onClose }) => {
                     border: '1.5px solid #e5e7eb',
                     borderRadius: isMobile ? 24 : 18,
                     boxShadow: '0 6px 32px rgba(60,60,90,0.13)',
-                    padding: isMobile ? '18px 8px' : `12px ${gap}px`,
-                    display: 'flex',
-                    flexDirection: isMobile ? 'column' : 'row',
+                    padding: isMobile ? '20px 16px' : `12px ${gap}px`,
+                    display: isMobile ? 'grid' : 'flex',
+                    gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'none',
+                    flexDirection: isMobile ? 'none' : 'row',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     pointerEvents: 'auto',
-                    minWidth: isMobile ? '90vw' : `${menuWidth}px`,
+                    minWidth: isMobile ? '85vw' : `${menuWidth}px`,
+                    maxWidth: isMobile ? '90vw' : 'none',
                     minHeight: `${menuHeight}px`,
+                    maxHeight: isMobile ? '70vh' : 'none',
                     transform: 'translate(-50%, -50%)',
                     gap: `${gap}px`,
+                    overflowY: isMobile ? 'auto' : 'visible',
                 }}
                 onClick={e => e.stopPropagation()}
             >
                 {items.map((item, i) => {
                     const Icon = iconMap[item.label]?.icon || User;
                     let itemStyle = {
-                        width: itemWidth,
-                        height: itemHeight,
+                        width: isMobile ? 'auto' : itemWidth,
+                        height: isMobile ? 65 : itemHeight,
+                        minWidth: isMobile ? 120 : itemWidth,
                         background: '#f4f7fa',
                         borderRadius: 14,
                         display: 'flex',
@@ -91,8 +108,9 @@ const RadialMenu = ({ isActive, position, items, onItemClick, onClose }) => {
                         transition: 'background 0.18s, box-shadow 0.18s, border 0.18s',
                         outline: 'none',
                         margin: 0,
-                        padding: '4px 6px',
+                        padding: isMobile ? '8px 12px' : '4px 6px',
                         position: 'relative',
+                        flex: isMobile ? '1' : 'none',
                     };
                     return (
                         <div
@@ -121,23 +139,23 @@ const RadialMenu = ({ isActive, position, items, onItemClick, onClose }) => {
                                 e.currentTarget.style.border = '1px solid #e5e7eb';
                             }}
                         >
-                            <Icon size={22} color="#2563eb" style={{ marginBottom: 2 }} />
+                            <Icon size={isMobile ? 24 : 22} color="#2563eb" style={{ marginBottom: isMobile ? 4 : 2 }} />
                             <span style={{
-                                fontSize: 13,
+                                fontSize: isMobile ? 12 : 13,
                                 fontWeight: 600,
                                 color: '#222',
                                 textAlign: 'center',
                                 lineHeight: 1.15,
-                                maxWidth: itemWidth - 10,
+                                maxWidth: isMobile ? '100%' : itemWidth - 10,
                                 whiteSpace: 'normal',
                                 wordBreak: 'break-word',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
-                                marginTop: 2,
+                                marginTop: isMobile ? 4 : 2,
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical',
-                                minHeight: 28,
+                                minHeight: isMobile ? 24 : 28,
                                 padding: '0 2px',
                             }}>{item.label}</span>
                         </div>

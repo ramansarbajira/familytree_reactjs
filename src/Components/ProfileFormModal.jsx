@@ -982,6 +982,8 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                     type="date"
                     value={formData.dob || ''} // FIXED: Ensure never undefined
                     onChange={handleChange}
+                    min="1900-01-01"
+                    max="2024-12-31"
                     className={inputClassName('dob')}
                   />
                   {errors.dob && <p className="text-red-500 text-xs mt-1">{errors.dob}</p>}

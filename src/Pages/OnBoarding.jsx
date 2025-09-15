@@ -135,16 +135,16 @@ const OnBoarding = () => {
         newErrors.firstName = 'First name is required';
       } else if (formData.firstName.trim().length < 2) {
         newErrors.firstName = 'First name must be at least 2 characters';
-      } else if (!/^[a-zA-Z\s]+$/.test(formData.firstName.trim())) {
-        newErrors.firstName = 'First name should only contain letters';
+      } else if (!/^[a-zA-Z0-9\s]+$/.test(formData.firstName.trim())) {
+        newErrors.firstName = 'First name should only contain letters and numbers';
       }
 
       if (!formData.lastName.trim()) {
         newErrors.lastName = 'Last name is required';
       } else if (formData.lastName.trim().length < 2) {
         newErrors.lastName = 'Last name must be at least 2 characters';
-      } else if (!/^[a-zA-Z\s]+$/.test(formData.lastName.trim())) {
-        newErrors.lastName = 'Last name should only contain letters';
+      } else if (!/^[a-zA-Z0-9\s]+$/.test(formData.lastName.trim())) {
+        newErrors.lastName = 'Last name should only contain letters and numbers';
       }
 
       if (!formData.dob.trim()) {
