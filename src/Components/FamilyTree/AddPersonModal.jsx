@@ -800,6 +800,11 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                 type="number" 
                                                 name={`age_${form.index}`}
                                                 min="0"
+                                                max="200"
+                                                onInput={(e) => {
+                                                    if (e.target.value > 200) e.target.value = 200;
+                                                    if (e.target.value < 0) e.target.value = 0;
+                                                }}
                                                 style={{ 
                                                     width: '100%', 
                                                     borderRadius: 12, 
@@ -1224,7 +1229,12 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                 type="number" 
                                                 name={`age_${form.index}`}
                                                 min="0"
+                                                max="200"
                                                 defaultValue={action.type === 'edit' && action.person ? action.person.age : ''}
+                                                onInput={(e) => {
+                                                    if (e.target.value > 200) e.target.value = 200;
+                                                    if (e.target.value < 0) e.target.value = 0;
+                                                }}
                                                 style={{ 
                                                     width: '100%', 
                                                     borderRadius: 12, 
