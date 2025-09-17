@@ -464,6 +464,7 @@ const FamilyTreePage = () => {
                 existingPerson.gender = persons[0].gender;
                 existingPerson.age = persons[0].age;
                 existingPerson.img = persons[0].img;
+                existingPerson.lifeStatus = persons[0].lifeStatus || 'living';
                 existingPerson.memberId = persons[0].memberId || persons[0].userId || null;
             }
             setTree(newTree);
@@ -847,6 +848,7 @@ const FamilyTreePage = () => {
                 formData.append(`person_${index}_gender`, person.gender);
                 formData.append(`person_${index}_age`, person.age);
                 formData.append(`person_${index}_generation`, person.generation);
+                formData.append(`person_${index}_lifeStatus`, person.lifeStatus || 'living');
                 formData.append(`person_${index}_birthOrder`, person.birthOrder || 0);
                 formData.append(`person_${index}_memberId`, person.memberId || '');
                 formData.append(`person_${index}_parents`, person.parents ? Array.from(person.parents).join(',') : '');

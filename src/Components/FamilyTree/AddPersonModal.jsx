@@ -443,6 +443,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                         dob: member.user.userProfile.dob,
                         memberId: member.user.id,
                         birthOrder: parseInt(formData.get(`birthOrder_${form.index}`)) || 1,
+                        lifeStatus: formData.get(`lifeStatus_${form.index}`) || member.lifeStatus || 'living',
                     });
                     hasValidPerson = true;
                 }
@@ -472,6 +473,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                         img: imageData[form.index] || '', // File object or empty string
                         imgPreview: imagePreview[form.index] || '',
                         birthOrder: parseInt(formData.get(`birthOrder_${form.index}`)) || 1,
+                        lifeStatus: formData.get(`lifeStatus_${form.index}`) || 'living',
                     };
                     if (action.type === 'edit' && action.person) {
                         personObj.id = action.person.id;
@@ -825,6 +827,42 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                     e.target.style.boxShadow = 'none';
                                                 }}
                                             />
+                                        </div>
+                                        <div className="form-group-upgraded" style={{ flex: 1 }}>
+                                            <label style={{ 
+                                                fontWeight: 600, 
+                                                color: '#333',
+                                                marginBottom: 8,
+                                                display: 'block'
+                                            }}>
+                                                Life Status:
+                                            </label>
+                                            <select 
+                                                name={`lifeStatus_${form.index}`}
+                                                defaultValue="living"
+                                                style={{ 
+                                                    width: '100%', 
+                                                    borderRadius: 12, 
+                                                    border: '2px solid rgba(102, 126, 234, 0.2)', 
+                                                    padding: '12px 16px', 
+                                                    background: 'rgba(255, 255, 255, 0.9)',
+                                                    fontSize: 14,
+                                                    fontWeight: 500,
+                                                    transition: 'all 0.3s ease',
+                                                    outline: 'none'
+                                                }}
+                                                onFocus={(e) => {
+                                                    e.target.style.borderColor = '#667eea';
+                                                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                                                }}
+                                                onBlur={(e) => {
+                                                    e.target.style.borderColor = 'rgba(102, 126, 234, 0.2)';
+                                                    e.target.style.boxShadow = 'none';
+                                                }}
+                                            >
+                                                <option value="living">Living</option>
+                                                <option value="remembering">In Loving Memory</option>
+                                            </select>
                                         </div>
                                     </div>
                                     <div className="form-row-upgraded" style={{ display: 'flex', gap: 16 }}>
@@ -1214,6 +1252,42 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                 </select>
                                             </div>
                                         )}
+                                        <div className="form-group-upgraded" style={{ flex: 1 }}>
+                                            <label style={{ 
+                                                fontWeight: 600, 
+                                                color: '#333',
+                                                marginBottom: 8,
+                                                display: 'block'
+                                            }}>
+                                                Life Status:
+                                            </label>
+                                            <select 
+                                                name={`lifeStatus_${form.index}`} 
+                                                defaultValue={action.type === 'edit' && action.person ? action.person.lifeStatus || 'living' : 'living'}
+                                                style={{ 
+                                                    width: '100%', 
+                                                    borderRadius: 12, 
+                                                    border: '2px solid rgba(102, 126, 234, 0.2)', 
+                                                    padding: '12px 16px', 
+                                                    background: 'rgba(255, 255, 255, 0.9)',
+                                                    fontSize: 14,
+                                                    fontWeight: 500,
+                                                    transition: 'all 0.3s ease',
+                                                    outline: 'none'
+                                                }}
+                                                onFocus={(e) => {
+                                                    e.target.style.borderColor = '#667eea';
+                                                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                                                }}
+                                                onBlur={(e) => {
+                                                    e.target.style.borderColor = 'rgba(102, 126, 234, 0.2)';
+                                                    e.target.style.boxShadow = 'none';
+                                                }}
+                                            >
+                                                <option value="living">Living</option>
+                                                <option value="remembering">In Loving Memory</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="form-row-upgraded" style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
                                         <div className="form-group-upgraded" style={{ flex: 1 }}>

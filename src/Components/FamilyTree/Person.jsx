@@ -108,6 +108,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
     const { width, height, fontSizeName, fontSizeDetails, fontSizeRelationship, profileSize, padding, margin } = cardDimensions;
     
     const ageText = person.age ? ` (Age: ${person.age})` : '';
+    const isRemembering = person.lifeStatus === 'remembering';
 
     // Calculate relationship code to root (memoized for performance)
     const relationshipCode = useMemo(() => {
@@ -382,7 +383,9 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
         <div id={`person-${person.id}`} className="person-container" style={{ position: 'absolute', left: `${person.x - width / 2}px`, top: `${person.y - height / 2}px` }}>
             {/* Main Person Card */}
             <div
-                className={`person ${person.gender} ${isRoot ? 'root' : ''} ${isNew ? 'person-new' : ''} ${isSelected ? 'person-selected' : ''} group transition-transform duration-200 hover:scale-105 hover:shadow-2xl hover:ring-4 hover:ring-green-200`}
+                className={`person ${person.gender} ${isRoot ? 'root' : ''} ${isNew ? 'person-new' : ''} ${isSelected ? 'person-selected' : ''} ${
+                    person.lifeStatus === 'remembering' ? 'remembering' : ''
+                } group transition-transform duration-200 hover:scale-105 hover:shadow-2xl hover:ring-4 hover:ring-green-200`}
                 style={{
                     position: 'relative',
                     minWidth: width,
@@ -391,6 +394,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                     minHeight: height,
                     margin: margin,
                     padding: padding,
+                    opacity: person.lifeStatus === 'remembering' ? 0.8 : 1,
                     background: isRoot
                       ? 'linear-gradient(135deg, #fceabb 0%, #f8b500 100%)' // gold gradient for root
                       : isNew
@@ -471,6 +475,19 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             )}
             {/* Profile pic and info (always show) */}
             <div className="profile-pic-container flex items-center justify-center relative">
+                {person.lifeStatus === 'remembering' && (
+                    <>
+                        {/* Purple tint overlay */}
+                        <div className="absolute inset-0 rounded-full bg-purple-500 bg-opacity-20 z-10"></div>
+                        {/* Tiny ribbon badge */}
+                        <span
+                            className="absolute -top-1 -left-1 bg-purple-600 text-white text-[10px] font-semibold px-[6px] py-[1px] rounded-sm rotate-[-12deg] shadow-lg select-none z-20"
+                            title="In Loving Memory"
+                        >
+                            ✝
+                        </span>
+                    </>
+                )}
                 <div 
                     className={`profile-pic-circle rounded-full overflow-hidden bg-gray-100 border-4 ${isRoot ? 'border-yellow-400 shadow-yellow-200' : person.gender === 'male' ? 'border-blue-300' : person.gender === 'female' ? 'border-pink-200' : 'border-gray-300'} shadow-lg group-hover:shadow-2xl transition-all duration-200`}
                     style={{
@@ -497,6 +514,11 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             </div>
             {/* All info inside the card */}
             <div className="mt-1 w-full flex flex-col items-center justify-center">
+                {person.lifeStatus === 'remembering' && (
+                    <div className="mb-1 px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full font-medium">
+                        In Loving Memory
+                    </div>
+                )}
                 <div className="flex flex-col items-center">
                     <span 
                         className="bg-white/90 px-2 py-0.5 rounded-full shadow text-gray-900 font-semibold border border-green-100 backdrop-blur-md tracking-wide text-center" 
