@@ -187,8 +187,13 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
             })
                 .then(res => res.json())
                 .then(data => {
+                    console.log('Family members API response:', data);
                     if (data && data.data) {
+                        console.log('Setting family members:', data.data);
                         setFamilyMembers(data.data);
+                    } else {
+                        console.log('No family members data found');
+                        setFamilyMembers([]);
                     }
                 })
                 .finally(() => setLoadingMembers(false));
@@ -258,17 +263,50 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
 
     // Modified: Get all family members, but mark existing ones as disabled in dropdown
     const getEligibleMembersWithAll = (form) => {
+        console.log('getEligibleMembersWithAll called with form:', form);
+        console.log('familyMembers array:', familyMembers);
+        console.log('familyMembers length:', familyMembers.length);
+        
         if (!form) return [];
         let genderFilter = null;
         if (form.type === 'father') genderFilter = 'Male';
         if (form.type === 'mother') genderFilter = 'Female';
-        if (form.type === 'spouse' && action.person) genderFilter = action.person.gender === 'male' ? 'Female' : 'Male';
+        if (form.type === 'spouse' && action.person) {
+            // For spouse, need opposite gender. Normalize to lowercase for comparison later
+            genderFilter = action.person.gender?.toLowerCase() === 'male' ? 'female' : 'male';
+        }
+        
+        console.log('Gender filter for', form.type, ':', genderFilter);
+        
         // For children/siblings, allow both genders
-        return familyMembers.filter(m => {
-            const g = m.user?.userProfile?.gender;
-            if (genderFilter && g !== genderFilter) return false;
+        // Perform case-insensitive gender check to avoid mismatches (e.g., 'Male' vs 'male')
+        const filtered = familyMembers.filter(m => {
+            console.log('Checking member:', m);
+            const gRaw = m.user?.userProfile?.gender || '';
+            const g = gRaw.trim().toLowerCase();
+            console.log('Member gender:', gRaw, '-> normalized:', g);
+            
+            // If gender filter is specified, only exclude when gender IS present and clearly opposite to filter.
+            if (genderFilter) {
+                const gf = genderFilter.toLowerCase();
+                if (g && g !== gf) {
+                    console.log('Excluding member due to gender mismatch');
+                    return false; // mismatch
+                }
+                // if gender missing, allow; fallback to include
+            }
+            console.log('Including member');
             return true;
         });
+        
+        // If no members match the gender filter, show all members anyway (for small families)
+        if (filtered.length === 0 && genderFilter && familyMembers.length > 0) {
+            console.log('No gender matches found, showing all members for selection');
+            return familyMembers;
+        }
+        
+        console.log('Filtered members:', filtered);
+        return filtered;
     };
 
     const handleImageUpload = (event, index) => {
@@ -405,6 +443,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                         dob: member.user.userProfile.dob,
                         memberId: member.user.id,
                         birthOrder: parseInt(formData.get(`birthOrder_${form.index}`)) || 1,
+                        lifeStatus: formData.get(`lifeStatus_${form.index}`) || member.lifeStatus || 'living',
                     });
                     hasValidPerson = true;
                 }
@@ -434,6 +473,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                         img: imageData[form.index] || '', // File object or empty string
                         imgPreview: imagePreview[form.index] || '',
                         birthOrder: parseInt(formData.get(`birthOrder_${form.index}`)) || 1,
+                        lifeStatus: formData.get(`lifeStatus_${form.index}`) || 'living',
                     };
                     if (action.type === 'edit' && action.person) {
                         personObj.id = action.person.id;
@@ -762,6 +802,11 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                 type="number" 
                                                 name={`age_${form.index}`}
                                                 min="0"
+                                                max="200"
+                                                onInput={(e) => {
+                                                    if (e.target.value > 200) e.target.value = 200;
+                                                    if (e.target.value < 0) e.target.value = 0;
+                                                }}
                                                 style={{ 
                                                     width: '100%', 
                                                     borderRadius: 12, 
@@ -782,6 +827,42 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                     e.target.style.boxShadow = 'none';
                                                 }}
                                             />
+                                        </div>
+                                        <div className="form-group-upgraded" style={{ flex: 1 }}>
+                                            <label style={{ 
+                                                fontWeight: 600, 
+                                                color: '#333',
+                                                marginBottom: 8,
+                                                display: 'block'
+                                            }}>
+                                                Life Status:
+                                            </label>
+                                            <select 
+                                                name={`lifeStatus_${form.index}`}
+                                                defaultValue="living"
+                                                style={{ 
+                                                    width: '100%', 
+                                                    borderRadius: 12, 
+                                                    border: '2px solid rgba(102, 126, 234, 0.2)', 
+                                                    padding: '12px 16px', 
+                                                    background: 'rgba(255, 255, 255, 0.9)',
+                                                    fontSize: 14,
+                                                    fontWeight: 500,
+                                                    transition: 'all 0.3s ease',
+                                                    outline: 'none'
+                                                }}
+                                                onFocus={(e) => {
+                                                    e.target.style.borderColor = '#667eea';
+                                                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                                                }}
+                                                onBlur={(e) => {
+                                                    e.target.style.borderColor = 'rgba(102, 126, 234, 0.2)';
+                                                    e.target.style.boxShadow = 'none';
+                                                }}
+                                            >
+                                                <option value="living">Living</option>
+                                                <option value="remembering">In Loving Memory</option>
+                                            </select>
                                         </div>
                                     </div>
                                     <div className="form-row-upgraded" style={{ display: 'flex', gap: 16 }}>
@@ -1171,6 +1252,42 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                 </select>
                                             </div>
                                         )}
+                                        <div className="form-group-upgraded" style={{ flex: 1 }}>
+                                            <label style={{ 
+                                                fontWeight: 600, 
+                                                color: '#333',
+                                                marginBottom: 8,
+                                                display: 'block'
+                                            }}>
+                                                Life Status:
+                                            </label>
+                                            <select 
+                                                name={`lifeStatus_${form.index}`} 
+                                                defaultValue={action.type === 'edit' && action.person ? action.person.lifeStatus || 'living' : 'living'}
+                                                style={{ 
+                                                    width: '100%', 
+                                                    borderRadius: 12, 
+                                                    border: '2px solid rgba(102, 126, 234, 0.2)', 
+                                                    padding: '12px 16px', 
+                                                    background: 'rgba(255, 255, 255, 0.9)',
+                                                    fontSize: 14,
+                                                    fontWeight: 500,
+                                                    transition: 'all 0.3s ease',
+                                                    outline: 'none'
+                                                }}
+                                                onFocus={(e) => {
+                                                    e.target.style.borderColor = '#667eea';
+                                                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                                                }}
+                                                onBlur={(e) => {
+                                                    e.target.style.borderColor = 'rgba(102, 126, 234, 0.2)';
+                                                    e.target.style.boxShadow = 'none';
+                                                }}
+                                            >
+                                                <option value="living">Living</option>
+                                                <option value="remembering">In Loving Memory</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="form-row-upgraded" style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
                                         <div className="form-group-upgraded" style={{ flex: 1 }}>
@@ -1186,7 +1303,12 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                 type="number" 
                                                 name={`age_${form.index}`}
                                                 min="0"
+                                                max="200"
                                                 defaultValue={action.type === 'edit' && action.person ? action.person.age : ''}
+                                                onInput={(e) => {
+                                                    if (e.target.value > 200) e.target.value = 200;
+                                                    if (e.target.value < 0) e.target.value = 0;
+                                                }}
                                                 style={{ 
                                                     width: '100%', 
                                                     borderRadius: 12, 
