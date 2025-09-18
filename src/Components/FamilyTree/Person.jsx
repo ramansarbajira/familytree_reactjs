@@ -41,16 +41,22 @@ const getGenderLabel = (person, tree, currentUserId) => {
     }
     
     // For non-spouses, use standard gender labels
-    switch (person.gender.toLowerCase()) {
+    const normalizedGender = person.gender.toLowerCase().trim();
+    switch (normalizedGender) {
         case 'male':
+        case 'm':
             return 'Male';
         case 'female':
+        case 'f':
             return 'Female';
         case 'unknown':
         case '':
+        case 'man': // Handle 'MAN' case
+        case 'woman':
             return '';
         default:
-            return person.gender.charAt(0).toUpperCase() + person.gender.slice(1);
+            // Don't show raw gender values like 'MAN' - return empty for unknown values
+            return '';
     }
 };
 
@@ -116,6 +122,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             const calculator = new RelationshipCalculator(tree);
             const rel = calculator.calculateRelationship(rootId, person.id);
             if (rel && rel.relationshipCode) {
+                console.log(`🔍 Relationship for ${person.name}: ${rel.relationshipCode}`);
                 return rel.relationshipCode;
             }
         }
