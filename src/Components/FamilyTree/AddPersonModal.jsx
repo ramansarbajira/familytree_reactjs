@@ -354,7 +354,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         // Fallback: Prevent adding an already-in-tree user
         const formData = new FormData(e.target);
@@ -394,7 +394,8 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                 imgPreview: imagePreview[form.index] || '',
                                 dob: member.user.userProfile.dob,
                                 memberId: member.user.id,
-                                birthOrder: 1, // Default birth order for parents
+                                birthOrder: 1, // Default birth order for parents,
+                                lifeStatus: formData.get(`lifeStatus_${form.index}`) || member.lifeStatus || 'living',
                             });
                             hasValidParent = true;
                         }
@@ -408,7 +409,8 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                 img: imageData[form.index] || '', // File object or empty string
                                 imgPreview: imagePreview[form.index] || '',
                                 generation: action.person ? action.person.generation - 1 : 0,
-                                birthOrder: 1, // Default birth order for parents
+                                birthOrder: 1, // Default birth order for parents,
+                                lifeStatus: formData.get(`lifeStatus_${form.index}`) || 'living',
                             });
                             hasValidParent = true;
                         }
@@ -419,6 +421,19 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
             if (!hasValidParent) {
                 Swal.fire({ icon: 'warning', title: 'Missing details', text: 'Please fill in at least one parent\'s details.' });
                 return;
+            }
+            // 🔒 Confirmation when marking a person as "Remembering"
+            const rememberingCount = parentPersons.filter(p => p.lifeStatus === 'remembering').length;
+            if (rememberingCount > 0) {
+                const { isConfirmed } = await Swal.fire({
+                    title: 'Confirm Status',
+                    icon: 'warning',
+                    html: `You are about to set <b>${rememberingCount}</b> parent${rememberingCount > 1 ? 's' : ''} to <b>Remembering</b> status. Are you sure?`,
+                    showCancelButton: true,
+                    confirmButtonColor: PRIMARY_COLOR,
+                    confirmButtonText: 'Yes, proceed',
+                });
+                if (!isConfirmed) return; // Abort submit
             }
             onAddPersons(parentPersons);
             onClose();
@@ -472,8 +487,8 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                         generation,
                         img: imageData[form.index] || '', // File object or empty string
                         imgPreview: imagePreview[form.index] || '',
-                        birthOrder: parseInt(formData.get(`birthOrder_${form.index}`)) || 1,
                         lifeStatus: formData.get(`lifeStatus_${form.index}`) || 'living',
+                        birthOrder: parseInt(formData.get(`birthOrder_${form.index}`)) || 1,
                     };
                     if (action.type === 'edit' && action.person) {
                         personObj.id = action.person.id;
@@ -488,6 +503,19 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
         if (!hasValidPerson) {
             Swal.fire({ icon: 'warning', title: 'Missing details', text: 'Please fill in at least one person\'s details.' });
             return;
+        }
+        // 🔒 Confirmation when marking a person as "Remembering"
+        const rememberingCount = persons.filter(p => p.lifeStatus === 'remembering').length;
+        if (rememberingCount > 0) {
+            const { isConfirmed } = await Swal.fire({
+                title: 'Confirm Status',
+                icon: 'warning',
+                html: `You are about to set <b>${rememberingCount}</b> new/edited person${rememberingCount > 1 ? 's' : ''} to <b>Remembering</b> status. Are you sure?`,
+                showCancelButton: true,
+                confirmButtonColor: PRIMARY_COLOR,
+                confirmButtonText: 'Yes, proceed',
+            });
+            if (!isConfirmed) return; // Abort submit
         }
         onAddPersons(persons);
         onClose();
@@ -839,7 +867,9 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                             </label>
                                             <select 
                                                 name={`lifeStatus_${form.index}`}
-                                                defaultValue="living"
+                                                defaultValue={(formSelections && formSelections[form.index] && !formSelections[form.index].showManualEntry)
+                                                ? (familyMembers.find(m => m.user?.id === parseInt(formSelections[form.index].selectedMemberId || -1))?.lifeStatus || 'living')
+                                                : 'living' }
                                                 style={{ 
                                                     width: '100%', 
                                                     borderRadius: 12, 

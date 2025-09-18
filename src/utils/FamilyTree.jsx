@@ -29,6 +29,7 @@ export class FamilyTree {
             spouses: new Set(),
             siblings: new Set(),
             img: data.img || '',
+            lifeStatus: data.lifeStatus || 'living',
             memberId: data.memberId || null,
         };
         this.people.set(person.id, person);
