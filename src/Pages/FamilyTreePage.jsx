@@ -460,12 +460,16 @@ const FamilyTreePage = () => {
         if (type === 'edit' && basePerson) {
             const existingPerson = newTree.people.get(basePerson.id);
             if (existingPerson && persons.length > 0) {
-                existingPerson.name = persons[0].name;
-                existingPerson.gender = persons[0].gender;
-                existingPerson.age = persons[0].age;
-                existingPerson.img = persons[0].img;
-                existingPerson.lifeStatus = persons[0].lifeStatus || 'living';
-                existingPerson.memberId = persons[0].memberId || persons[0].userId || null;
+                const updatedPerson = {
+                    ...existingPerson,
+                    name: persons[0].name,
+                    gender: persons[0].gender,
+                    age: persons[0].age,
+                    img: persons[0].img,
+                    lifeStatus: persons[0].lifeStatus || 'living',
+                    memberId: persons[0].memberId || persons[0].userId || null,
+                };
+                newTree.people.set(existingPerson.id, updatedPerson);
             }
             setTree(newTree);
             updateStats(newTree);
