@@ -79,7 +79,12 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
               className="text-xs text-gray-500 whitespace-nowrap ml-2" 
               title={fullDateTime}
             >
-              {timeAgo}
+              {new Date(createdAt).toLocaleDateString([], { 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
             </span>
           </div>
           

@@ -18,6 +18,7 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processingRequest, setProcessingRequest] = useState(null);
+  const [filter, setFilter] = useState('all'); // 'all', 'read', 'unread'
 
   const notificationTypes = {
     request: { icon: <FiUser />, color: 'from-blue-500 to-blue-300' },
@@ -27,6 +28,8 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
     family_association_request: { icon: <FiUsers />, color: 'from-green-500 to-green-300' },
     family_association_accepted: { icon: <FiUserPlus />, color: 'from-teal-500 to-teal-300' },
     family_association_rejected: { icon: <FiUserX />, color: 'from-orange-500 to-orange-300' },
+    family_member_removed: { icon: <FiUserX />, color: 'from-red-500 to-red-300' },
+    family_member_joined: { icon: <FiUserPlus />, color: 'from-green-500 to-green-300' },
   };
 
   const fetchNotifications = async (getAll = false) => {
@@ -47,7 +50,7 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
         type: n.type.toLowerCase(),
         title: n.title,
         message: n.message,
-        time: new Date(n.createdAt).toLocaleString(),
+        time: n.createdAt, // Keep the original ISO string for proper parsing
         read: n.isRead,
         data: n.data || {},
         createdAt: n.createdAt,
@@ -115,9 +118,16 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
 
   if (!open) return null;
 
+  // Apply filter to notifications
+  const filteredNotifications = notifications.filter(notification => {
+    if (filter === 'read') return notification.read;
+    if (filter === 'unread') return !notification.read;
+    return true; // 'all'
+  });
+
   // Filter out association requests to handle them separately
-  const associationRequests = notifications.filter(n => n.type === 'family_association_request');
-  const otherNotifications = notifications.filter(n => n.type !== 'family_association_request');
+  const associationRequests = filteredNotifications.filter(n => n.type === 'family_association_request');
+  const otherNotifications = filteredNotifications.filter(n => n.type !== 'family_association_request');
 
   const handleAcceptRequest = async (notification) => {
     try {
@@ -195,21 +205,48 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
       <div className="absolute right-0 top-0 h-full w-full max-w-md transform overflow-hidden bg-white shadow-xl transition-transform duration-300 ease-in-out">
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
-            <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={markAllAsRead}
-                className="text-sm text-blue-600 hover:text-blue-800"
-                disabled={notifications.length === 0 || notifications.every(n => n.read)}
-              >
-                Mark all as read
-              </button>
+          <div className="border-b border-gray-200 bg-white px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
               <button
                 onClick={onClose}
                 className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
               >
                 <FiX className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Filter Buttons */}
+            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setFilter('all')}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                  filter === 'all' 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFilter('unread')}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                  filter === 'unread' 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Unread
+              </button>
+              <button
+                onClick={() => setFilter('read')}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                  filter === 'read' 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Read
               </button>
             </div>
           </div>
@@ -220,7 +257,7 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
               <div className="flex h-full items-center justify-center">
                 <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500" />
               </div>
-            ) : notifications.length === 0 ? (
+            ) : filteredNotifications.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center p-6 text-center">
                 <FiBell className="mb-2 h-10 w-10 text-gray-400" />
                 <h4 className="text-lg font-medium text-gray-900">No notifications</h4>
@@ -302,7 +339,12 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
                               {notification.title || getNotificationType(notification.type)}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {new Date(notification.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(notification.time).toLocaleDateString([], { 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
                             </p>
                           </div>
                           <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
@@ -326,7 +368,24 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
           <div className="border-t border-gray-200 p-4 text-center">
             <button
               onClick={() => fetchNotifications(true)}
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+              style={{
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#2563eb',
+                backgroundColor: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.color = '#1d4ed8';
+                e.target.style.textDecoration = 'underline';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.color = '#2563eb';
+                e.target.style.textDecoration = 'none';
+              }}
             >
               View all notifications
             </button>
