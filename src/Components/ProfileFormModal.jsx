@@ -343,7 +343,16 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.gender) newErrors.gender = 'Gender is required';
-    if (!formData.dob) newErrors.dob = 'Date of birth is required';
+    
+    if (!formData.dob.trim()) {
+      newErrors.dob = 'Date of birth is required';
+    } else {
+      const today = new Date();
+      const birthDate = new Date(formData.dob);
+      if (birthDate >= today) {
+        newErrors.dob = 'Date of birth must be in the past';
+      }
+    }
 
     // Family Information Validation
     if (!formData.maritalStatus) newErrors.maritalStatus = 'Marital status is required';
@@ -976,16 +985,57 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   <label htmlFor="dob" className={labelClassName}>
                     Date of Birth <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    id="dob"
-                    name="dob"
-                    type="date"
-                    value={formData.dob || ''} // FIXED: Ensure never undefined
-                    onChange={handleChange}
-                    min="1900-01-01"
-                    max="2024-12-31"
-                    className={inputClassName('dob')}
-                  />
+                  <div className="relative">
+                    <input
+                      id="dob"
+                      name="dob"
+                      type="date"
+                      value={formData.dob || ''} // FIXED: Ensure never undefined
+                      onChange={handleChange}
+                      max={new Date().toISOString().split('T')[0]}
+                      className={`${inputClassName('dob')} pr-10`}
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    {formData.dob && (
+                      <div className="absolute inset-y-0 right-8 flex items-center pr-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, dob: '' }));
+                            if (errors.dob) {
+                              setErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors.dob;
+                                return newErrors;
+                              });
+                            }
+                          }}
+                          className="text-gray-400 hover:text-gray-600 transition-colors duration-200 p-1 rounded-full hover:bg-gray-100"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {formData.dob && (
+                    <div className="mt-1 text-xs text-gray-500 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Selected: {new Date(formData.dob).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </div>
+                  )}
                   {errors.dob && <p className="text-red-500 text-xs mt-1">{errors.dob}</p>}
                 </div>
                 <div>

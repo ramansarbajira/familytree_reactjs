@@ -251,7 +251,11 @@ const OnBoarding = () => {
       formDataToSend.set('childrenCount', parseInt(formData.childrenCount) || '0');
       formDataToSend.set('languageId', parseInt(formData.motherTongue) || '');
       formDataToSend.set('religionId', parseInt(formData.religionId) || '');
-      formDataToSend.set('gothramId', parseInt(formData.gothram) || '');
+      
+      // Only add gothramId if it has a valid value
+      if (formData.gothram && parseInt(formData.gothram) > 0) {
+        formDataToSend.set('gothramId', parseInt(formData.gothram));
+      }
 
       // Add childrenNames array (as comma-separated string, like in CURL)
       if (formData.maritalStatus === 'Married' && formData.childrenCount > 0) {
