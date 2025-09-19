@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 
 // Helper to fetch user's first name from profile
 async function fetchUserFirstName(userId, accessToken) {
-  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/${userId}`, {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/profile/${userId}`, {
     headers: {
       accept: 'application/json',
       Authorization: `Bearer ${accessToken}`,

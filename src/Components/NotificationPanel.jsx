@@ -28,6 +28,8 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
     family_association_request: { icon: <FiUsers />, color: 'from-green-500 to-green-300' },
     family_association_accepted: { icon: <FiUserPlus />, color: 'from-teal-500 to-teal-300' },
     family_association_rejected: { icon: <FiUserX />, color: 'from-orange-500 to-orange-300' },
+    family_member_removed: { icon: <FiUserX />, color: 'from-red-500 to-red-300' },
+    family_member_joined: { icon: <FiUserPlus />, color: 'from-green-500 to-green-300' },
   };
 
   const fetchNotifications = async (getAll = false) => {
@@ -62,7 +64,7 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
         type: n.type.toLowerCase(),
         title: n.title,
         message: n.message,
-        time: new Date(n.createdAt).toLocaleString(),
+        time: n.createdAt, // Keep the original ISO string for proper parsing
         read: n.isRead,
         status: n.status || 'pending', // Include notification status
         data: n.data || {},
@@ -396,7 +398,12 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
                               {notification.title || getNotificationType(notification.type)}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {new Date(notification.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(notification.time).toLocaleDateString([], { 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
                             </p>
                           </div>
                           <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
@@ -420,7 +427,24 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
           <div className="border-t border-gray-200 p-4 text-center">
             <button
               onClick={() => fetchNotifications(true)}
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+              style={{
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#2563eb',
+                backgroundColor: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.color = '#1d4ed8';
+                e.target.style.textDecoration = 'underline';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.color = '#2563eb';
+                e.target.style.textDecoration = 'none';
+              }}
             >
               View all notifications
             </button>

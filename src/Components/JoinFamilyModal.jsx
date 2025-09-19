@@ -2,6 +2,19 @@ import React, { useState } from 'react';
 import { FiX, FiHash, FiUsers } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { useUser } from '../Contexts/UserContext';
+import { jwtDecode } from 'jwt-decode';
+
+// Helper to fetch user's first name from profile
+async function fetchUserFirstName(userId, accessToken) {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/profile/${userId}`, {
+    headers: {
+      accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  const data = await res.json();
+  return data?.data?.userProfile?.firstName || '';
+}
 
 const JoinFamilyModal = ({ isOpen, onClose, token, onFamilyJoined }) => {
   const [familyCode, setFamilyCode] = useState('');
@@ -20,119 +33,65 @@ const JoinFamilyModal = ({ isOpen, onClose, token, onFamilyJoined }) => {
       return;
     }
 
-    if (!userInfo?.userId) {
-      Swal.fire({
-        icon: 'error',
-        title: 'User Information Missing',
-        text: 'Unable to get user information. Please try again.',
-      });
-      return;
-    }
-
-    // Get the current user's family code
-    const currentUserResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/profile`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'accept': 'application/json'
-      }
-    });
-
-    if (!currentUserResponse.ok) {
-      throw new Error('Failed to fetch user profile');
-    }
-
-    const currentUserData = await currentUserResponse.json();
-    const currentFamilyCode = currentUserData.familyCode;
-
-    if (!currentFamilyCode) {
-      Swal.fire({
-        icon: 'error',
-        title: 'No Family Found',
-        text: 'You need to be a member of a family before you can associate with another family.',
-      });
-      return;
-    }
-
     setLoading(true);
     try {
-      // First, send the family join request
-      const joinResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/family/member/request-join`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          memberId: userInfo.userId,
-          familyCode: familyCode.trim(),
-          approveStatus: "pending"
-        }),
-      });
-
-      if (!joinResponse.ok) {
-        const errorData = await joinResponse.json();
-        throw new Error(errorData.message || 'Failed to send join request');
-      }
-
-      // Then, create a family association request
-      const associationResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: 'FAMILY_ASSOCIATION_REQUEST',
-          title: 'Family Association Request',
-          message: `${userInfo.firstName || 'A user'} wants to connect families`,
-          familyCode: familyCode.trim(),
-          referenceId: userInfo.userId,
-          data: {
-            senderId: userInfo.userId,
-            senderName: userInfo.firstName ? `${userInfo.firstName} ${userInfo.lastName || ''}`.trim() : 'A user',
-            senderFamilyCode: currentFamilyCode,
-            targetFamilyCode: familyCode.trim(),
-            requestType: 'family_association'
-          },
-          userIds: [] // This will be populated by the backend with admin users
-        }),
-      });
-
-      if (!associationResponse.ok) {
-        const errorData = await associationResponse.json();
-        console.error('Failed to create association request:', errorData);
-        // Don't fail the whole process if just the notification fails
-      }
-
-      const data = await joinResponse.json();
+      const accessToken = localStorage.getItem('access_token');
+      let userId = null;
+      let firstName = '';
       
-      Swal.fire({
-        icon: 'success',
-        title: 'Request Sent!',
-        html: `
-          <div class="text-left">
-            <p>Your request to join the family has been sent.</p>
-            <p class="mt-2">You'll be notified when the family administrator reviews your request.</p>
-            <p class="text-sm text-gray-600 mt-2">Note: This may take some time as the family administrator needs to approve the association between your families.</p>
-          </div>
-        `,
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#4F46E5',
-      }).then((result) => {
-        if (result.isConfirmed) {
-          onFamilyJoined(data);
-          onClose();
-          // Refresh the page to update the UI
-          window.location.reload();
+      if (accessToken) {
+        const decoded = jwtDecode(accessToken);
+        userId = decoded?.id || decoded?.userId || decoded?.sub;
+        // Fetch the user's first name from their profile
+        firstName = await fetchUserFirstName(userId, accessToken);
+      }
+      
+      if (!userId) throw new Error('User ID not found');
+      
+      // 1. Get admin user IDs for the family
+      const adminRes = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/notifications/${familyCode.trim()}/admins`,
+        {
+          headers: {
+            accept: 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
+      );
+      const adminData = await adminRes.json();
+      const adminIds = adminData.data || [];
+      
+      // 2. Send notification to admins
+      await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          type: 'FAMILY_JOIN_REQUEST',
+          title: 'New Family Join Request',
+          message: `${firstName} has requested to join your family using the code ${familyCode.trim()}.`,
+          familyCode: familyCode.trim(),
+          referenceId: userId,
+          userIds: adminIds,
+        }),
       });
+      
+      await Swal.fire({
+        icon: 'success',
+        title: 'Your Request Sent',
+        text: 'Your request was sent to the family admins.',
+        confirmButtonColor: '#3f982c'
+      });
+      
+      onClose();
     } catch (err) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Join Failed',
-        text: err.message || 'Failed to join family. Please check the family code and try again.',
+      Swal.fire({ 
+        icon: 'error', 
+        title: 'Failed to send join request', 
+        text: 'Please try again.' 
       });
-      console.error(err);
     } finally {
       setLoading(false);
     }

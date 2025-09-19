@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import Swal from 'sweetalert2';
+import AuthLogo from '../Components/AuthLogo';
 
 const ProfileFormPage = () => {
   const [formData, setFormData] = useState({
@@ -395,9 +396,8 @@ const ProfileFormPage = () => {
         text: 'Your profile has been updated successfully. This invitation link is now invalid.',
         confirmButtonColor: '#3f982c',
       }).then(() => {
-        // Clear the URL parameters to prevent back button issues
-        window.history.replaceState({}, document.title, window.location.pathname);
-        window.history.back();
+        // Redirect to login page after successful submission
+        window.location.href = '/login';
       });
       
     } catch (error) {
@@ -557,39 +557,49 @@ const ProfileFormPage = () => {
   const title = `Edit Profile - ${currentMemberData?.user?.fullName || 'Member'}`;
   const submitButtonText = isLoading ? 'Processing...' : 'Save Changes';
 
-  const inputClassName = (fieldName) => `w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-1 text-sm font-inter text-gray-800 placeholder-gray-400 ${
-    errors[fieldName] ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+  const inputClassName = (fieldName) => `w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 text-sm font-inter text-gray-800 placeholder-gray-400 transition-all duration-200 ${
+    errors[fieldName] ? 'border-red-400 focus:ring-red-200 bg-red-50' : 'border-gray-200 focus:ring-blue-200 focus:border-blue-400 bg-white hover:border-gray-300'
   }`;
 
-  const sectionClassName = "bg-white p-6 rounded-lg space-y-4 border border-gray-200 shadow-sm";
+  const sectionClassName = "bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl space-y-4 border border-gray-100 shadow-lg shadow-gray-100/50 backdrop-blur-sm";
   const labelClassName = "block text-sm font-medium text-gray-700 mb-1";
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 font-inter">
-      <div className="max-w-4xl mx-auto">
-        {/* Header with member info */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">{title}</h1>
-              <p className="text-gray-600 mt-1">
-                Family Code: <span className="font-medium">{currentMemberData?.familyCode}</span> | 
-                Member ID: <span className="font-medium">{currentMemberData?.memberId}</span>
-              </p>
+    <div className="min-h-screen bg-gray-50 font-inter">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        {/* Header Section - Same Size as Footer */}
+        <div className="bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="flex items-center gap-4 text-gray-800 text-center sm:text-left">
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-2 shadow-lg border border-gray-200">
+                <img
+                  src="/assets/logo-green-light.png"
+                  alt="Familyss Logo"
+                  className="w-10 h-10 sm:w-12 sm:h-12"
+                />
+              </div>
+              <div>
+                <h1 className="font-semibold text-base sm:text-lg text-gray-800">Family Tree Profile</h1>
+                <p className="text-gray-600 text-xs sm:text-sm mt-1">Complete your family member profile</p>
+              </div>
             </div>
-            <button
-              onClick={() => window.history.back()}
-              className="bg-unset px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m12 19-7-7 7-7"/>
-                <path d="M19 12H5"/>
-              </svg>
-              Back
-            </button>
+            <div className="flex w-full sm:w-auto">
+              <button
+                onClick={() => window.history.back()}
+                className="bg-blue-500 hover:bg-blue-600 px-4 sm:px-6 py-2.5 sm:py-3 border border-blue-400 rounded-lg sm:rounded-xl font-medium text-white transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base w-full sm:w-auto shadow-lg hover:shadow-xl"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m12 19-7-7 7-7"/>
+                  <path d="M19 12H5"/>
+                </svg>
+                <span>Back</span>
+              </button>
+            </div>
           </div>
-          <p className="text-gray-600 mt-2">Update your profile information below</p>
         </div>
+      </div>
+      
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
 
         {/* API Error Display */}
         {apiError && (
@@ -631,13 +641,20 @@ const ProfileFormPage = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8 pb-4 sm:pb-8">
           {/* Profile Image Section */}
           <div className={sectionClassName}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Profile Picture</h3>
-            <div className="flex flex-col sm:flex-row items-center gap-6">
+            <div className="flex items-center space-x-3 mb-4 sm:mb-6">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800">Profile Picture</h3>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
               <div className="relative group">
-                <div className="w-32 h-32 rounded-lg border-2 border-gray-200 overflow-hidden shadow-sm flex items-center justify-center bg-gray-100">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-2 border-gray-200 overflow-hidden shadow-lg flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
                   {imagePreviewUrl || formData.profileImageUrl ? (
                     <img
                       src={imagePreviewUrl || formData.profileImageUrl}
@@ -652,9 +669,15 @@ const ProfileFormPage = () => {
                 </div>
                 <label
                   htmlFor="profile"
-                  className="absolute inset-0 bg-black bg-opacity-30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                  className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center cursor-pointer"
                 >
-                  <span className="text-white text-sm font-medium">Change Photo</span>
+                  <div className="text-center">
+                    <svg className="w-6 h-6 text-white mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <span className="text-white text-xs font-medium">Change Photo</span>
+                  </div>
                 </label>
               </div>
               <div className="flex-1 w-full">
@@ -681,7 +704,14 @@ const ProfileFormPage = () => {
 
           {/* Account Information Section */}
           <div className={sectionClassName}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Account Information</h3>
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-teal-500 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Account Information</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="email" className={labelClassName}>
@@ -771,7 +801,14 @@ const ProfileFormPage = () => {
 
           {/* Personal Information Section */}
           <div className={sectionClassName}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/>
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Personal Information</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="firstName" className={labelClassName}>
@@ -896,7 +933,15 @@ const ProfileFormPage = () => {
 
           {/* Contact Information Section */}
           <div className={sectionClassName}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Contact Information</h3>
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Contact Information</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label htmlFor="address" className={labelClassName}>
@@ -917,7 +962,14 @@ const ProfileFormPage = () => {
 
           {/* Family Information Section */}
           <div className={sectionClassName}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Family Information</h3>
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-rose-500 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Family Information</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="maritalStatus" className={labelClassName}>
@@ -1074,7 +1126,14 @@ const ProfileFormPage = () => {
 
           {/* Cultural & Background Section */}
           <div className={sectionClassName}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Cultural & Background</h3>
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-8 h-8 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Cultural & Background</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="religionId" className={labelClassName}>
@@ -1196,7 +1255,14 @@ const ProfileFormPage = () => {
 
           {/* Additional Information Section */}
           <div className={sectionClassName}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Additional Information</h3>
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Additional Information</h3>
+            </div>
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <label htmlFor="bio" className={labelClassName}>
@@ -1271,30 +1337,50 @@ const ProfileFormPage = () => {
             </div>
           </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end gap-3 pt-4 bg-white p-6 rounded-lg shadow-sm">
-            <button
-              type="button"
-              onClick={() => window.history.back()}
-              className="bg-unset px-6 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center ${
-                isLoading ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
-            >
-              {isLoading && (
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              )}
-              {submitButtonText}
-            </button>
+          {/* Submit Button - Mobile Optimized */}
+          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div className="text-white text-center sm:text-left">
+                <h4 className="font-semibold text-base sm:text-lg">Ready to save your profile?</h4>
+                <p className="text-blue-100 text-xs sm:text-sm mt-1">Your information will be securely saved to your family tree.</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => window.history.back()}
+                  className="bg-white/20 backdrop-blur-sm hover:bg-white/30 px-4 sm:px-6 py-2.5 sm:py-3 border border-white/30 rounded-lg sm:rounded-xl font-medium text-white transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base order-2 sm:order-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`px-6 sm:px-8 py-2.5 sm:py-3 bg-white hover:bg-gray-50 text-gray-800 font-semibold rounded-lg sm:rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg text-sm sm:text-base order-1 sm:order-2 ${
+                    isLoading ? 'opacity-75 cursor-not-allowed' : 'hover:shadow-xl sm:hover:scale-105'
+                  }`}
+                >
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Save Profile
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       </div>

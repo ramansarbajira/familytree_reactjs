@@ -26,6 +26,26 @@ const SuggestionApproving = () => {
   const [viewMember, setViewMember] = useState(null); // for member details in replace modal
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [requestToReject, setRequestToReject] = useState(null);
+
+  const markNotificationAsRead = async (notificationId, status = null) => {
+    try {
+      const url = new URL(`${import.meta.env.VITE_API_BASE_URL}/notifications/${notificationId}/read`);
+      if (status) {
+        url.searchParams.append('status', status);
+      }
+      
+      await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
 
   useEffect(() => {
     if (!userInfo?.id) return;
@@ -62,9 +82,11 @@ const SuggestionApproving = () => {
         }
       );
       const data = await res.json();
-      // 3. For each request, fetch the user profile
+      // Filter to only show pending requests
+      const pendingRequests = (data.data || []).filter(req => req.status === 'pending');
+      // 3. For each pending request, fetch the user profile
       const requestsWithUser = await Promise.all(
-        (data.data || []).map(async (req) => {
+        pendingRequests.map(async (req) => {
           let user = null;
           if (req.triggeredBy) {
             const userRes = await fetch(
@@ -182,10 +204,19 @@ const SuggestionApproving = () => {
                   View Profile
                 </button>
                 <button
-                  className="ml-auto bg-green-500 text-white px-4 py-2 rounded"
+                  className="bg-red-500 text-white px-4 py-2 rounded mr-2"
+                  onClick={() => {
+                    setRequestToReject(req);
+                    setShowRejectConfirm(true);
+                  }}
+                >
+                  Reject
+                </button>
+                <button
+                  className="bg-green-500 text-white px-4 py-2 rounded"
                   onClick={() => openReplaceModal(req)}
                 >
-                  Approve & Replace
+                  Accept & Replace
                 </button>
               </div>
             ))}
@@ -307,6 +338,8 @@ const SuggestionApproving = () => {
                         }),
                       }
                     );
+                    // Mark the notification as read with accepted status after successful merge
+                    await markNotificationAsRead(replaceModal.request.id, 'accepted');
                     setReplaceLoading(false);
                     setShowConfirm(false);
                     setReplaceModal({ open: false, request: null });
@@ -332,6 +365,42 @@ const SuggestionApproving = () => {
             <div className="text-3xl mb-4 text-green-600">✔️</div>
             <div className="text-xl font-bold mb-2">Member replaced successfully!</div>
             <div className="text-gray-500">The selected member has been replaced with the new joiner.</div>
+          </div>
+        </Modal>
+      )}
+      {/* Reject Confirmation Modal */}
+      {showRejectConfirm && requestToReject && (
+        <Modal onClose={() => setShowRejectConfirm(false)}>
+          <div className="text-center py-6">
+            <div className="text-2xl mb-4 text-red-600">⚠️</div>
+            <div className="text-xl font-bold mb-4">Confirm Rejection</div>
+            <div className="text-gray-600 mb-6">
+              Are you sure you want to reject the join request from <span className="font-semibold">{requestToReject.user?.firstName} {requestToReject.user?.lastName}</span>?
+            </div>
+            <div className="flex justify-center gap-4">
+              <button
+                className="bg-gray-300 text-gray-700 px-6 py-2 rounded"
+                onClick={() => {
+                  setShowRejectConfirm(false);
+                  setRequestToReject(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-red-500 text-white px-6 py-2 rounded"
+                onClick={async () => {
+                  // Mark notification as rejected
+                  await markNotificationAsRead(requestToReject.id, 'rejected');
+                  // Remove the request from the list
+                  setRequests(prev => prev.filter(r => r.id !== requestToReject.id));
+                  setShowRejectConfirm(false);
+                  setRequestToReject(null);
+                }}
+              >
+                Yes, Reject
+              </button>
+            </div>
           </div>
         </Modal>
       )}
