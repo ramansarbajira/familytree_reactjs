@@ -7,7 +7,6 @@ import {
   isAuthenticated, 
   initializeAuth 
 } from '../utils/auth';
-import { apiClient } from '../utils/apiClient';
 
 const UserContext = createContext();
 
@@ -44,7 +43,14 @@ export const UserProvider = ({ children }) => {
     try {
       setUserLoading(true);
 
-      const response = await apiClient.get('/user/myProfile');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/myProfile`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, // 10 second timeout
+      });
       if (response.status === 401) {
         // Treat 401 from myProfile as invalid session
         try {
@@ -143,20 +149,7 @@ export const UserProvider = ({ children }) => {
     } catch (err) {
       console.error('Error fetching user:', err);
       
-      // Handle CORS errors specifically
-      if (err.name === 'TypeError' && (err.message.includes('CORS') || err.message.includes('fetch'))) {
-        console.warn(`CORS/Network error detected: ${err.message}`);
-        
-        if (retryCount < 2) {
-          console.warn(`Retrying CORS request... (${retryCount + 1}/3)`);
-          setTimeout(() => fetchUserDetails(retryCount + 1), 5000); // Longer delay for CORS issues
-          return;
-        } else {
-          console.error('CORS error persists after retries. Check server CORS configuration.');
-        }
-      }
-      
-      // Handle other network errors with retry logic
+      // Handle network errors with retry logic
       if (err.name === 'TypeError' && err.message.includes('fetch') && retryCount < 2) {
         console.warn(`Network error, retrying... (${retryCount + 1}/3)`);
         setTimeout(() => fetchUserDetails(retryCount + 1), 3000);
