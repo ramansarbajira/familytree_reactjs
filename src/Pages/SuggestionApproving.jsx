@@ -28,6 +28,7 @@ const SuggestionApproving = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
   const [requestToReject, setRequestToReject] = useState(null);
+  const [addNewMemberLoading, setAddNewMemberLoading] = useState(false);
 
   const markNotificationAsRead = async (notificationId, status = null) => {
     try {
@@ -133,6 +134,46 @@ const SuggestionApproving = () => {
     setSelectedMemberId(null);
     // Refresh requests
     window.location.reload();
+  };
+
+  const handleAddAsNewMember = async () => {
+    if (!familyCode || !replaceModal.request) return;
+    setAddNewMemberLoading(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/family/member/add-user-to-family`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            userId: replaceModal.request.triggeredBy,
+            familyCode: familyCode,
+          }),
+        }
+      );
+      
+      if (response.ok) {
+        // Mark the notification as read with accepted status
+        await markNotificationAsRead(replaceModal.request.id, 'accepted');
+        setAddNewMemberLoading(false);
+        setReplaceModal({ open: false, request: null });
+        setSelectedMemberId(null);
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          window.location.reload();
+        }, 2000);
+      } else {
+        console.error('Failed to add user to family');
+        setAddNewMemberLoading(false);
+      }
+    } catch (error) {
+      console.error('Error adding user to family:', error);
+      setAddNewMemberLoading(false);
+    }
   };
 
   const openReplaceModal = async (request) => {
@@ -258,6 +299,10 @@ const SuggestionApproving = () => {
                 value={search}
                 onChange={e => { setSearch(e.target.value); setViewMember(null); }}
               />
+              <p className="text-sm text-gray-500 mt-2">
+                Click on a member to select for replacement, or click "Add as New Member" to add without replacing anyone.
+                {selectedMemberId && " Click on the selected member again to deselect."}
+              </p>
             </div>
 
             {/* Scrollable Members Grid */}
@@ -271,8 +316,14 @@ const SuggestionApproving = () => {
                       key={member.id}
                       className={`p-2 border rounded flex flex-col items-center cursor-pointer ${selectedMemberId === user.id ? 'border-primary-500 bg-primary-50' : ''}`}
                       onClick={() => {
-                        setSelectedMemberId(user.id);
-                        setViewMember({ user, profile });
+                        // Toggle selection - if already selected, deselect it
+                        if (selectedMemberId === user.id) {
+                          setSelectedMemberId(null);
+                          setViewMember(null);
+                        } else {
+                          setSelectedMemberId(user.id);
+                          setViewMember({ user, profile });
+                        }
                       }}
                     >
                       <img
@@ -300,8 +351,15 @@ const SuggestionApproving = () => {
               </div>
             )}
 
-            {/* Footer Button - Fixed */}
-            <div className="flex-shrink-0">
+            {/* Footer Buttons - Fixed */}
+            <div className="flex-shrink-0 flex gap-3">
+              <button
+                className="bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50"
+                disabled={selectedMemberId || addNewMemberLoading}
+                onClick={handleAddAsNewMember}
+              >
+                {addNewMemberLoading ? 'Adding...' : 'Add as New Member'}
+              </button>
               <button
                 className="bg-green-600 text-white px-6 py-2 rounded disabled:opacity-50"
                 disabled={!selectedMemberId || replaceLoading}
