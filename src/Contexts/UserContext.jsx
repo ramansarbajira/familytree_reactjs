@@ -59,13 +59,7 @@ export const UserProvider = ({ children }) => {
           // ignore json parse errors
         }
         clearUserData();
-        // Use React Router navigation instead of window.location to avoid page refresh
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          // Only redirect if not already on login page
-          setTimeout(() => {
-            window.location.replace('/login');
-          }, 100);
-        }
+        window.location.href = '/login';
         return;
       }
       if (!response.ok) throw new Error('Failed to fetch user details');
@@ -139,9 +133,6 @@ export const UserProvider = ({ children }) => {
       
     } catch (err) {
       console.error('Error fetching user:', err);
-      // Remove retry logic that was causing slow performance
-      // Just clear user data on any error to avoid multiple API calls
-      clearUserData();
     } finally {
       setUserLoading(false);
     }
@@ -166,14 +157,14 @@ export const UserProvider = ({ children }) => {
     // Listen for storage events from other tabs/windows
     window.addEventListener('storage', handleStorageChange);
 
-    // Reduced frequency token checking - only check every 30 seconds
+    // Also check for token changes in the same tab
     const checkTokenInterval = setInterval(() => {
       const currentToken = getToken();
       if (currentToken && !userInfo && !userLoading) {
         // Token exists but no user info, fetch it
         fetchUserDetails();
       }
-    }, 30000); // Check every 30 seconds instead of every second
+    }, 1000); // Check every second
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -198,9 +189,9 @@ export const UserProvider = ({ children }) => {
           clearAuthData();
           clearUserData();
           
-          // Use replace instead of href to avoid adding to history
+          // Redirect to login if on a protected page
           if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-            window.location.replace('/login');
+            window.location.href = '/login';
           }
         }
       }
