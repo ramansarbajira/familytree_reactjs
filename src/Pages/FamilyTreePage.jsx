@@ -1112,6 +1112,26 @@ const FamilyTreePage = () => {
                         </button>
                     </div>
 
+                    {/* Desktop Zoom Controls (Plus/Minus only) */}
+                    <div className="hidden sm:flex fixed right-4 top-1/2 transform -translate-y-1/2 flex-col gap-3 z-40">
+                        <button
+                            className="w-12 h-12 bg-white border-2 border-gray-300 rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:bg-gray-50 active:scale-95 transition-all duration-200"
+                            onClick={zoomIn}
+                            disabled={zoom >= 2}
+                            title="Zoom In"
+                        >
+                            <FaPlus className="text-lg" />
+                        </button>
+                        <button
+                            className="w-12 h-12 bg-white border-2 border-gray-300 rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:bg-gray-50 active:scale-95 transition-all duration-200"
+                            onClick={zoomOut}
+                            disabled={zoom <= 0.1}
+                            title="Zoom Out"
+                        >
+                            <FaMinus className="text-lg" />
+                        </button>
+                    </div>
+
                     {canEdit && (
                         <div className="fixed left-0 w-full bg-white border-t border-gray-200 flex justify-around items-center py-3 z-50 sm:hidden" style={{ bottom: '60px' }}>
                             <button

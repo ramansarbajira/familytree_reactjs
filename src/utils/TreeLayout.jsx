@@ -341,40 +341,25 @@ export function autoArrange(tree) {
     // Apply layout with better configuration
     const layoutConfig = {
         rankdir: 'TB',
-        nodesep: nodesep * 2,  // Further increased node separation
-        ranksep: ranksep * 1.8,  // Further increased rank separation
-        marginx: 100,   // Fixed large margins
+        nodesep: nodesep, // base node separation (we already scale elsewhere)
+        ranksep: memberCount > 50 ? ranksep * 2 : ranksep * 1.5,
+        marginx: 100,
         marginy: 100,
         acyclicer: 'greedy',
-        ranker: 'network-simplex',  // Better for complex trees
+        ranker: 'network-simplex',
         align: 'UL',
-        edgesep: nodesep / 1.5,  // Better edge separation
-        maxiter: 7000,  // Even more iterations for better layout
+        edgesep: 80,
+        maxiter: 7000,
         compound: true,
-        // Improved layout parameters
-        nodeRankFactor: 2.5,  // Better node positioning
-        // Better spacing control
-        ranksep: ranksep,
-        nodesep: nodesep,
-        // Improved convergence
+        nodeRankFactor: 2.5,
         tolerance: 0.00001,
-        // Prevent node overlap with more strict settings
         overlap: 'false',
         overlap_shrink: true,
         overlap_scaling: 10,
-        // Better edge routing
         splines: 'polyline',
-        // More space between nodes
-        edgesep: 80,
-        // Better spacing for large trees
-        ranksep: memberCount > 50 ? ranksep * 2 : ranksep * 1.5,
-        // Prevent edge crossing
         acyclic: true,
-        // Force node dimensions
         nodeDimensionsIncludeLabels: true,
-        // Better edge routing
         edgeWeight: 2,
-        // More space for labels
         labeloffset: 10
     };
     
