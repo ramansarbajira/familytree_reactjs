@@ -5,7 +5,8 @@ import {
   setAuthData, 
   clearAuthData, 
   isAuthenticated, 
-  initializeAuth 
+  initializeAuth,
+  authenticatedFetch 
 } from '../utils/auth';
 
 const UserContext = createContext();
@@ -43,32 +44,9 @@ export const UserProvider = ({ children }) => {
     try {
       setUserLoading(true);
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/myProfile`, {
+      const response = await authenticatedFetch(`${import.meta.env.VITE_API_BASE_URL}/user/myProfile`, {
         method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 10000, // 10 second timeout
       });
-      if (response.status === 401) {
-        // Treat 401 from myProfile as invalid session
-        try {
-          const errJson = await response.json();
-          console.error('User session error:', errJson?.message || errJson);
-        } catch (_) {
-          // ignore json parse errors
-        }
-        clearUserData();
-        
-        // Use replace to avoid history issues and prevent refresh loops
-        setTimeout(() => {
-          if (window.location.pathname !== '/login') {
-            window.location.replace('/login');
-          }
-        }, 100);
-        return;
-      }
       if (!response.ok) {
         // Handle server errors with retry logic
         if (response.status >= 500 && retryCount < 2) {
@@ -149,10 +127,28 @@ export const UserProvider = ({ children }) => {
     } catch (err) {
       console.error('Error fetching user:', err);
       
+      // Handle authentication errors
+      if (err.message.includes('Authentication expired')) {
+        clearUserData();
+        setTimeout(() => {
+          if (window.location.pathname !== '/login') {
+            window.location.replace('/login');
+          }
+        }, 100);
+        return;
+      }
+      
       // Handle network errors with retry logic
-      if (err.name === 'TypeError' && err.message.includes('fetch') && retryCount < 2) {
+      if (err.message.includes('Network error') && retryCount < 2) {
         console.warn(`Network error, retrying... (${retryCount + 1}/3)`);
         setTimeout(() => fetchUserDetails(retryCount + 1), 3000);
+        return;
+      }
+      
+      // Handle bad request errors (400)
+      if (err.message.includes('Bad Request')) {
+        console.error('Bad request error - clearing user data to reset state');
+        clearUserData();
         return;
       }
       
