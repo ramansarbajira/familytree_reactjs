@@ -126,6 +126,12 @@ const Layout = ({ children }) => {
     }
   };
 
+  const decrementUnreadCount = () => {
+    setUnreadCount(prev => Math.max(0, prev - 1));
+    // Also fetch the actual count to ensure accuracy
+    setTimeout(fetchUnreadCount, 100);
+  };
+
   useEffect(() => {
     if (localStorage.getItem('access_token')) {
       fetchUnreadCount();
@@ -292,7 +298,7 @@ const Layout = ({ children }) => {
       <NotificationPanel 
         open={notificationOpen} 
         onClose={() => setNotificationOpen(false)} 
-        onNotificationCountUpdate={fetchUnreadCount}
+        onNotificationCountUpdate={decrementUnreadCount}
       />
 
       {/* Add Member Form Modal */}

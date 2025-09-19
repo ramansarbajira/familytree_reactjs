@@ -18,7 +18,7 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processingRequest, setProcessingRequest] = useState(null);
-  const [filter, setFilter] = useState('all'); // 'all', 'read', 'unread'
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'unread', 'read'
 
   const notificationTypes = {
     request: { icon: <FiUser />, color: 'from-blue-500 to-blue-300' },
@@ -37,13 +37,27 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
       setLoading(true);
       const url = `${import.meta.env.VITE_API_BASE_URL}/notifications${getAll ? '?all=true' : ''}`;
 
+      console.log('🔍 Fetching notifications from:', url);
+      console.log('🔑 Using token:', localStorage.getItem('access_token') ? 'Token exists' : 'No token');
+      
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('access_token')}`,
         },
       });
 
+      console.log('📡 API Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        console.error('❌ Failed to fetch notifications:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('❌ Error details:', errorText);
+        return;
+      }
+
       const data = await response.json();
+      console.log('📥 Raw notification data from API:', data);
+      console.log('📊 Data type:', typeof data, 'Is array:', Array.isArray(data), 'Length:', data?.length);
 
       const formatted = data.map((n) => ({
         id: n.id,
@@ -52,10 +66,14 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
         message: n.message,
         time: n.createdAt, // Keep the original ISO string for proper parsing
         read: n.isRead,
+        status: n.status || 'pending', // Include notification status
         data: n.data || {},
         createdAt: n.createdAt,
         triggeredBy: n.triggeredBy,
       }));
+
+      // Debug: Log all notifications to see what types we're getting
+      console.log('All notifications received:', formatted.map(n => ({ id: n.id, type: n.type, title: n.title })));
 
       setNotifications(formatted);
     } catch (err) {
@@ -105,7 +123,8 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
 
   useEffect(() => {
     if (open) {
-      fetchNotifications();
+      // Fetch all notifications to see if acceptance notifications are there
+      fetchNotifications(true);
       
       // Set up automatic refresh every 30 seconds when panel is open
       const refreshInterval = setInterval(() => {
@@ -118,16 +137,31 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
 
   if (!open) return null;
 
-  // Apply filter to notifications
-  const filteredNotifications = notifications.filter(notification => {
-    if (filter === 'read') return notification.read;
-    if (filter === 'unread') return !notification.read;
-    return true; // 'all'
-  });
+  // Filter notifications based on active tab
+  const getFilteredNotifications = () => {
+    switch (activeTab) {
+      case 'unread':
+        return notifications.filter(n => !n.read);
+      case 'read':
+        return notifications.filter(n => n.read);
+      default:
+        return notifications;
+    }
+  };
+
+  const filteredNotifications = getFilteredNotifications();
 
   // Filter out association requests to handle them separately
   const associationRequests = filteredNotifications.filter(n => n.type === 'family_association_request');
   const otherNotifications = filteredNotifications.filter(n => n.type !== 'family_association_request');
+
+  // Debug: Log the filtering results
+  console.log('Filtered notifications:', {
+    total: filteredNotifications.length,
+    associationRequests: associationRequests.length,
+    otherNotifications: otherNotifications.length,
+    otherTypes: otherNotifications.map(n => n.type)
+  });
 
   const handleAcceptRequest = async (notification) => {
     try {
@@ -148,9 +182,14 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
       });
 
       if (response.ok) {
-        // Remove the processed notification
+        // Remove the processed notification immediately from local state
         setNotifications(prev => prev.filter(n => n.id !== notification.id));
-        if (onNotificationCountUpdate) onNotificationCountUpdate();
+        
+        // Update notification count immediately (decrements count and fetches actual count)
+        if (onNotificationCountUpdate) {
+          onNotificationCountUpdate();
+        }
+        
         return true;
       } else {
         const errorData = await response.json();
@@ -180,11 +219,14 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
       });
 
       if (response.ok) {
-        // Remove the processed notification
+        // Remove the processed notification immediately from local state
         setNotifications(prev => prev.filter(n => n.id !== notification.id));
+        
+        // Update notification count immediately (decrements count and fetches actual count)
         if (onNotificationCountUpdate) {
           onNotificationCountUpdate();
         }
+        
         return true;
       } else {
         const errorData = await response.json();
@@ -208,42 +250,51 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
           <div className="border-b border-gray-200 bg-white px-4 py-3">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
-              <button
-                onClick={onClose}
-                className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
-              >
-                <FiX className="h-5 w-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={markAllAsRead}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                  disabled={notifications.length === 0 || notifications.every(n => n.read)}
+                >
+                  Mark all as read
+                </button>
+                <button
+                  onClick={onClose}
+                  className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                >
+                  <FiX className="h-5 w-5" />
+                </button>
+              </div>
             </div>
             
-            {/* Filter Buttons */}
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            {/* Tab Navigation */}
+            <div className="flex space-x-1">
               <button
-                onClick={() => setFilter('all')}
+                onClick={() => setActiveTab('all')}
                 className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                  filter === 'all' 
-                    ? 'bg-white text-blue-600 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
+                  activeTab === 'all'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 All
               </button>
               <button
-                onClick={() => setFilter('unread')}
+                onClick={() => setActiveTab('unread')}
                 className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                  filter === 'unread' 
-                    ? 'bg-white text-blue-600 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
+                  activeTab === 'unread'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 Unread
               </button>
               <button
-                onClick={() => setFilter('read')}
+                onClick={() => setActiveTab('read')}
                 className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                  filter === 'read' 
-                    ? 'bg-white text-blue-600 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
+                  activeTab === 'read'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 Read
@@ -260,8 +311,15 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
             ) : filteredNotifications.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center p-6 text-center">
                 <FiBell className="mb-2 h-10 w-10 text-gray-400" />
-                <h4 className="text-lg font-medium text-gray-900">No notifications</h4>
-                <p className="mt-1 text-sm text-gray-500">We'll let you know when there's something new.</p>
+                <h4 className="text-lg font-medium text-gray-900">
+                  {activeTab === 'unread' ? 'No unread notifications' : 
+                   activeTab === 'read' ? 'No read notifications' : 'No notifications'}
+                </h4>
+                <p className="mt-1 text-sm text-gray-500">
+                  {activeTab === 'unread' ? 'All caught up!' : 
+                   activeTab === 'read' ? 'No notifications have been read yet.' : 
+                   "We'll let you know when there's something new."}
+                </p>
               </div>
             ) : (
               <>
@@ -293,6 +351,7 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
                           id: notification.id,
                           type: notification.type, // Ensure type is passed through
                           message: notification.message, // Ensure message is passed through
+                          status: notification.status, // Pass notification status
                           data: {
                             ...notification.data, // Include all data from the notification
                             senderId: requesterId,
