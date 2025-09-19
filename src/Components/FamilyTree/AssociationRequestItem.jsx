@@ -9,6 +9,7 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
     type = 'FAMILY_ASSOCIATION_REQUEST',
     createdAt,
     data = {},
+    status = 'pending', // Include notification status
     triggeredByUser // User who sent the request
   } = request;
 
@@ -55,8 +56,29 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
   // Determine loading state
   const isLoading = loading || isAccepting || isRejecting;
 
+  // Check if buttons should be shown (only for pending requests)
+  const showActionButtons = status === 'pending';
+
+  // Get status display info
+  const getStatusDisplay = () => {
+    switch (status) {
+      case 'accepted':
+        return { text: 'Accepted', color: 'text-green-600', bgColor: 'bg-green-100' };
+      case 'rejected':
+        return { text: 'Rejected', color: 'text-red-600', bgColor: 'bg-red-100' };
+      default:
+        return null;
+    }
+  };
+
+  const statusDisplay = getStatusDisplay();
+
   return (
-    <div className="p-4 hover:bg-green-50 transition-colors duration-150 border-l-4 border-green-400 bg-gradient-to-r from-green-50 to-white">
+    <div className={`p-4 transition-colors duration-150 border-l-4 ${
+      status === 'accepted' ? 'border-green-400 bg-gradient-to-r from-green-50 to-white' :
+      status === 'rejected' ? 'border-red-400 bg-gradient-to-r from-red-50 to-white' :
+      'border-green-400 bg-gradient-to-r from-green-50 to-white hover:bg-green-50'
+    }`}>
       <div className="flex items-start">
         <div className="flex-shrink-0 bg-green-100 rounded-full p-2 shadow-sm">
           {isFamilyJoinRequest ? (
@@ -75,12 +97,19 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
                   : `${senderName} wants to connect your family`
               )}
             </p>
-            <span 
-              className="text-xs text-gray-500 whitespace-nowrap ml-2" 
-              title={fullDateTime}
-            >
-              {timeAgo}
-            </span>
+            <div className="flex items-center space-x-2">
+              {statusDisplay && (
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusDisplay.bgColor} ${statusDisplay.color}`}>
+                  {statusDisplay.text}
+                </span>
+              )}
+              <span 
+                className="text-xs text-gray-500 whitespace-nowrap" 
+                title={fullDateTime}
+              >
+                {timeAgo}
+              </span>
+            </div>
           </div>
           
           {!isFamilyJoinRequest && senderFamilyCode && (
@@ -89,57 +118,59 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
             </p>
           )}
           
-          <div className="mt-3 flex space-x-2">
-            <button
-              onClick={handleAccept}
-              disabled={isLoading}
-              className={`inline-flex items-center px-4 py-2 border border-transparent text-xs font-semibold rounded-lg shadow-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 ${
-                isLoading && !isAccepting 
-                  ? 'bg-gray-300 cursor-not-allowed' 
-                  : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500 hover:shadow-lg transform hover:scale-105'
-              }`}
-            >
-              {isAccepting ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Accepting...
-                </>
-              ) : (
-                <>
-                  <Check className="h-3 w-3 mr-1" />
-                  Accept
-                </>
-              )}
-            </button>
-            
-            <button
-              onClick={handleReject}
-              disabled={isLoading}
-              className={`inline-flex items-center px-4 py-2 border text-xs font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 ${
-                isLoading && !isRejecting
-                  ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
-                  : 'border-red-300 text-red-700 bg-white hover:bg-red-50 focus:ring-red-500 hover:shadow-md transform hover:scale-105'
-              }`}
-            >
-              {isRejecting ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Rejecting...
-                </>
-              ) : (
-                <>
-                  <X className="h-3 w-3 mr-1" />
-                  Reject
-                </>
-              )}
-            </button>
-          </div>
+          {showActionButtons && (
+            <div className="mt-3 flex space-x-2">
+              <button
+                onClick={handleAccept}
+                disabled={isLoading}
+                className={`inline-flex items-center px-4 py-2 border border-transparent text-xs font-semibold rounded-lg shadow-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 ${
+                  isLoading && !isAccepting 
+                    ? 'bg-gray-300 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500 hover:shadow-lg transform hover:scale-105'
+                }`}
+              >
+                {isAccepting ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Accepting...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-3 w-3 mr-1" />
+                    Accept
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={handleReject}
+                disabled={isLoading}
+                className={`inline-flex items-center px-4 py-2 border text-xs font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 ${
+                  isLoading && !isRejecting
+                    ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                    : 'border-red-300 text-red-700 bg-white hover:bg-red-50 focus:ring-red-500 hover:shadow-md transform hover:scale-105'
+                }`}
+              >
+                {isRejecting ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Rejecting...
+                  </>
+                ) : (
+                  <>
+                    <X className="h-3 w-3 mr-1" />
+                    Reject
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

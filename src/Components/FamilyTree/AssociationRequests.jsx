@@ -36,6 +36,7 @@ const AssociationRequests = () => {
         const familyRequests = data.filter(n => 
           !n.isRead && 
           n.type === 'FAMILY_ASSOCIATION_REQUEST' &&
+          (n.status === 'pending' || !n.status) && // Only show pending requests
           // Backend sets 'family_association_request'
           n.data?.requestType === 'family_association_request'
         );
