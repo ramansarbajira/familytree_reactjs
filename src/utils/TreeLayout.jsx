@@ -200,7 +200,9 @@ export function autoArrange(tree) {
                     height: 80,
                     // Add margin to prevent overlap with other nodes
                     marginx: 20,
-                    marginy: 10
+                    marginy: 10,
+                    // Mark as spouse relationship for renderers
+                    relationship: 'spouse'
                 });
                 
                 // If they have no common children, create a special cluster
@@ -261,7 +263,9 @@ export function autoArrange(tree) {
             style: 'stroke: #ff69b4; stroke-width: 2px;',
             arrowhead: 'none',
             rank: 'same',
-            constraint: true
+            constraint: true,
+            // Mark as spouse relationship for renderers
+            relationship: 'spouse'
         });
         
         // Set node options for both spouses
@@ -376,6 +380,35 @@ export function autoArrange(tree) {
     
     // Apply the layout
     dagre.layout(g, layoutConfig);
+
+    // Post-process: HARD ENFORCE spouses on the same row, side-by-side
+    // This corrects cases where Dagre still ends up placing spouses with slight Y offsets.
+    const adjustedSpousePairs = new Set();
+    tree.people.forEach(person => {
+        person.spouses.forEach(spouseId => {
+            const key = [person.id, spouseId].sort().join('-');
+            if (adjustedSpousePairs.has(key)) return;
+            adjustedSpousePairs.add(key);
+
+            const n1 = g.node(person.id.toString());
+            const n2 = g.node(spouseId.toString());
+            if (!n1 || !n2) return;
+
+            // Force same Y (row)
+            const targetY = Math.round((n1.y + n2.y) / 2);
+            n1.y = targetY;
+            n2.y = targetY;
+
+            // Ensure a minimum horizontal gap between spouses
+            const minGap = (nodeWidth || 160) + (coupleSpacing || 40);
+            const dx = Math.abs(n1.x - n2.x);
+            if (dx < minGap) {
+                const centerX = (n1.x + n2.x) / 2;
+                n1.x = centerX - minGap / 2;
+                n2.x = centerX + minGap / 2;
+            }
+        });
+    });
 
     // Calculate offsets with better bounds checking and padding
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
