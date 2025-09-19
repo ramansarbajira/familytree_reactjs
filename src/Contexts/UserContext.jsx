@@ -7,6 +7,7 @@ import {
   isAuthenticated, 
   initializeAuth 
 } from '../utils/auth';
+import { apiClient } from '../utils/apiClient';
 
 const UserContext = createContext();
 
@@ -32,7 +33,7 @@ export const UserProvider = ({ children }) => {
     clearAuthData();
   }, []);
 
-  const fetchUserDetails = useCallback(async () => {
+  const fetchUserDetails = useCallback(async (retryCount = 0) => {
     const token = getToken();
     if (!token) {
       console.warn('Authentication token not found or expired.');
@@ -43,13 +44,7 @@ export const UserProvider = ({ children }) => {
     try {
       setUserLoading(true);
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/myProfile`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.get('/user/myProfile');
       if (response.status === 401) {
         // Treat 401 from myProfile as invalid session
         try {
@@ -59,10 +54,24 @@ export const UserProvider = ({ children }) => {
           // ignore json parse errors
         }
         clearUserData();
-        window.location.href = '/login';
+        
+        // Use replace to avoid history issues and prevent refresh loops
+        setTimeout(() => {
+          if (window.location.pathname !== '/login') {
+            window.location.replace('/login');
+          }
+        }, 100);
         return;
       }
-      if (!response.ok) throw new Error('Failed to fetch user details');
+      if (!response.ok) {
+        // Handle server errors with retry logic
+        if (response.status >= 500 && retryCount < 2) {
+          console.warn(`Server error ${response.status}, retrying... (${retryCount + 1}/3)`);
+          setTimeout(() => fetchUserDetails(retryCount + 1), 2000);
+          return;
+        }
+        throw new Error(`Failed to fetch user details: ${response.status} ${response.statusText}`);
+      }
 
       const jsonData = await response.json();
       const { userProfile, email, countryCode, mobile, status, role } = jsonData.data || {};
@@ -133,6 +142,32 @@ export const UserProvider = ({ children }) => {
       
     } catch (err) {
       console.error('Error fetching user:', err);
+      
+      // Handle CORS errors specifically
+      if (err.name === 'TypeError' && (err.message.includes('CORS') || err.message.includes('fetch'))) {
+        console.warn(`CORS/Network error detected: ${err.message}`);
+        
+        if (retryCount < 2) {
+          console.warn(`Retrying CORS request... (${retryCount + 1}/3)`);
+          setTimeout(() => fetchUserDetails(retryCount + 1), 5000); // Longer delay for CORS issues
+          return;
+        } else {
+          console.error('CORS error persists after retries. Check server CORS configuration.');
+        }
+      }
+      
+      // Handle other network errors with retry logic
+      if (err.name === 'TypeError' && err.message.includes('fetch') && retryCount < 2) {
+        console.warn(`Network error, retrying... (${retryCount + 1}/3)`);
+        setTimeout(() => fetchUserDetails(retryCount + 1), 3000);
+        return;
+      }
+      
+      // If all retries failed or it's not a network error, clear user data
+      if (retryCount >= 2) {
+        console.error('Max retries reached, clearing user data');
+        clearUserData();
+      }
     } finally {
       setUserLoading(false);
     }
@@ -164,7 +199,7 @@ export const UserProvider = ({ children }) => {
         // Token exists but no user info, fetch it
         fetchUserDetails();
       }
-    }, 1000); // Check every second
+    }, 30000); // Check every 30 seconds instead of 1 second
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
