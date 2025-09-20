@@ -103,48 +103,26 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
                 ));
             });
             
-            // Calculate the top position for the horizontal line above all children
-            const childrenTopY = children.reduce((minY, child) => {
-                const cHeight = (child.height || 80);
-                const y = child.y + dagreLayoutOffsetY - (cHeight / 2) - 20;
-                return Math.min(minY, y);
-            }, Infinity);
-            
-            // Find leftmost and rightmost children for the horizontal line
-            const leftMostChild = children.reduce((leftMost, child) => 
-                (child.x < leftMost.x ? child : leftMost), 
-                children[0]
-            );
-            const rightMostChild = children.reduce((rightMost, child) => 
-                (child.x > rightMost.x ? child : rightMost), 
-                children[0]
-            );
-            
-            // Draw the main horizontal line above all children
-            svg.appendChild(svgPath(
-                `M ${leftMostChild.x + dagreLayoutOffsetX} ${childrenTopY} H ${rightMostChild.x + dagreLayoutOffsetX}`,
-                '#34d399', 5, false, connectionOpacity
-            ));
-            
-            // Draw vertical connections from the horizontal line to each child
+            // Connect from the parents' center to each child with an individual T-connector
             children.forEach(child => {
                 const cHeight = (child.height || 80);
                 const connectOffset = Math.min(14, Math.max(6, cHeight * 0.1));
                 const childTopX = child.x + dagreLayoutOffsetX;
                 const childTopY = child.y + dagreLayoutOffsetY - (cHeight / 2) + connectOffset;
-                
-                // Draw vertical line from horizontal line to child
+
+                // Horizontal from parent center to child's x at centerY, then vertical down to the child's top
                 svg.appendChild(svgPath(
-                    `M ${childTopX} ${childrenTopY} V ${childTopY}`,
+                    `M ${parentCenterX + dagreLayoutOffsetX} ${centerY} H ${childTopX} V ${childTopY}`,
+                    '#34d399', 5, false, connectionOpacity
+                ));
+
+                // Small horizontal nub on child's top edge for a clear T connection
+                const nub = 14; // half-length of the small horizontal connector
+                svg.appendChild(svgPath(
+                    `M ${childTopX - nub} ${childTopY} H ${childTopX + nub}`,
                     '#34d399', 5, false, connectionOpacity
                 ));
             });
-            
-            // Connect the center vertical line to the horizontal line
-            svg.appendChild(svgPath(
-                `M ${parentCenterX + dagreLayoutOffsetX} ${centerY} V ${childrenTopY}`,
-                '#34d399', 5, false, connectionOpacity
-            ));
         });
 
         // Draw spouse connections with pink lines
