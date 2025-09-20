@@ -49,16 +49,8 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
         defs.appendChild(marker);
         svg.appendChild(defs);
 
-        // Dynamic card height based on member count
+        // Member count (used for opacity etc.)
         const memberCount = dagreGraph.nodes().filter(n => !n.startsWith('family-') && !n.startsWith('cluster-') && !n.startsWith('subgraph-')).length;
-        const getCardHeight = () => {
-            if (memberCount > 100) return 120; // Very compact for large trees
-            if (memberCount > 50) return 140;  // Compact for medium trees
-            return window.innerWidth <= 600 ? 140 : 220; // Normal size
-        };
-        
-        const CARD_HEIGHT = getCardHeight();
-        const CARD_CONNECT_OFFSET = memberCount > 50 ? 8 : 10; // Smaller offset for large trees
 
         // Optimize rendering for large trees
         const isLargeTree = memberCount > 50;
@@ -92,9 +84,11 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
             
             // Draw connection from parents to children
             parents.forEach(parent => {
-                // Line from parent to center point
+                // Use node's actual height from dagre for precise anchors
+                const pHeight = (parent.height || 80);
+                const connectOffset = Math.min(14, Math.max(6, pHeight * 0.1));
                 const startX = parent.x + dagreLayoutOffsetX;
-                const startY = parent.y + dagreLayoutOffsetY + CARD_HEIGHT / 2 - CARD_CONNECT_OFFSET;
+                const startY = parent.y + dagreLayoutOffsetY + (pHeight / 2) - connectOffset;
                 
                 // Draw vertical line down from parent
                 svg.appendChild(svgPath(
@@ -109,48 +103,29 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
                 ));
             });
             
-            // Calculate the top position for the horizontal line above all children
-            const childrenTopY = children.reduce((minY, child) => 
-                Math.min(minY, child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2 - 20), 
-                Infinity
-            );
-            
-            // Find leftmost and rightmost children for the horizontal line
-            const leftMostChild = children.reduce((leftMost, child) => 
-                (child.x < leftMost.x ? child : leftMost), 
-                children[0]
-            );
-            const rightMostChild = children.reduce((rightMost, child) => 
-                (child.x > rightMost.x ? child : rightMost), 
-                children[0]
-            );
-            
-            // Draw the main horizontal line above all children
-            svg.appendChild(svgPath(
-                `M ${leftMostChild.x + dagreLayoutOffsetX} ${childrenTopY} H ${rightMostChild.x + dagreLayoutOffsetX}`,
-                '#34d399', 5, false, connectionOpacity
-            ));
-            
-            // Draw vertical connections from the horizontal line to each child
+            // Connect from the parents' center to each child with an individual T-connector
             children.forEach(child => {
+                const cHeight = (child.height || 80);
+                const connectOffset = Math.min(14, Math.max(6, cHeight * 0.1));
                 const childTopX = child.x + dagreLayoutOffsetX;
-                const childTopY = child.y + dagreLayoutOffsetY - CARD_HEIGHT / 2 + CARD_CONNECT_OFFSET;
-                
-                // Draw vertical line from horizontal line to child
+                const childTopY = child.y + dagreLayoutOffsetY - (cHeight / 2) + connectOffset;
+
+                // Horizontal from parent center to child's x at centerY, then vertical down to the child's top
                 svg.appendChild(svgPath(
-                    `M ${childTopX} ${childrenTopY} V ${childTopY}`,
+                    `M ${parentCenterX + dagreLayoutOffsetX} ${centerY} H ${childTopX} V ${childTopY}`,
+                    '#34d399', 5, false, connectionOpacity
+                ));
+
+                // Small horizontal nub on child's top edge for a clear T connection
+                const nub = 14; // half-length of the small horizontal connector
+                svg.appendChild(svgPath(
+                    `M ${childTopX - nub} ${childTopY} H ${childTopX + nub}`,
                     '#34d399', 5, false, connectionOpacity
                 ));
             });
-            
-            // Connect the center vertical line to the horizontal line
-            svg.appendChild(svgPath(
-                `M ${parentCenterX + dagreLayoutOffsetX} ${centerY} V ${childrenTopY}`,
-                '#34d399', 5, false, connectionOpacity
-            ));
         });
 
-        // Draw spouse connections with green lines
+        // Draw spouse connections with pink lines
         const spousePairs = new Set();
         dagreGraph.edges().forEach(edge => {
             const edgeData = dagreGraph.edge(edge);
@@ -170,13 +145,13 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
                     const curveHeight = 20; // Height of the curve
                     const pathData = `M ${x1} ${y1} Q ${midX} ${y1 + curveHeight}, ${x2} ${y2}`;
                     
-                    // Add shadow for depth
-                    svg.appendChild(svgShadowPath(pathData, '#10b981', 0.3));
+                    // Add shadow for depth (pink shadow)
+                    svg.appendChild(svgShadowPath(pathData, '#ec4899', 0.3));
                     
-                    // Add the main green line
+                    // Add the main pink line
                     svg.appendChild(svgPath(
                         pathData,
-                        '#10b981', // Green color
+                        '#ec4899', // Pink color
                         3,        // Line width
                         false,    // No arrow
                         0.9       // Slightly transparent
@@ -187,7 +162,7 @@ const TreeConnections = ({ dagreGraph, dagreLayoutOffsetX, dagreLayoutOffsetY })
                     circle.setAttribute('cx', midX.toString());
                     circle.setAttribute('cy', (y1 + curveHeight/2).toString());
                     circle.setAttribute('r', '4');
-                    circle.setAttribute('fill', '#10b981');
+                    circle.setAttribute('fill', '#ec4899');
                     circle.setAttribute('opacity', '0.9');
                     svg.appendChild(circle);
                     
