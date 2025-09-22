@@ -147,14 +147,40 @@ export const isAuthenticated = () => {
 };
 
 /**
+ * Detect if running in server environment vs local
+ * @returns {boolean} True if running on server
+ */
+const isServerEnvironment = () => {
+  const hostname = window.location.hostname;
+  return !['localhost', '127.0.0.1', '0.0.0.0'].includes(hostname);
+};
+
+/**
+ * Create fetch with timeout
+ * @param {string} url - Request URL
+ * @param {Object} options - Fetch options
+ * @param {number} timeout - Timeout in milliseconds
+ * @returns {Promise<Response>} Fetch response with timeout
+ */
+const fetchWithTimeout = (url, options, timeout = 30000) => {
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout')), timeout)
+    )
+  ]);
+};
+
+/**
  * Authenticated fetch utility with proper error handling
  * @param {string} url - API endpoint URL
  * @param {Object} options - Fetch options
  * @param {number} retries - Number of retries for network errors
  * @returns {Promise<Response>} Fetch response
  */
-export const authenticatedFetch = async (url, options = {}, retries = 1) => {
+export const authenticatedFetch = async (url, options = {}, retries = 2) => {
   const token = getToken();
+  const isServer = isServerEnvironment();
   
   // Validate token before making request
   if (!token || !isValidTokenFormat(token)) {
@@ -187,9 +213,21 @@ export const authenticatedFetch = async (url, options = {}, retries = 1) => {
     headers
   };
   
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  // Increase retries for server environment
+  const maxRetries = isServer ? Math.max(retries, 3) : retries;
+  // Longer timeout for server environment
+  const timeout = isServer ? 45000 : 30000;
+  
+  console.log(`Making request to ${url} (Environment: ${isServer ? 'Server' : 'Local'}, Retries: ${maxRetries})`);
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const startTime = Date.now();
+    
     try {
-      const response = await fetch(url, fetchOptions);
+      const response = await fetchWithTimeout(url, fetchOptions, timeout);
+      const duration = Date.now() - startTime;
+      
+      console.log(`Request completed in ${duration}ms (Attempt ${attempt + 1}/${maxRetries + 1})`);
       
       // Handle different response status codes
       if (response.status === 401) {
@@ -207,7 +245,42 @@ export const authenticatedFetch = async (url, options = {}, retries = 1) => {
       if (response.status === 500) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Server Error (500):', errorData);
+        
+        // For server environment, retry 500 errors
+        if (isServer && attempt < maxRetries) {
+          console.warn(`Server error on attempt ${attempt + 1}, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 2000));
+          continue;
+        }
+        
         throw new Error(`Server Error: ${errorData.message || 'Internal server error'}`);
+      }
+      
+      if (response.status === 502) {
+        const errorData = await response.text().catch(() => 'Bad Gateway');
+        console.error('Bad Gateway (502):', errorData);
+        
+        // Always retry 502 errors as they're usually temporary
+        if (attempt < maxRetries) {
+          console.warn(`Bad Gateway on attempt ${attempt + 1}, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 3000));
+          continue;
+        }
+        
+        throw new Error('Bad Gateway: Server temporarily unavailable');
+      }
+      
+      if (response.status === 503) {
+        console.error('Service Unavailable (503)');
+        
+        // Retry 503 errors
+        if (attempt < maxRetries) {
+          console.warn(`Service unavailable on attempt ${attempt + 1}, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 5000));
+          continue;
+        }
+        
+        throw new Error('Service Unavailable: Server is temporarily overloaded');
       }
       
       if (!response.ok) {
@@ -219,14 +292,37 @@ export const authenticatedFetch = async (url, options = {}, retries = 1) => {
       return response;
       
     } catch (error) {
-      // If this is the last attempt or it's not a network error, throw the error
-      if (attempt === retries || !error.message.includes('fetch')) {
+      const duration = Date.now() - startTime;
+      console.error(`Request failed after ${duration}ms (Attempt ${attempt + 1}/${maxRetries + 1}):`, error.message);
+      
+      // Handle timeout errors
+      if (error.message === 'Request timeout') {
+        if (attempt < maxRetries) {
+          console.warn(`Request timeout on attempt ${attempt + 1}, retrying with longer timeout...`);
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 2000));
+          continue;
+        }
+        throw new Error('Request timeout: Server is taking too long to respond');
+      }
+      
+      // Handle network errors
+      if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed to fetch')) {
+        if (attempt < maxRetries) {
+          console.warn(`Network error on attempt ${attempt + 1}, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 2000));
+          continue;
+        }
+        throw new Error('Network error: Please check your internet connection');
+      }
+      
+      // For other errors, don't retry unless it's a server error
+      if (attempt === maxRetries || (!error.message.includes('Server Error') && !error.message.includes('Bad Gateway'))) {
         throw error;
       }
       
       // Wait before retrying (exponential backoff)
-      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-      console.warn(`Retrying request (attempt ${attempt + 2}/${retries + 1}):`, url);
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 2000));
+      console.warn(`Retrying request (attempt ${attempt + 2}/${maxRetries + 1}):`, url);
     }
   }
 };

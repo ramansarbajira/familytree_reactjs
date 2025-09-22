@@ -56,7 +56,7 @@ export const UserProvider = ({ children }) => {
       const response = await authenticatedFetch(
         `${import.meta.env.VITE_API_BASE_URL}/user/myProfile`,
         { method: 'GET' },
-        2 // Retry up to 2 times for network errors
+        3 // Retry up to 3 times for network errors (will be increased to 4 on server)
       );
 
       const jsonData = await response.json();
@@ -135,14 +135,35 @@ export const UserProvider = ({ children }) => {
         console.warn('Authentication error, redirecting to login');
         clearUserData();
         window.location.replace('/login');
-      } else if (err.message.includes('Server Error') || err.message.includes('Bad Request')) {
-        // Server errors - show user-friendly message but don't redirect
+      } else if (err.message.includes('Server Error')) {
+        // Server errors - log detailed info but don't redirect
         console.error('Server error occurred:', err.message);
-        // You could show a toast notification here
-        // For now, we'll just log it and continue
-      } else if (err.message.includes('fetch')) {
+        console.warn('Server may be experiencing issues. User profile data not loaded.');
+        // Don't clear user data for server errors, just log and continue
+      } else if (err.message.includes('Bad Gateway')) {
+        // 502 errors - temporary server issues
+        console.error('Bad Gateway error:', err.message);
+        console.warn('Server temporarily unavailable. Retries were attempted.');
+      } else if (err.message.includes('Service Unavailable')) {
+        // 503 errors - server overloaded
+        console.error('Service unavailable:', err.message);
+        console.warn('Server is temporarily overloaded. Please try again later.');
+      } else if (err.message.includes('Request timeout')) {
+        // Timeout errors
+        console.error('Request timeout:', err.message);
+        console.warn('Server is responding slowly. Please check your connection.');
+      } else if (err.message.includes('Network error')) {
         // Network errors - could retry or show network error message
         console.warn('Network error occurred:', err.message);
+        console.warn('Please check your internet connection and try again.');
+      } else if (err.message.includes('Bad Request')) {
+        // 400 errors - client-side issues
+        console.error('Bad request error:', err.message);
+        console.warn('Request format issue. Please try logging in again.');
+      } else {
+        // Unknown errors
+        console.error('Unknown error occurred:', err.message);
+        console.warn('An unexpected error occurred while loading user profile.');
       }
     } finally {
       setUserLoading(false);
