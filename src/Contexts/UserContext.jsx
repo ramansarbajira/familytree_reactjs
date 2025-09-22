@@ -5,9 +5,7 @@ import {
   setAuthData, 
   clearAuthData, 
   isAuthenticated, 
-  initializeAuth,
-  authenticatedFetch,
-  isValidTokenFormat
+  initializeAuth 
 } from '../utils/auth';
 
 const UserContext = createContext();
@@ -42,22 +40,29 @@ export const UserProvider = ({ children }) => {
       return;
     }
 
-    // Validate token format before making API call
-    if (!isValidTokenFormat(token)) {
-      console.warn('Invalid token format detected, clearing auth data');
-      clearUserData();
-      window.location.replace('/login');
-      return;
-    }
-
     try {
       setUserLoading(true);
 
-      const response = await authenticatedFetch(
-        `${import.meta.env.VITE_API_BASE_URL}/user/myProfile`,
-        { method: 'GET' },
-        3 // Retry up to 3 times for network errors (will be increased to 4 on server)
-      );
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/myProfile`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (response.status === 401) {
+        // Treat 401 from myProfile as invalid session
+        try {
+          const errJson = await response.json();
+          console.error('User session error:', errJson?.message || errJson);
+        } catch (_) {
+          // ignore json parse errors
+        }
+        clearUserData();
+        window.location.href = '/login';
+        return;
+      }
+      if (!response.ok) throw new Error('Failed to fetch user details');
 
       const jsonData = await response.json();
       const { userProfile, email, countryCode, mobile, status, role } = jsonData.data || {};
@@ -128,49 +133,6 @@ export const UserProvider = ({ children }) => {
       
     } catch (err) {
       console.error('Error fetching user:', err);
-      
-      // Handle specific error types
-      if (err.message.includes('Authentication')) {
-        // Authentication errors - redirect to login
-        console.warn('Authentication error, redirecting to login');
-        clearUserData();
-        window.location.replace('/login');
-      } else if (err.message.includes('Profile Association Error')) {
-        // Specific user profile association error
-        console.error('User profile association error:', err.message);
-        console.warn('User profile is not properly linked in the database. Please contact support.');
-        // Don't clear auth data, but show user a message
-        // You could set a flag here to show a user-friendly message in the UI
-      } else if (err.message.includes('Server Error')) {
-        // General server errors - log detailed info but don't redirect
-        console.error('Server error occurred:', err.message);
-        console.warn('Server may be experiencing issues. User profile data not loaded.');
-        // Don't clear user data for server errors, just log and continue
-      } else if (err.message.includes('Bad Gateway')) {
-        // 502 errors - temporary server issues
-        console.error('Bad Gateway error:', err.message);
-        console.warn('Server temporarily unavailable. Retries were attempted.');
-      } else if (err.message.includes('Service Unavailable')) {
-        // 503 errors - server overloaded
-        console.error('Service unavailable:', err.message);
-        console.warn('Server is temporarily overloaded. Please try again later.');
-      } else if (err.message.includes('Request timeout')) {
-        // Timeout errors
-        console.error('Request timeout:', err.message);
-        console.warn('Server is responding slowly. Please check your connection.');
-      } else if (err.message.includes('Network error')) {
-        // Network errors - could retry or show network error message
-        console.warn('Network error occurred:', err.message);
-        console.warn('Please check your internet connection and try again.');
-      } else if (err.message.includes('Bad Request')) {
-        // 400 errors - client-side issues
-        console.error('Bad request error:', err.message);
-        console.warn('Request format issue. Please try logging in again.');
-      } else {
-        // Unknown errors
-        console.error('Unknown error occurred:', err.message);
-        console.warn('An unexpected error occurred while loading user profile.');
-      }
     } finally {
       setUserLoading(false);
     }
@@ -202,7 +164,7 @@ export const UserProvider = ({ children }) => {
         // Token exists but no user info, fetch it
         fetchUserDetails();
       }
-    }, 30000); // Check every 30 seconds (reduced from 1 second to prevent aggressive checking)
+    }, 1000); // Check every second
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
