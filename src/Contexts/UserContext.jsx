@@ -5,7 +5,9 @@ import {
   setAuthData, 
   clearAuthData, 
   isAuthenticated, 
-  initializeAuth 
+  initializeAuth,
+  authenticatedFetch,
+  isValidTokenFormat
 } from '../utils/auth';
 
 const UserContext = createContext();
@@ -40,29 +42,22 @@ export const UserProvider = ({ children }) => {
       return;
     }
 
+    // Validate token format before making API call
+    if (!isValidTokenFormat(token)) {
+      console.warn('Invalid token format detected, clearing auth data');
+      clearUserData();
+      window.location.replace('/login');
+      return;
+    }
+
     try {
       setUserLoading(true);
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/myProfile`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (response.status === 401) {
-        // Treat 401 from myProfile as invalid session
-        try {
-          const errJson = await response.json();
-          console.error('User session error:', errJson?.message || errJson);
-        } catch (_) {
-          // ignore json parse errors
-        }
-        clearUserData();
-        window.location.href = '/login';
-        return;
-      }
-      if (!response.ok) throw new Error('Failed to fetch user details');
+      const response = await authenticatedFetch(
+        `${import.meta.env.VITE_API_BASE_URL}/user/myProfile`,
+        { method: 'GET' },
+        2 // Retry up to 2 times for network errors
+      );
 
       const jsonData = await response.json();
       const { userProfile, email, countryCode, mobile, status, role } = jsonData.data || {};
@@ -133,6 +128,22 @@ export const UserProvider = ({ children }) => {
       
     } catch (err) {
       console.error('Error fetching user:', err);
+      
+      // Handle specific error types
+      if (err.message.includes('Authentication')) {
+        // Authentication errors - redirect to login
+        console.warn('Authentication error, redirecting to login');
+        clearUserData();
+        window.location.replace('/login');
+      } else if (err.message.includes('Server Error') || err.message.includes('Bad Request')) {
+        // Server errors - show user-friendly message but don't redirect
+        console.error('Server error occurred:', err.message);
+        // You could show a toast notification here
+        // For now, we'll just log it and continue
+      } else if (err.message.includes('fetch')) {
+        // Network errors - could retry or show network error message
+        console.warn('Network error occurred:', err.message);
+      }
     } finally {
       setUserLoading(false);
     }
@@ -164,7 +175,7 @@ export const UserProvider = ({ children }) => {
         // Token exists but no user info, fetch it
         fetchUserDetails();
       }
-    }, 1000); // Check every second
+    }, 30000); // Check every 30 seconds (reduced from 1 second to prevent aggressive checking)
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);

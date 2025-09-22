@@ -103,6 +103,32 @@ export const clearAuthData = () => {
 };
 
 /**
+ * Validates JWT token format
+ * @param {string} token - JWT token to validate
+ * @returns {boolean} True if token format is valid
+ */
+export const isValidTokenFormat = (token) => {
+  if (!token || typeof token !== 'string') return false;
+  
+  // Check if token has 3 parts separated by dots
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  
+  // Check if each part is base64 encoded
+  try {
+    parts.forEach(part => {
+      if (!part) throw new Error('Empty token part');
+      // Try to decode each part
+      window.atob(part.replace(/-/g, '+').replace(/_/g, '/'));
+    });
+    return true;
+  } catch (error) {
+    console.warn('Invalid token format:', error.message);
+    return false;
+  }
+};
+
+/**
  * Check if user is authenticated
  * @returns {boolean} True if user is authenticated
  */
@@ -110,8 +136,99 @@ export const isAuthenticated = () => {
   const token = getToken();
   if (!token) return false;
   
-  // Additional token validation can be added here
+  // Validate token format
+  if (!isValidTokenFormat(token)) {
+    console.warn('Invalid token format detected, clearing auth data');
+    clearAuthData();
+    return false;
+  }
+  
   return true;
+};
+
+/**
+ * Authenticated fetch utility with proper error handling
+ * @param {string} url - API endpoint URL
+ * @param {Object} options - Fetch options
+ * @param {number} retries - Number of retries for network errors
+ * @returns {Promise<Response>} Fetch response
+ */
+export const authenticatedFetch = async (url, options = {}, retries = 1) => {
+  const token = getToken();
+  
+  // Validate token before making request
+  if (!token || !isValidTokenFormat(token)) {
+    console.warn('No valid token available for authenticated request');
+    clearAuthData();
+    throw new Error('Authentication required');
+  }
+  
+  // Prepare headers with authentication
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+    ...options.headers
+  };
+  
+  // Validate request body for POST/PUT requests
+  if (options.method && ['POST', 'PUT', 'PATCH'].includes(options.method.toUpperCase())) {
+    if (options.body && typeof options.body === 'string') {
+      try {
+        JSON.parse(options.body);
+      } catch (error) {
+        console.error('Invalid JSON in request body:', error);
+        throw new Error('Invalid request body format');
+      }
+    }
+  }
+  
+  const fetchOptions = {
+    ...options,
+    headers
+  };
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, fetchOptions);
+      
+      // Handle different response status codes
+      if (response.status === 401) {
+        console.warn('Authentication failed - clearing auth data');
+        clearAuthData();
+        throw new Error('Authentication failed');
+      }
+      
+      if (response.status === 400) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Bad Request (400):', errorData);
+        throw new Error(`Bad Request: ${errorData.message || 'Invalid request'}`);
+      }
+      
+      if (response.status === 500) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Server Error (500):', errorData);
+        throw new Error(`Server Error: ${errorData.message || 'Internal server error'}`);
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`HTTP Error ${response.status}:`, errorData);
+        throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
+      }
+      
+      return response;
+      
+    } catch (error) {
+      // If this is the last attempt or it's not a network error, throw the error
+      if (attempt === retries || !error.message.includes('fetch')) {
+        throw error;
+      }
+      
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      console.warn(`Retrying request (attempt ${attempt + 2}/${retries + 1}):`, url);
+    }
+  }
 };
 
 /**
