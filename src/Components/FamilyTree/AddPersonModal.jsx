@@ -1117,7 +1117,8 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                                 </div>
                                                                  {!phoneInvite.result.sameFamily && (
                                                                     <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                                                        <button 
+                                                                        {/* Invite button hidden as requested */}
+                                                                        {/* <button 
                                                                             type="button" 
                                                                             onClick={handleSendInvite} 
                                                                             disabled={phoneInvite.sending}
@@ -1136,7 +1137,7 @@ const AddPersonModal = ({ isOpen, onClose, action, onAddPersons, familyCode, tok
                                                                         >
                                                                             <Send size={16} />
                                                                             {phoneInvite.sending ? 'Sending...' : 'Invite'}
-                                                                        </button>
+                                                                        </button> */}
                                                                         <button 
                                                                             type="button" 
                                                                             onClick={handleSendRequest} 
