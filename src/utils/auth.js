@@ -244,13 +244,30 @@ export const authenticatedFetch = async (url, options = {}, retries = 2) => {
       
       if (response.status === 500) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Server Error (500):', errorData);
+        console.error('Server Error (500):', {
+          url,
+          attempt: attempt + 1,
+          maxRetries: maxRetries + 1,
+          errorData,
+          timestamp: new Date().toISOString()
+        });
         
-        // For server environment, retry 500 errors
+        // Log specific error details for debugging
+        if (errorData.details) {
+          console.error('Server Error Details:', errorData.details);
+        }
+        
+        // For server environment, retry 500 errors with longer delays
         if (isServer && attempt < maxRetries) {
-          console.warn(`Server error on attempt ${attempt + 1}, retrying...`);
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 2000));
+          const retryDelay = Math.pow(2, attempt) * 3000; // Increased delay for server
+          console.warn(`Server error on attempt ${attempt + 1}, retrying in ${retryDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
           continue;
+        }
+        
+        // If this is a user profile error, provide specific handling
+        if (errorData.details && errorData.details.includes('UserProfile is not associated')) {
+          throw new Error(`Profile Association Error: ${errorData.message || 'User profile not properly linked'}`);
         }
         
         throw new Error(`Server Error: ${errorData.message || 'Internal server error'}`);
@@ -328,6 +345,54 @@ export const authenticatedFetch = async (url, options = {}, retries = 2) => {
 };
 
 /**
+ * Check API health and log server status
+ * @param {string} baseUrl - Base API URL
+ * @returns {Promise<boolean>} True if API is healthy
+ */
+export const checkApiHealth = async (baseUrl) => {
+  try {
+    console.log('Checking API health:', baseUrl);
+    const startTime = Date.now();
+    
+    // Try a simple health check endpoint or any basic endpoint
+    const response = await fetchWithTimeout(`${baseUrl}/health`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    }, 10000);
+    
+    const duration = Date.now() - startTime;
+    console.log(`API health check completed in ${duration}ms, Status: ${response.status}`);
+    
+    return response.ok;
+  } catch (error) {
+    console.error('API health check failed:', error.message);
+    return false;
+  }
+};
+
+/**
+ * Log detailed environment and API information
+ */
+export const logEnvironmentInfo = () => {
+  const isServer = isServerEnvironment();
+  const baseUrl = import.meta.env.VITE_API_BASE_URL;
+  
+  console.log('=== Environment Information ===');
+  console.log('Environment:', isServer ? 'Server/Production' : 'Local/Development');
+  console.log('Hostname:', window.location.hostname);
+  console.log('API Base URL:', baseUrl);
+  console.log('User Agent:', navigator.userAgent);
+  console.log('Connection:', navigator.onLine ? 'Online' : 'Offline');
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('===============================');
+  
+  // Check API health if we have a base URL
+  if (baseUrl) {
+    checkApiHealth(baseUrl);
+  }
+};
+
+/**
  * Initialize authentication state
  * Should be called when app loads
  */
@@ -337,4 +402,7 @@ export const initializeAuth = () => {
   if (expiryTime && new Date().getTime() > Number(expiryTime)) {
     clearAuthData();
   }
+  
+  // Log environment info for debugging
+  logEnvironmentInfo();
 };

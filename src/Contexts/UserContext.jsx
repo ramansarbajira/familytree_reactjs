@@ -135,8 +135,14 @@ export const UserProvider = ({ children }) => {
         console.warn('Authentication error, redirecting to login');
         clearUserData();
         window.location.replace('/login');
+      } else if (err.message.includes('Profile Association Error')) {
+        // Specific user profile association error
+        console.error('User profile association error:', err.message);
+        console.warn('User profile is not properly linked in the database. Please contact support.');
+        // Don't clear auth data, but show user a message
+        // You could set a flag here to show a user-friendly message in the UI
       } else if (err.message.includes('Server Error')) {
-        // Server errors - log detailed info but don't redirect
+        // General server errors - log detailed info but don't redirect
         console.error('Server error occurred:', err.message);
         console.warn('Server may be experiencing issues. User profile data not loaded.');
         // Don't clear user data for server errors, just log and continue
