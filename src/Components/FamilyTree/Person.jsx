@@ -60,7 +60,7 @@ const getGenderLabel = (person, tree, currentUserId) => {
     }
 };
 
-const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSelected, currentUserId, currentFamilyId, viewOnly, sourceRelationship }) => {
+const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSelected, isHighlighted, isSearchResult, currentUserId, currentFamilyId, viewOnly, sourceRelationship }) => {
     // Dynamic sizing based on tree size
     const memberCount = tree ? tree.people.size : 0;
     const { userInfo } = useUser();
@@ -392,7 +392,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             <div
                 className={`person ${person.gender} ${isRoot ? 'root' : ''} ${isNew ? 'person-new' : ''} ${isSelected ? 'person-selected' : ''} ${
                     person.lifeStatus === 'remembering' ? 'remembering' : ''
-                } group transition-transform duration-200 hover:scale-105 hover:shadow-2xl hover:ring-4 hover:ring-green-200`}
+                } ${isHighlighted ? 'person-highlighted' : ''} ${isSearchResult ? 'person-search-result' : ''} group transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:ring-4 hover:ring-green-200`}
                 style={{
                     position: 'relative',
                     minWidth: width,
@@ -411,7 +411,11 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                       : person.gender === 'female'
                       ? 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' // pink to yellow gradient for females
                       : 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', // soft teal to pink for others
-                    border: isRoot
+                    border: isHighlighted
+                      ? '4px solid #ff6b35' // orange border for highlighted (search focus)
+                      : isSearchResult
+                      ? '3px solid #ffd700' // gold border for search results
+                      : isRoot
                       ? '4px solid #f8b500' // gold border for root
                       : isNew
                       ? '2.5px dashed #f093fb' // pink border for new
@@ -423,7 +427,11 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                       ? '2.5px solid #fa709a' // pink border for females
                       : '2.5px solid #a8edea', // teal border for others
                     borderRadius: memberCount > 50 ? 12 : 18,
-                    boxShadow: isRoot
+                    boxShadow: isHighlighted
+                      ? '0 0 0 8px rgba(255, 107, 53, 0.3), 0 12px 36px rgba(255, 107, 53, 0.2), 0 0 20px rgba(255, 107, 53, 0.4)' // orange glow for highlighted
+                      : isSearchResult
+                      ? '0 0 0 6px rgba(255, 215, 0, 0.25), 0 8px 24px rgba(255, 215, 0, 0.15)' // gold glow for search results
+                      : isRoot
                       ? '0 0 0 8px rgba(248, 181, 0, 0.25), 0 12px 36px rgba(248, 181, 0.18)'
                       : isSelected
                       ? '0 12px 36px rgba(79, 172, 254, 0.13)'
@@ -515,8 +523,11 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 {isNew && !viewOnly && (
                   <span className="absolute -top-1 -right-1 bg-gradient-to-br from-green-400 to-teal-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold text-xs shadow-md">+</span>
                 )}
-                {isSelected && !isNew && !viewOnly && (
+                {isSelected && !isNew && !viewOnly && !isHighlighted && (
                   <span className="absolute -top-1 -right-1 bg-gradient-to-br from-green-500 to-green-700 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold text-xs shadow-md">✓</span>
+                )}
+                {isHighlighted && (
+                  <span className="absolute -top-1 -right-1 bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold text-xs shadow-lg animate-pulse">🔍</span>
                 )}
             </div>
             {/* All info inside the card */}

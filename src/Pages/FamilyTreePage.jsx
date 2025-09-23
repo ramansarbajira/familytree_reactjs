@@ -7,6 +7,7 @@ import Person from '../Components/FamilyTree/Person';
 import TreeConnections from '../Components/FamilyTree/TreeConnections';
 import RadialMenu from '../Components/FamilyTree/RadialMenu';
 import AddPersonModal from '../Components/FamilyTree/AddPersonModal';
+import SearchBar from '../Components/FamilyTree/SearchBar';
 import { getTranslation } from '../utils/languageTranslations';
 import { useLanguage } from '../Contexts/LanguageContext';
 import RelationshipCalculator from '../utils/relationshipCalculator';
@@ -71,6 +72,10 @@ const FamilyTreePage = () => {
     const [selectedPersonId, setSelectedPersonId] = useState(null);
     const [treeLoading, setTreeLoading] = useState(false);
     const [zoom, setZoom] = useState(1);
+    // Search state
+    const [searchResults, setSearchResults] = useState([]);
+    const [highlightedPersonId, setHighlightedPersonId] = useState(null);
+    const [isSearchActive, setIsSearchActive] = useState(false);
     // Touch zoom/pinch state
     const [isPinching, setIsPinching] = useState(false);
     const pinchStateRef = useRef({ startDist: 0, startZoom: 1 });
@@ -129,6 +134,39 @@ const FamilyTreePage = () => {
     const zoomIn = () => setZoom(prev => Math.min(2, +(prev + 0.1).toFixed(2)));
     const zoomOut = () => setZoom(prev => Math.max(0.1, +(prev - 0.1).toFixed(2)));
     const resetZoom = () => setZoom(1);
+
+    // Search handlers
+    const handleSearchResults = (results) => {
+        setSearchResults(results);
+        setIsSearchActive(results.length > 0);
+    };
+
+    const handleFocusPerson = (personId, person) => {
+        setHighlightedPersonId(personId);
+        setSelectedPersonId(personId);
+        
+        // Scroll to the person's position
+        if (containerRef.current && person) {
+            const memberCount = tree ? tree.people.size : 0;
+            const personSize = memberCount > 50 ? 80 : 100;
+            
+            const targetX = person.x - containerRef.current.clientWidth / 2;
+            const targetY = person.y - containerRef.current.clientHeight / 2;
+            
+            containerRef.current.scrollTo({
+                left: targetX,
+                top: targetY,
+                behavior: 'smooth'
+            });
+        }
+    };
+
+    const handleClearSearch = () => {
+        setSearchResults([]);
+        setHighlightedPersonId(null);
+        setIsSearchActive(false);
+        setSelectedPersonId(null);
+    };
 
     // Helpers for pinch-to-zoom on mobile
     const clampZoom = (z) => Math.max(0.1, Math.min(2, z));
@@ -973,51 +1011,226 @@ const FamilyTreePage = () => {
                 <div className="relative flex flex-col h-[calc(100vh-56px)] w-full bg-gray-100 overflow-hidden">
                     {/* Navigation buttons when viewing another family's tree */}
                     
+                    {/* Mobile Header */}
                     {canEdit && (
-                        <div className="hidden sm:flex w-full justify-between items-center gap-4 px-8 py-4 bg-white border-b border-gray-200 z-40">
-                            {/* Stats section */}
-                            <div className="flex gap-6 items-center text-gray-700 text-base font-medium">{code && code !== userInfo.familyCode && (<><button className="inline-flex items-center justify-center w-8 h-8 border border-gray-400 text-gray-700 rounded-full hover:bg-gray-100 active:scale-95 transition" onClick={() => navigate(-1)} title="Back"><FaArrowLeft /></button><button className="inline-flex items-center justify-center w-8 h-8 border border-indigo-600 text-indigo-600 rounded-full hover:bg-indigo-600 hover:text-white active:scale-95 transition" onClick={() => navigate('/family-tree')} title="My Birth Family Tree"><FaHome /></button></>)}
-                                <div>Total: <span className="font-bold">{stats.total}</span></div>
-                                <div>Male: <span className="font-bold">{stats.male}</span></div>
-                                <div>Female: <span className="font-bold">{stats.female}</span></div>
-                                <div>Generations: <span className="font-bold">{stats.generations}</span></div>
-                                <div><LanguageSwitcher /></div>
-                            </div>
-                            {/* Action buttons */}
-                            <div className="flex gap-4">
-                                <button
-                                    className="flex items-center gap-2 px-6 py-2 bg-green-500 text-white rounded-lg shadow-md text-lg font-semibold active:scale-95 transition"
-                                    onClick={resetTree}
-                                >
-                                    <FaPlus /> New Tree
-                                </button>
-                                <button
-                                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md text-lg font-semibold active:scale-95 transition disabled:opacity-60"
-                                    onClick={saveTreeToApi}
-                                    disabled={saveStatus === 'loading'}
-                                >
-                                    {saveStatus === 'loading' && (
-                                        <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                                        </svg>
-                                    )}
-                                    <FaSave /> Save
-                                </button>
+                        <div className="sm:hidden w-full bg-white border-b-2 border-gray-100 shadow-sm z-40">
+                            <div className="w-full px-4 py-3">
+                                {/* Stats Row */}
+                                <div className="flex items-center justify-center gap-4 text-xs mb-3">
+                                    <span className="text-gray-700">
+                                        <span className="font-medium">Total:</span> <span className="font-bold text-gray-900">{stats.total}</span>
+                                    </span>
+                                    <span className="text-gray-700">
+                                        <span className="font-medium">Male:</span> <span className="font-bold text-gray-900">{stats.male}</span>
+                                    </span>
+                                    <span className="text-gray-700">
+                                        <span className="font-medium">Female:</span> <span className="font-bold text-gray-900">{stats.female}</span>
+                                    </span>
+                                    <span className="text-gray-700">
+                                        <span className="font-medium">Gen:</span> <span className="font-bold text-gray-900">{stats.generations}</span>
+                                    </span>
+                                </div>
+                                
+                                {/* Controls Row */}
+                                <div className="flex items-center justify-center gap-3">
+                                    <LanguageSwitcher />
+                                    <SearchBar
+                                        tree={tree}
+                                        onSearchResults={handleSearchResults}
+                                        onFocusPerson={handleFocusPerson}
+                                        onClearSearch={handleClearSearch}
+                                        language={language}
+                                    />
+                                </div>
                             </div>
                         </div>
                     )}
-                    {!canEdit && (
-                        <div className="flex w-full justify-between items-center gap-4 px-4 sm:px-8 py-4 bg-white border-b border-gray-200 z-40">
-                            {/* Stats section only */}
-                            <div className="flex gap-2 sm:gap-6 items-center text-gray-700 text-sm sm:text-base font-medium flex-wrap">{code && code !== userInfo.familyCode && (<><button className="inline-flex items-center justify-center w-8 h-8 border border-gray-400 text-gray-700 rounded-full hover:bg-gray-100 active:scale-95 transition" onClick={() => navigate(-1)} title="Back"><FaArrowLeft /></button><button className="inline-flex items-center justify-center w-8 h-8 border border-indigo-600 text-indigo-600 rounded-full hover:bg-indigo-600 hover:text-white active:scale-95 transition" onClick={() => navigate('/family-tree')} title="My Birth Family Tree"><FaHome /></button></>)}
-                                <div>Total: <span className="font-bold">{stats.total}</span></div>
-                                <div>Male: <span className="font-bold">{stats.male}</span></div>
-                                <div>Female: <span className="font-bold">{stats.female}</span></div>
-                                <div>Generations: <span className="font-bold">{stats.generations}</span></div>
+
+                    {/* Desktop Header */}
+                    {canEdit && (
+                        <div className="hidden sm:flex w-full bg-white border-b-2 border-gray-100 shadow-sm z-40">
+                            <div className="w-full max-w-none 2xl:max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+                                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 lg:gap-6">
+                                    {/* Top Section: Stats */}
+                                    <div className="flex items-center justify-center lg:justify-start gap-3 xl:gap-6 flex-wrap">
+                                        {/* Navigation Buttons */}
+                                        {code && code !== userInfo.familyCode && (
+                                            <div className="flex items-center gap-2 pr-3 border-r border-gray-300">
+                                                <button 
+                                                    className="inline-flex items-center justify-center w-9 h-9 bg-gray-100 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 hover:border-gray-400 active:scale-95 transition-all duration-200 shadow-sm" 
+                                                    onClick={() => navigate(-1)} 
+                                                    title="Back"
+                                                >
+                                                    <FaArrowLeft className="text-sm" />
+                                                </button>
+                                                <button 
+                                                    className="inline-flex items-center justify-center w-9 h-9 bg-blue-600 border border-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-200 shadow-sm" 
+                                                    onClick={() => navigate('/family-tree')} 
+                                                    title="My Birth Family Tree"
+                                                >
+                                                    <FaHome className="text-sm" />
+                                                </button>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Stats Inline */}
+                                        <div className="flex items-center gap-6 text-sm">
+                                            <span className="text-gray-700">
+                                                <span className="font-medium">Total:</span> <span className="font-bold text-gray-900">{stats.total}</span>
+                                            </span>
+                                            <span className="text-gray-700">
+                                                <span className="font-medium">Male:</span> <span className="font-bold text-gray-900">{stats.male}</span>
+                                            </span>
+                                            <span className="text-gray-700">
+                                                <span className="font-medium">Female:</span> <span className="font-bold text-gray-900">{stats.female}</span>
+                                            </span>
+                                            <span className="text-gray-700">
+                                                <span className="font-medium">Generations:</span> <span className="font-bold text-gray-900">{stats.generations}</span>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Bottom Section: Controls */}
+                                    <div className="flex items-center justify-center lg:justify-end gap-3 lg:gap-4 flex-shrink-0">
+                                        {/* Language Switcher */}
+                                        <div className="flex items-center">
+                                            <LanguageSwitcher />
+                                        </div>
+                                        
+                                        {/* Search */}
+                                        <SearchBar
+                                            tree={tree}
+                                            onSearchResults={handleSearchResults}
+                                            onFocusPerson={handleFocusPerson}
+                                            onClearSearch={handleClearSearch}
+                                            language={language}
+                                        />
+                                        
+                                        {/* Vertical Separator */}
+                                        <div className="w-px h-8 bg-gray-300"></div>
+                                        
+                                        {/* Action Buttons */}
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                className="flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 text-sm font-semibold active:scale-95 transition-all duration-200 shadow-sm"
+                                                onClick={resetTree}
+                                            >
+                                                <FaPlus className="text-sm" />
+                                                <span>New Tree</span>
+                                            </button>
+                                            <button
+                                                className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 border-2 border-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold active:scale-95 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+                                                onClick={saveTreeToApi}
+                                                disabled={saveStatus === 'loading'}
+                                            >
+                                                {saveStatus === 'loading' && (
+                                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                                    </svg>
+                                                )}
+                                                <FaSave className="text-sm" />
+                                                <span>Save</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            {/* Language switcher for non-edit users */}
-                            <div><LanguageSwitcher /></div>
+                        </div>
+                    )}
+                    {/* Mobile Header - Non Edit */}
+                    {!canEdit && (
+                        <div className="sm:hidden w-full bg-white border-b-2 border-gray-100 shadow-sm z-40">
+                            <div className="w-full px-4 py-3">
+                                {/* Stats Row */}
+                                <div className="flex items-center justify-center gap-4 text-xs mb-3">
+                                    <span className="text-gray-700">
+                                        <span className="font-medium">Total:</span> <span className="font-bold text-gray-900">{stats.total}</span>
+                                    </span>
+                                    <span className="text-gray-700">
+                                        <span className="font-medium">Male:</span> <span className="font-bold text-gray-900">{stats.male}</span>
+                                    </span>
+                                    <span className="text-gray-700">
+                                        <span className="font-medium">Female:</span> <span className="font-bold text-gray-900">{stats.female}</span>
+                                    </span>
+                                    <span className="text-gray-700">
+                                        <span className="font-medium">Gen:</span> <span className="font-bold text-gray-900">{stats.generations}</span>
+                                    </span>
+                                </div>
+                                
+                                {/* Controls Row */}
+                                <div className="flex items-center justify-center gap-3">
+                                    <LanguageSwitcher />
+                                    <SearchBar
+                                        tree={tree}
+                                        onSearchResults={handleSearchResults}
+                                        onFocusPerson={handleFocusPerson}
+                                        onClearSearch={handleClearSearch}
+                                        language={language}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Desktop Header - Non Edit */}
+                    {!canEdit && (
+                        <div className="hidden sm:flex w-full bg-white border-b-2 border-gray-100 shadow-sm z-40">
+                            <div className="w-full max-w-none 2xl:max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+                                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 lg:gap-6">
+                                    {/* Top Section: Stats */}
+                                    <div className="flex items-center justify-center lg:justify-start gap-3 xl:gap-6 flex-wrap">
+                                        {/* Navigation Buttons */}
+                                        {code && code !== userInfo.familyCode && (
+                                            <div className="flex items-center gap-2 pr-3 border-r border-gray-300">
+                                                <button 
+                                                    className="inline-flex items-center justify-center w-9 h-9 bg-gray-100 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 hover:border-gray-400 active:scale-95 transition-all duration-200 shadow-sm" 
+                                                    onClick={() => navigate(-1)} 
+                                                    title="Back"
+                                                >
+                                                    <FaArrowLeft className="text-sm" />
+                                                </button>
+                                                <button 
+                                                    className="inline-flex items-center justify-center w-9 h-9 bg-blue-600 border border-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-200 shadow-sm" 
+                                                    onClick={() => navigate('/family-tree')} 
+                                                    title="My Birth Family Tree"
+                                                >
+                                                    <FaHome className="text-sm" />
+                                                </button>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Stats Inline */}
+                                        <div className="flex items-center gap-6 text-sm">
+                                            <span className="text-gray-700">
+                                                <span className="font-medium">Total:</span> <span className="font-bold text-gray-900">{stats.total}</span>
+                                            </span>
+                                            <span className="text-gray-700">
+                                                <span className="font-medium">Male:</span> <span className="font-bold text-gray-900">{stats.male}</span>
+                                            </span>
+                                            <span className="text-gray-700">
+                                                <span className="font-medium">Female:</span> <span className="font-bold text-gray-900">{stats.female}</span>
+                                            </span>
+                                            <span className="text-gray-700">
+                                                <span className="font-medium">Generations:</span> <span className="font-bold text-gray-900">{stats.generations}</span>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Bottom Section: Controls */}
+                                    <div className="flex items-center justify-center lg:justify-end gap-3 lg:gap-4 flex-shrink-0">
+                                        <LanguageSwitcher />
+                                        
+                                        <SearchBar
+                                            tree={tree}
+                                            onSearchResults={handleSearchResults}
+                                            onFocusPerson={handleFocusPerson}
+                                            onClearSearch={handleClearSearch}
+                                            language={language}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
                     {/* Tree visualization area */}
@@ -1075,6 +1288,8 @@ const FamilyTreePage = () => {
                                     tree={tree}
                                     language={language}
                                     isSelected={selectedPersonId === person.id}
+                                    isHighlighted={highlightedPersonId === person.id}
+                                    isSearchResult={searchResults.some(result => result.id === person.id)}
                                     currentUserId={userInfo?.userId} // <-- Pass userId
                                     currentFamilyId={userInfo?.familyId || userInfo?.familyCode} // <-- Pass familyId or familyCode
                                 />
@@ -1133,20 +1348,30 @@ const FamilyTreePage = () => {
                     </div>
 
                     {canEdit && (
-                        <div className="fixed left-0 w-full bg-white border-t border-gray-200 flex justify-around items-center py-3 z-50 sm:hidden" style={{ bottom: '60px' }}>
-                            <button
-                                className="flex items-center gap-2 px-6 py-2 bg-green-500 text-white rounded-lg shadow-md text-lg font-semibold active:scale-95 transition"
-                                onClick={resetTree}
-                            >
-                                <FaPlus /> New Tree
-                            </button>
-                            <button
-                                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md text-lg font-semibold active:scale-95 transition"
-                                onClick={saveTreeToApi}
-                                disabled={saveStatus === 'loading'}
-                            >
-                                <FaSave /> Save
-                            </button>
+                        <div className="fixed left-0 w-full bg-gradient-to-r from-white to-gray-50 border-t border-gray-200 shadow-lg flex justify-center items-center py-4 z-50 sm:hidden" style={{ bottom: '60px' }}>
+                            <div className="flex items-center gap-4 px-4">
+                                <button
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg text-sm font-semibold active:scale-95 transition-all duration-200 border border-green-600"
+                                    onClick={resetTree}
+                                >
+                                    <FaPlus className="text-sm" />
+                                    <span>New Tree</span>
+                                </button>
+                                <button
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg shadow-md hover:shadow-lg text-sm font-semibold active:scale-95 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed border border-blue-700"
+                                    onClick={saveTreeToApi}
+                                    disabled={saveStatus === 'loading'}
+                                >
+                                    {saveStatus === 'loading' && (
+                                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                        </svg>
+                                    )}
+                                    <FaSave className="text-sm" />
+                                    <span>Save</span>
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
