@@ -367,18 +367,28 @@ const OnBoarding = () => {
       
       try {
         setUserLoading(true);
+        console.log(`[OnBoarding] Starting user profile fetch for userId: ${userId}`);
+        const startTime = Date.now();
+        
+        // Create AbortController for request timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/profile/${userId}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
+        console.log(`[OnBoarding] Profile fetch completed in ${Date.now() - startTime}ms`);
 
         if (!response.ok) throw new Error('Failed to fetch user details');
         
-         const jsonData = await response.json();
-
+        const jsonData = await response.json();
         const { userProfile } = jsonData.data;
 
         const childrenArray = userProfile.childrenNames
@@ -422,10 +432,12 @@ const OnBoarding = () => {
             familyCode: prev.familyCode || userProfile.familyCode || ''
           };
         });
-        // Parse response body
 
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error fetching user details:', error);
+        if (error.name === 'AbortError') {
+          console.error('Request timed out after 30 seconds');
+        }
       } finally {
         setUserLoading(false);
       }
