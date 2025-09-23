@@ -517,7 +517,7 @@ const OnBoarding = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Father's name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Father's name <span className="text-red-500">*</span></label>
                 <input
                   ref={fieldRefs.fatherName}
                   type="text"
@@ -535,7 +535,7 @@ const OnBoarding = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mother's name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mother's name <span className="text-red-500">*</span></label>
                 <input
                   ref={fieldRefs.motherName}
                   type="text"
@@ -553,7 +553,7 @@ const OnBoarding = () => {
               </div>
 
               <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mother Tongue</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mother Tongue <span className="text-red-500">*</span></label>
               <select
                 ref={fieldRefs.motherTongue}
                 name="motherTongue"
@@ -724,7 +724,7 @@ const OnBoarding = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Firstname */}
               <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+  <label className="block text-sm font-medium text-gray-700 mb-1">First Name <span className="text-red-500">*</span></label>
   <input
     ref={fieldRefs.firstName}
     type="text"
@@ -743,7 +743,7 @@ const OnBoarding = () => {
 
 {/* Lastname */}
 <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name <span className="text-red-500">*</span></label>
   <input
     ref={fieldRefs.lastName}
     type="text"
@@ -762,7 +762,7 @@ const OnBoarding = () => {
 
               {/* Date of Birth */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <input
                     ref={fieldRefs.dob}
@@ -838,7 +838,7 @@ const OnBoarding = () => {
 
               {/* Gender */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Gender <span className="text-red-500">*</span></label>
                 <select
                   ref={fieldRefs.gender}
                   name="gender"
@@ -1012,7 +1012,7 @@ const OnBoarding = () => {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Contact number */}
       <div className="">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Contact number</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Contact number <span className="text-red-500">*</span></label>
         <div className="max-w-sm">
           <PhoneInput
             country={'in'}
@@ -1124,7 +1124,7 @@ const OnBoarding = () => {
 
       {/* Enter address */}
       <div className="md:col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Enter address</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Enter address <span className="text-red-500">*</span></label>
         <input
           ref={fieldRefs.address}
           type="text"

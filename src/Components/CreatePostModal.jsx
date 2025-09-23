@@ -454,7 +454,8 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
                                     <span className="text-xs font-medium hidden sm:inline">Emoji</span>
                                 </button>
 
-                                <button
+                                {/* Video button hidden as requested */}
+                                {/* <button
                                     type="button"
                                     className="p-2 rounded-lg bg-white text-purple-500 hover:bg-purple-50 transition-colors shadow-sm flex items-center gap-1 opacity-50 cursor-not-allowed"
                                     title="Coming soon"
@@ -462,7 +463,7 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, currentUser, authToke
                                 >
                                     <FiVideo size={18} />
                                     <span className="text-xs font-medium hidden sm:inline">Video</span>
-                                </button>
+                                </button> */}
                             </div>
 
                             <button
