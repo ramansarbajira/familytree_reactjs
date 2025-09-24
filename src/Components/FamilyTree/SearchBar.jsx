@@ -177,9 +177,32 @@ const SearchBar = ({
         if (!isSearchOpen) {
             setTimeout(() => {
                 searchInputRef.current?.focus();
-                // Show all results when opening search
+                // Populate and show all results when opening search
                 if (tree && tree.people.size > 0) {
+                    // Force repopulate search results by triggering the search logic
+                    const results = [];
+                    tree.people.forEach((person, personId) => {
+                        const name = person.name || '';
+                        const firstName = person.firstName || '';
+                        const lastName = person.lastName || '';
+                        const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+                        
+                        results.push({
+                            id: personId,
+                            person: person,
+                            displayName: name || fullName || 'Unnamed Member',
+                            matchType: 'all'
+                        });
+                    });
+                    
+                    // Sort alphabetically when showing all
+                    results.sort((a, b) => a.displayName.localeCompare(b.displayName));
+                    
+                    setSearchResults(results);
+                    setCurrentResultIndex(results.length > 0 ? 0 : -1);
                     setShowResults(true);
+                    
+                    if (onSearchResults) onSearchResults(results);
                 }
             }, 100);
         } else {
