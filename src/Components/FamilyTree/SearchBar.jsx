@@ -94,7 +94,7 @@ const SearchBar = ({
         setShowResults(results.length > 0);
         
         if (onSearchResults) onSearchResults(results);
-    }, [searchQuery, tree, onSearchResults]);
+    }, [searchQuery, tree]);
 
     // Handle search input change
     const handleSearchChange = (e) => {
@@ -139,8 +139,14 @@ const SearchBar = ({
 
     // Handle result item click
     const handleResultClick = (index) => {
+        // Directly focus on the clicked result without relying on state update
+        if (index >= 0 && index < searchResults.length) {
+            const result = searchResults[index];
+            if (onFocusPerson) {
+                onFocusPerson(result.id, result.person);
+            }
+        }
         setCurrentResultIndex(index);
-        focusOnResult(index);
         setShowResults(false);
     };
 
@@ -195,7 +201,7 @@ const SearchBar = ({
     }, []);
 
     return (
-        <div className="relative">
+        <div className="relative z-50">
             {/* Search Toggle Button */}
             {!isSearchOpen && (
                 <button
@@ -210,7 +216,7 @@ const SearchBar = ({
 
             {/* Search Bar */}
             {isSearchOpen && (
-                <div className="flex items-center gap-2 bg-white rounded-lg shadow-xl border-2 border-blue-300 p-3 w-[280px] backdrop-blur-sm">
+                <div className="flex items-center gap-2 bg-white rounded-lg shadow-xl border-2 border-blue-300 p-3 w-[280px] sm:w-[320px] backdrop-blur-sm">
                     <FaSearch className="text-blue-500 text-sm ml-2" />
                     <input
                         ref={searchInputRef}
@@ -218,7 +224,12 @@ const SearchBar = ({
                         value={searchQuery}
                         onChange={handleSearchChange}
                         onKeyDown={handleKeyDown}
-                        onFocus={() => setShowResults(searchResults.length > 0)}
+                        onFocus={() => {
+                            // Always show results when focusing, even if empty (shows all members)
+                            if (tree && tree.people.size > 0) {
+                                setShowResults(true);
+                            }
+                        }}
                         placeholder={language === 'tamil' ? 'குடும்ப உறுப்பினர்களைத் தேடுங்கள்...' : 'Search family members...'}
                         className="flex-1 px-2 py-1 border-none outline-none text-gray-700 placeholder-gray-400"
                         autoComplete="off"
@@ -240,7 +251,7 @@ const SearchBar = ({
             {isSearchOpen && showResults && searchResults.length > 0 && (
                 <div
                     ref={resultsRef}
-                    className="absolute top-full left-0 mt-3 bg-white rounded-xl shadow-2xl border-2 border-blue-200 max-h-72 overflow-y-auto z-50 backdrop-blur-sm w-[320px]"
+                    className="absolute top-full left-0 right-0 mt-3 bg-white rounded-xl shadow-2xl border-2 border-blue-200 max-h-72 overflow-y-auto z-[9999] backdrop-blur-sm w-[280px] sm:w-[320px] max-w-[90vw]"
                 >
                     <div className="p-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
                         <span className="text-sm font-semibold text-blue-700">

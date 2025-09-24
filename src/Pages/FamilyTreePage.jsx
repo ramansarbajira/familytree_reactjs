@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Layout from '../Components/Layout';
 import { useUser } from '../Contexts/UserContext';
 import { FamilyTree } from '../utils/FamilyTree';
@@ -135,23 +135,27 @@ const FamilyTreePage = () => {
     const zoomOut = () => setZoom(prev => Math.max(0.1, +(prev - 0.1).toFixed(2)));
     const resetZoom = () => setZoom(1);
 
-    // Search handlers
-    const handleSearchResults = (results) => {
+    // Search handlers - memoized to prevent infinite re-renders
+    const handleSearchResults = useCallback((results) => {
         setSearchResults(results);
         setIsSearchActive(results.length > 0);
-    };
+    }, []);
 
-    const handleFocusPerson = (personId, person) => {
+    const handleFocusPerson = useCallback((personId, person) => {
         setHighlightedPersonId(personId);
         setSelectedPersonId(personId);
         
-        // Scroll to the person's position
+        // Scroll to the person's position accounting for zoom level
         if (containerRef.current && person) {
             const memberCount = tree ? tree.people.size : 0;
             const personSize = memberCount > 50 ? 80 : 100;
             
-            const targetX = person.x - containerRef.current.clientWidth / 2;
-            const targetY = person.y - containerRef.current.clientHeight / 2;
+            // Apply zoom scaling to the person's coordinates
+            const scaledX = person.x * zoom;
+            const scaledY = person.y * zoom;
+            
+            const targetX = scaledX - containerRef.current.clientWidth / 2;
+            const targetY = scaledY - containerRef.current.clientHeight / 2;
             
             containerRef.current.scrollTo({
                 left: targetX,
@@ -159,14 +163,14 @@ const FamilyTreePage = () => {
                 behavior: 'smooth'
             });
         }
-    };
+    }, [tree, zoom]);
 
-    const handleClearSearch = () => {
+    const handleClearSearch = useCallback(() => {
         setSearchResults([]);
         setHighlightedPersonId(null);
         setIsSearchActive(false);
         setSelectedPersonId(null);
-    };
+    }, []);
 
     // Helpers for pinch-to-zoom on mobile
     const clampZoom = (z) => Math.max(0.1, Math.min(2, z));
