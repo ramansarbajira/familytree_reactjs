@@ -26,8 +26,11 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
     event: { icon: <FiCalendar />, color: 'from-purple-500 to-purple-300' },
     anniversary: { icon: <FiHeart />, color: 'from-red-500 to-red-300' },
     family_association_request: { icon: <FiUsers />, color: 'from-green-500 to-green-300' },
+    FAMILY_ASSOCIATION_REQUEST: { icon: <FiUsers />, color: 'from-green-500 to-green-300' },
     family_association_accepted: { icon: <FiUserPlus />, color: 'from-teal-500 to-teal-300' },
+    FAMILY_ASSOCIATION_ACCEPTED: { icon: <FiUserPlus />, color: 'from-teal-500 to-teal-300' },
     family_association_rejected: { icon: <FiUserX />, color: 'from-orange-500 to-orange-300' },
+    FAMILY_ASSOCIATION_REJECTED: { icon: <FiUserX />, color: 'from-orange-500 to-orange-300' },
     family_member_removed: { icon: <FiUserX />, color: 'from-red-500 to-red-300' },
     family_member_joined: { icon: <FiUserPlus />, color: 'from-green-500 to-green-300' },
   };
@@ -61,7 +64,7 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
 
       const formatted = data.map((n) => ({
         id: n.id,
-        type: n.type.toLowerCase(),
+        type: n.type, // Keep original case to handle both formats
         title: n.title,
         message: n.message,
         time: n.createdAt, // Keep the original ISO string for proper parsing
@@ -73,7 +76,16 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
       }));
 
       // Debug: Log all notifications to see what types we're getting
-      console.log('All notifications received:', formatted.map(n => ({ id: n.id, type: n.type, title: n.title })));
+      console.log('All notifications received:', formatted.map(n => ({ id: n.id, type: n.type, title: n.title, status: n.status, read: n.read })));
+      
+      // Debug: Log association requests specifically
+      const associationNotifs = formatted.filter(n => 
+        n.type === 'family_association_request' || n.type === 'FAMILY_ASSOCIATION_REQUEST'
+      );
+      console.log('Association notifications found:', associationNotifs.length);
+      associationNotifs.forEach(notif => {
+        console.log(`🔍 Association Notification ${notif.id}: status=${notif.status}, read=${notif.read}, isRead=${notif.isRead}`);
+      });
 
       setNotifications(formatted);
     } catch (err) {
@@ -139,21 +151,35 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
 
   // Filter notifications based on active tab
   const getFilteredNotifications = () => {
-    switch (activeTab) {
-      case 'unread':
-        return notifications.filter(n => !n.read);
-      case 'read':
-        return notifications.filter(n => n.read);
-      default:
-        return notifications;
-    }
+    const filtered = (() => {
+      switch (activeTab) {
+        case 'unread':
+          return notifications.filter(n => !n.read);
+        case 'read':
+          return notifications.filter(n => n.read);
+        default:
+          return notifications;
+      }
+    })();
+    
+    // Debug: Log filtering results
+    console.log(`🔍 Tab: ${activeTab}, Total: ${notifications.length}, Filtered: ${filtered.length}`);
+    console.log(`🔍 Read notifications:`, notifications.filter(n => n.read).map(n => ({ id: n.id, status: n.status, read: n.read })));
+    console.log(`🔍 Unread notifications:`, notifications.filter(n => !n.read).map(n => ({ id: n.id, status: n.status, read: n.read })));
+    
+    return filtered;
   };
 
   const filteredNotifications = getFilteredNotifications();
 
   // Filter out association requests to handle them separately
-  const associationRequests = filteredNotifications.filter(n => n.type === 'family_association_request');
-  const otherNotifications = filteredNotifications.filter(n => n.type !== 'family_association_request');
+  // Handle both lowercase and uppercase type formats
+  const associationRequests = filteredNotifications.filter(n => 
+    n.type === 'family_association_request' || n.type === 'FAMILY_ASSOCIATION_REQUEST'
+  );
+  const otherNotifications = filteredNotifications.filter(n => 
+    n.type !== 'family_association_request' && n.type !== 'FAMILY_ASSOCIATION_REQUEST'
+  );
 
   // Debug: Log the filtering results
   console.log('Filtered notifications:', {
@@ -182,22 +208,37 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
       });
 
       if (response.ok) {
-        // Remove the processed notification immediately from local state
-        setNotifications(prev => prev.filter(n => n.id !== notification.id));
+        const responseData = await response.json();
+        console.log('✅ Accept response:', responseData);
+        
+        // Update the notification status and mark as read immediately in local state
+        setNotifications(prev => prev.map(n => 
+          n.id === notification.id 
+            ? { ...n, status: 'accepted', read: true }
+            : n
+        ));
         
         // Update notification count immediately (decrements count and fetches actual count)
         if (onNotificationCountUpdate) {
           onNotificationCountUpdate();
         }
         
+        // Refresh notifications after a longer delay to ensure backend transaction commits
+        setTimeout(() => {
+          console.log('🔄 Refreshing notifications after accept...');
+          fetchNotifications(true);
+        }, 2000);
+        
         return true;
       } else {
         const errorData = await response.json();
-        console.error('Error accepting association:', errorData);
+        console.error('❌ Error accepting association:', errorData);
+        alert(`Failed to accept request: ${errorData.message || 'Unknown error'}`);
         return false;
       }
     } catch (error) {
-      console.error('Error accepting association:', error);
+      console.error('❌ Network error accepting association:', error);
+      alert('Network error. Please check your connection and try again.');
       return false;
     } finally {
       setProcessingRequest(null);
@@ -219,22 +260,37 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
       });
 
       if (response.ok) {
-        // Remove the processed notification immediately from local state
-        setNotifications(prev => prev.filter(n => n.id !== notification.id));
+        const responseData = await response.json();
+        console.log('✅ Reject response:', responseData);
+        
+        // Update the notification status and mark as read immediately in local state
+        setNotifications(prev => prev.map(n => 
+          n.id === notification.id 
+            ? { ...n, status: 'rejected', read: true }
+            : n
+        ));
         
         // Update notification count immediately (decrements count and fetches actual count)
         if (onNotificationCountUpdate) {
           onNotificationCountUpdate();
         }
         
+        // Refresh notifications after a longer delay to ensure backend transaction commits
+        setTimeout(() => {
+          console.log('🔄 Refreshing notifications after reject...');
+          fetchNotifications(true);
+        }, 2000);
+        
         return true;
       } else {
         const errorData = await response.json();
-        console.error('Error rejecting association:', errorData);
+        console.error('❌ Error rejecting association:', errorData);
+        alert(`Failed to reject request: ${errorData.message || 'Unknown error'}`);
         return false;
       }
     } catch (error) {
-      console.error('Error rejecting association:', error);
+      console.error('❌ Network error rejecting association:', error);
+      alert('Network error. Please check your connection and try again.');
       return false;
     } finally {
       setProcessingRequest(null);

@@ -27,7 +27,7 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
   const [isRejecting, setIsRejecting] = useState(false);
   
   // Determine if this is a family join request
-  const isFamilyJoinRequest = type === 'FAMILY_JOIN_REQUEST';
+  const isFamilyJoinRequest = type === 'FAMILY_JOIN_REQUEST' || type === 'family_join_request';
   
   // Format the request time
   const requestTime = new Date(createdAt);
