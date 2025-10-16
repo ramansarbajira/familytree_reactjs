@@ -151,9 +151,21 @@ const OnBoarding = () => {
         newErrors.dob = 'Date of birth is required';
       } else {
         const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of today
         const birthDate = new Date(formData.dob);
-        if (birthDate >= today) {
-          newErrors.dob = 'Date of birth must be in the past';
+        birthDate.setHours(0, 0, 0, 0); // Set to start of birth date
+        
+        if (birthDate > today) {
+          newErrors.dob = 'Date of birth cannot be in the future';
+        }
+        
+        // Additional validation: Check for reasonable age limits
+        const maxAge = 150;
+        const minAge = 0;
+        const age = Math.floor((today - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
+        
+        if (age > maxAge) {
+          newErrors.dob = 'Please enter a valid date of birth';
         }
       }
 
