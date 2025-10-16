@@ -6,7 +6,6 @@ import Person from './Person';
 import TreeConnections from './TreeConnections';
 import { useUser } from '../../Contexts/UserContext';
 import { useLanguage } from '../../Contexts/LanguageContext';
-import { getTranslation } from '../../utils/languageTranslations';
 
 const AssociatedFamilyTree = ({ familyCode, userId }) => {
   const navigate = useNavigate();
@@ -41,7 +40,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
         
         if (!data.people || data.people.length === 0) {
           setTree(null);
-          setError(getTranslation('noMembersFound', language));
+          setError('No members found');
           setTreeLoading(false);
           return;
         }
@@ -107,7 +106,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
         setTree(newTree);
       } catch (err) {
         setTree(null);
-        setError(getTranslation('couldNotLoadTree', language));
+        setError('Could not load tree');
       }
       setTreeLoading(false);
     };
@@ -124,7 +123,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
     }
   }, [tree, rootId, hasScrolledToRoot]);
 
-  if (treeLoading) return <div>{getTranslation('loadingAssociatedFamilyTree', language)}</div>;
+  if (treeLoading) return <div>Loading Associated Family Tree...</div>;
   if (error) return <div className="text-red-500">{error}</div>;
   if (!tree) return null;
 
@@ -133,7 +132,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
       {/* Header with family codes and connection info */}
       {familyCodes.length > 0 && (
         <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <h3 className="text-lg font-semibold text-blue-800 mb-2">{getTranslation('connectedFamilyTrees', language)}</h3>
+          <h3 className="text-lg font-semibold text-blue-800 mb-2">Connected Family Trees</h3>
           <div className="flex flex-wrap gap-2 mb-2">
             {familyCodes
                 .filter(code => code !== (familyCode || userInfo?.familyCode))
@@ -153,7 +152,7 @@ const AssociatedFamilyTree = ({ familyCode, userId }) => {
           </div>
           {totalConnections > 0 && (
             <p className="text-sm text-blue-600">
-              {getTranslation('totalCrossFamilyConnections', language)}: {totalConnections}
+              Total Cross-Family Connections: {totalConnections}
             </p>
           )}
         </div>

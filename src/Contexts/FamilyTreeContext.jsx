@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import dagre from 'dagre';
 import { useUser } from './UserContext';
-import { getUniversalRelationshipLabel } from '../utils/getUniversalRelationshipLabel';
+// Removed getUniversalRelationshipLabel import - backend provides labels
 
 const FamilyTreeContext = createContext();
 
@@ -96,7 +96,7 @@ export const FamilyTreeProvider = ({ children, language }) => {
 
   // Helper to get a label for a code
   const getLabel = (code) => {
-    return labels[code] || getUniversalRelationshipLabel(code, language);
+    return labels[code] || code; // Fallback to code if no label found
   };
 
   const [people, setPeople] = useState(() => {

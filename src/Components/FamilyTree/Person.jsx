@@ -1,11 +1,8 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import RelationshipCalculator from '../../utils/relationshipCalculator';
-import { getTranslation } from '../../utils/languageTranslations';
-import { fetchCustomLabel } from '../../utils/fetchCustomLabel';
 import { useFamilyTreeLabels } from '../../Contexts/FamilyTreeContext';
 import { useUser } from '../../Contexts/UserContext';
 import { FiEye } from 'react-icons/fi';
-import { fetchAssociatedFamilyPrefixes } from '../../utils/familyTreeApi';
 import Swal from 'sweetalert2';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -255,129 +252,88 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
         return Array.from(new Set(codes));
     };
 
-    const hasAssociatedTree = Boolean(person.memberId) || getAssociatedCodes().length > 0;
+    // Check if person has spouse relationships
+    const hasSpouse = () => {
+        if (!person.spouses) return false;
+        
+        // Handle different spouse data formats
+        const spouses = person.spouses instanceof Set 
+            ? Array.from(person.spouses)
+            : Array.isArray(person.spouses) 
+            ? person.spouses 
+            : [];
+            
+        return spouses.length > 0;
+    };
 
-    // Handler for viewing family tree (uses backend prefixes)
-    const handleViewAssociatedFamilyTree = async (e) => {
+    // Show icon only for people with different birth family than current view (with enhanced validation)
+    const hasSpouseFamilyNavigation = () => {
+        // Check if person has a birth family code
+        if (!person.familyCode) return false;
+        
+        // Don't show icon if we're already viewing this person's birth family
+        if (code === person.familyCode) return false;
+        
+        // Don't show icon if this person's family is the logged-in user's own family
+        if (userInfo?.familyCode && person.familyCode === userInfo.familyCode) return false;
+        
+        // Show icon for anyone with a different birth family than current view
+        return true;
+    };
+
+    const hasAssociatedTree = hasSpouseFamilyNavigation();
+
+    // Enhanced handler with comprehensive family code validation
+    const handleViewPersonBirthFamily = (e) => {
         e.stopPropagation();
         
-        // Fetch spouse-connected associated families via API (fallback to local field)
-        let associatedData = [];
-        try {
-            const uid = person.memberId || person.userId;
-            if (uid) {
-                associatedData = await fetchAssociatedFamilyPrefixes(uid);
-            }
-        } catch {}
-
-        // Convert to codes list; if API empty, derive from legacy field
-        const associatedCodes = associatedData.length
-            ? associatedData.map(d => `${d.prefix || ''}${d.prefix ? ' - ' : ''}${d.familyCode}`)
-            : getAssociatedCodes();
+        // Get person's family code
+        const personFamilyCode = person.familyCode;
         
-        // If no associated family codes, show error
-        if (associatedCodes.length === 0) {
+        // Validation 1: Check if person has a family code
+        if (!personFamilyCode) {
             Swal.fire({
                 icon: 'info',
-                title: 'No Associated Family Tree',
-                text: 'This member is not associated with any other family trees.',
+                title: 'No Family Tree Found',
+                text: 'This member does not have a family tree available.',
                 confirmButtonColor: '#3f982c',
             });
             return;
         }
         
-        // Helper: resolve counterpart (spouse) to their userId/memberId for cross-family focus
-        const resolveCounterpartUserId = (targetFamilyCode) => {
-            try {
-                const meUserId = person.memberId || person.userId;
-                if (meUserId && targetFamilyCode) {
-                    const key = `assoc_pair:${meUserId}:${targetFamilyCode}`;
-                    const stored = localStorage.getItem(key);
-                    if (stored) return Number(stored);
-                }
-            } catch (_) {}
-            const spouseIds = person.spouses instanceof Set
-                ? Array.from(person.spouses)
-                : Array.isArray(person.spouses)
-                    ? person.spouses
-                    : [];
-            if (!spouseIds || spouseIds.length === 0) return null;
-            const spousePersonId = Number(spouseIds[0]);
-            const spouse = tree && tree.people ? tree.people.get(spousePersonId) : null;
-            return spouse ? (spouse.memberId || spouse.userId || null) : null;
-        };
-
-        // If only one associated family code, navigate directly to it
-        if (associatedCodes.length === 1) {
-            const firstCode = associatedCodes[0].split(' - ').pop();
-            // Prefer focusing counterpart (spouse) when jumping to associated family (convert spouse personId -> userId)
-            const counterpartUserId = resolveCounterpartUserId(firstCode);
-            const uid = counterpartUserId || (person.userId || person.memberId);
-            
-            // Use logged-in user's gender to determine proper source prefix
-            const loggedInUserGender = userInfo?.gender?.toLowerCase();
-            let sourcePrefix = '';
-            
-            if (loggedInUserGender === 'male' || loggedInUserGender === 'husband') {
-                sourcePrefix = 'H';
-            } else if (loggedInUserGender === 'female' || loggedInUserGender === 'wife') {
-                sourcePrefix = 'W';
-            } else {
-                sourcePrefix = 'H'; // Default to H if unknown
-            }
-            
-            // Pass focus user id so the other tree highlights counterpart, and include relationship code as source
-            const query = new URLSearchParams({
-                source: String(relationshipCode || sourcePrefix),
-                focus: uid ? String(uid) : ''
-            }).toString();
-            navigate(`/family-tree/${firstCode}?${query}`);
+        // Validation 2: Check if already viewing this person's family tree (current URL)
+        if (code === personFamilyCode) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Already Viewing',
+                text: `You are already viewing ${person.name}'s family tree.`,
+                confirmButtonColor: '#3f982c',
+            });
             return;
         }
         
-        // If multiple associated family codes, show a dropdown to select
-        Swal.fire({
-            title: 'Select Associated Family Tree',
-            text: 'This member is associated with multiple family trees. Please select one to view:',
-            input: 'select',
-            inputOptions: associatedCodes.reduce((acc, entry) => {
-            const [prefixLabel, code] = entry.split(' - ').length === 2 ? entry.split(' - ') : ['', entry];
-            acc[entry] = prefixLabel ? `${prefixLabel} → ${code}` : `Family: ${code}`;
-                return acc;
-            }, {}),
-            inputPlaceholder: 'Select a family tree',
-            showCancelButton: true,
-            confirmButtonColor: '#3f982c',
-            cancelButtonText: 'Cancel',
-            confirmButtonText: 'View Tree'
-        }).then((result) => {
-            if (result.isConfirmed && result.value) {
-                // Extract familyCode after optional prefix label
-                const parts = result.value.split(' - ');
-                const selectedCode = parts.length === 2 ? parts[1] : parts[0];
-                // Pass relationship code; prefer focusing counterpart (spouse) when changing family (convert spouse personId -> userId)
-                const counterpartUserId = resolveCounterpartUserId(selectedCode);
-                const uid = counterpartUserId || (person.userId || person.memberId);
-                
-                // Use logged-in user's gender to determine proper source prefix
-                const loggedInUserGender = userInfo?.gender?.toLowerCase();
-                let sourcePrefix = '';
-                
-                if (loggedInUserGender === 'male' || loggedInUserGender === 'husband') {
-                    sourcePrefix = 'H';
-                } else if (loggedInUserGender === 'female' || loggedInUserGender === 'wife') {
-                    sourcePrefix = 'W';
-                } else {
-                    sourcePrefix = 'H'; // Default to H if unknown
-                }
-                
-                const query = new URLSearchParams({
-                    source: String(relationshipCode || sourcePrefix),
-                    focus: uid ? String(uid) : ''
-                }).toString();
-                navigate(`/family-tree/${selectedCode}?${query}`);
-            }
-        });
+        // Validation 3: Check if trying to navigate to logged-in user's own family
+        if (userInfo?.familyCode && personFamilyCode === userInfo.familyCode) {
+            console.log(`🚫 Navigation blocked: ${person.name}'s family (${personFamilyCode}) is user's own family (${userInfo.familyCode})`);
+            Swal.fire({
+                icon: 'info',
+                title: 'Your Own Family Tree',
+                text: `This is your own family tree. Use the home button to navigate to your family.`,
+                confirmButtonColor: '#3f982c',
+            });
+            return;
+        }
+        
+        // All validations passed - proceed with navigation
+        console.log(`✅ Navigation allowed: ${person.name} (${personFamilyCode}) → Current: ${code} → User: ${userInfo?.familyCode}`);
+        
+        // Navigate to person's family tree with focus on this person
+        const uid = person.memberId || person.userId;
+        const query = new URLSearchParams({
+            focus: uid ? String(uid) : ''
+        }).toString();
+        
+        navigate(`/family-tree/${personFamilyCode}?${query}`);
     };
 
     // Optimize rendering for large trees
@@ -453,23 +409,23 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 onClick={viewOnly ? undefined : handleCardClick}
                 data-person-id={person.id}
             >
-            {/* Eye Icon for Associated Family Tree (only if person has one and not viewOnly) */}
-            {!viewOnly && (
-                <button
-                    className="absolute top-1 left-1 w-6 h-6 bg-white/80 hover:bg-green-100 text-green-700 rounded-full flex items-center justify-center shadow-md transition-all duration-200 z-10 border border-green-200"
-                    onClick={handleViewAssociatedFamilyTree}
-                    title={`View Associated Family Tree${hasAssociatedTree ? '' : ' (No associated families)'}`}
-                    style={{
-                        width: '24px',
-                        height: '24px',
-                        top: memberCount > 50 ? '2px' : '8px',
-                        left: memberCount > 50 ? '2px' : '8px',
-                        opacity: hasAssociatedTree ? 1 : 0.3
-                    }}
-                    disabled={!hasAssociatedTree}
-                >
-                    <FiEye size={16} />
-                </button>
+            {/* Family Tree Navigation Icon (simple approach using person.familyCode) */}
+            {!viewOnly && hasAssociatedTree && (
+                <div className="absolute top-1 left-1 flex flex-col items-center z-10">
+                    <button
+                        className="w-6 h-6 bg-white/90 hover:bg-green-100 text-green-700 rounded-full flex items-center justify-center shadow-md transition-all duration-200 border border-green-200"
+                        onClick={handleViewPersonBirthFamily}
+                        title={`Go to ${person.name}'s Family Tree`}
+                        style={{
+                            width: '24px',
+                            height: '24px',
+                            top: memberCount > 50 ? '0px' : '0px',
+                            left: memberCount > 50 ? '0px' : '0px',
+                        }}
+                    >
+                        <FiEye size={16} />
+                    </button>
+                </div>
             )}
             {/* Radial Menu Button - Top Right Corner (hide in viewOnly mode) */}
             {!viewOnly && (

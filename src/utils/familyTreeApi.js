@@ -1,6 +1,7 @@
 // API utility for family tree CRUD operations
 
-const API_BASE = '/family-tree';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE = `${API_BASE_URL}/family-tree`;
 
 function getToken() {
   return localStorage.getItem('access_token');
@@ -83,7 +84,7 @@ export async function saveFamilyTree(people, familyCode) {
 
 // Fetch all relationships with multilingual descriptions
 export async function fetchRelationships() {
-  const res = await fetch(`${API_BASE}/relationships`, {
+  const res = await fetch(`${API_BASE_URL}/relationships`, {
     method: 'GET',
     headers: authHeaders(),
   });
@@ -93,7 +94,7 @@ export async function fetchRelationships() {
 
 // Update a relationship label (and mark as curated)
 export async function updateRelationshipLabel(code, description, labels) {
-  const res = await fetch(`/relationships/edit/${code}`, {
+  const res = await fetch(`${API_BASE_URL}/relationships/edit/${code}`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify({ description, labels }),
@@ -105,7 +106,7 @@ export async function updateRelationshipLabel(code, description, labels) {
 // Fetch associated family prefixes (spouse-connected)
 export async function fetchAssociatedFamilyPrefixes(userId) {
   if (!userId) throw new Error('userId is required');
-  const res = await fetch(`/family/user/${userId}/associated-prefixes`, {
+  const res = await fetch(`${API_BASE_URL}/family/user/${userId}/associated-prefixes`, {
     method: 'GET',
     headers: authHeaders(),
   });
@@ -115,7 +116,7 @@ export async function fetchAssociatedFamilyPrefixes(userId) {
 
 // Fetch all family codes (main + associated) for a user
 export async function fetchUserFamilyCodes(userId) {
-  const res = await fetch(`/family/user/${userId}/families`, {
+  const res = await fetch(`${API_BASE_URL}/family/user/${userId}/families`, {
     method: 'GET',
     headers: authHeaders(),
   });
@@ -125,7 +126,7 @@ export async function fetchUserFamilyCodes(userId) {
 
 // Fetch all relationships for a user
 export async function fetchUserRelationships(userId) {
-  const res = await fetch(`/family/user/${userId}/relationships`, {
+  const res = await fetch(`${API_BASE_URL}/family/user/${userId}/relationships`, {
     method: 'GET',
     headers: authHeaders(),
   });
@@ -136,7 +137,7 @@ export async function fetchUserRelationships(userId) {
 // Add a spouse relationship
 export async function addSpouseRelationship(userId, spouseUserId) {
   // Preserve signature, but route to association request workflow
-  const res = await fetch(`/family/request-association`, {
+  const res = await fetch(`${API_BASE_URL}/family/request-association`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ targetUserId: spouseUserId }),

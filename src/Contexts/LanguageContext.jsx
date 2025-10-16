@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentLanguage, setLanguage } from '../utils/languageTranslations';
+// Simple language management without external translations
 
 const LanguageContext = createContext();
 
@@ -9,6 +9,15 @@ export const useLanguage = () => {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;
+};
+
+// Simple language functions
+const getCurrentLanguage = () => {
+  return localStorage.getItem('language') || 'tamil';
+};
+
+const setLanguage = (language) => {
+  localStorage.setItem('language', language);
 };
 
 export const LanguageProvider = ({ children }) => {
@@ -34,4 +43,4 @@ export const LanguageProvider = ({ children }) => {
       {children}
     </LanguageContext.Provider>
   );
-}; 
+};

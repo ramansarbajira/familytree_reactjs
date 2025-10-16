@@ -4,7 +4,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Layout from '../Components/Layout';
 import AssociatedFamilyTree from '../Components/FamilyTree/AssociatedFamilyTree';
 import { useLanguage } from '../Contexts/LanguageContext';
-import { getTranslation } from '../utils/languageTranslations';
 import LanguageSwitcher from '../Components/LanguageSwitcher';
 
 const AssociatedFamilyTreePage = () => {
@@ -17,8 +16,8 @@ const AssociatedFamilyTreePage = () => {
   // Determine if this is userId-based or familyCode-based routing
   const isUserIdBased = location.pathname.includes('/associated-family-tree-user/');
   const displayTitle = isUserIdBased 
-    ? `${getTranslation('associatedFamilyTreesForUser', language)}: ${userId}`
-    : `${getTranslation('associatedFamilyTree', language)}: ${code}`;
+    ? `Associated Family Trees for User: ${userId}`
+    : `Associated Family Tree: ${code}`;
 
   return (
     <Layout>
@@ -28,7 +27,7 @@ const AssociatedFamilyTreePage = () => {
             <h2 className="text-2xl font-bold mb-2 text-gray-800">{displayTitle}</h2>
             {isUserIdBased && (
               <p className="text-gray-600 text-sm">
-                {getTranslation('showingAllFamilyTrees', language)}
+                Showing all connected family trees
               </p>
             )}
           </div>
@@ -45,14 +44,14 @@ const AssociatedFamilyTreePage = () => {
             className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors" 
             onClick={() => navigate(-1)}
           >
-            {getTranslation('back', language)}
+            Back
           </button>
           {userInfo?.familyCode && (
             <button 
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors" 
               onClick={() => navigate('/family-tree') }
             >
-              {getTranslation('myBirthFamilyTree', language)}
+              My Birth Family Tree
             </button>
           )}
         </div>

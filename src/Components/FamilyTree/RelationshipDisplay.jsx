@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { getTranslation } from '../../utils/languageTranslations';
 import { useLanguage } from '../../Contexts/LanguageContext';
 import RelationshipCalculator from '../../utils/relationshipCalculator';
 import { useFamilyTreeLabels } from '../../Contexts/FamilyTreeContext';
@@ -37,11 +36,11 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
 
   const getGenerationText = (generationDiff) => {
     if (generationDiff === 0) {
-      return getTranslation('relationships.sameGeneration', language);
+      return 'Same Generation';
     } else if (generationDiff < 0) {
-      return getTranslation('relationships.olderGeneration', language);
+      return 'Older Generation';
     } else {
-      return getTranslation('relationships.youngerGeneration', language);
+      return 'Younger Generation';
     }
   };
 
@@ -82,7 +81,7 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-800">
-            {getTranslation('relationships.relationshipTo', language)}
+            Relationship To
           </h3>
           <div className="flex space-x-2">
             <button
@@ -108,7 +107,7 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
           </div>
         </div>
         <p className="text-gray-500 text-center py-8">
-          {getTranslation('selectPersonToSeeRelationship', language)}
+          Select a person to see relationship
         </p>
       </div>
     );
@@ -120,7 +119,7 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-800">
-          {getTranslation('relationships.relationshipTo', language)}: {selectedPerson?.name}
+          Relationship To: {selectedPerson?.name}
         </h3>
         <div className="flex space-x-2">
           <button
@@ -148,7 +147,7 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
 
       {relationships.length === 0 ? (
         <p className="text-gray-500 text-center py-8">
-          {getTranslation('noRelationshipFound', language)}
+          No relationship found
         </p>
       ) : (
         <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -186,7 +185,7 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
                   </p>
                   {rel.relationship.generationDiff !== 0 && (
                     <p className="text-xs text-gray-400">
-                      {Math.abs(rel.relationship.generationDiff)} {getTranslation('relationships.generationGap', language)}
+                      {Math.abs(rel.relationship.generationDiff)} generation gap
                     </p>
                   )}
                 </div>
@@ -226,10 +225,10 @@ const RelationshipDisplay = ({ tree, selectedPersonId, onPersonSelect }) => {
       <div className="mt-4 pt-4 border-t border-gray-200">
         <div className="flex items-center justify-between text-sm text-gray-600">
           <span>
-            {getTranslation('total', language)}: <span className="font-semibold">{relationships.length}</span>
+            Total: <span className="font-semibold">{relationships.length}</span>
           </span>
           <span>
-            {getTranslation('relationshipCalculated', language)}
+            Relationship calculated
           </span>
         </div>
       </div>

@@ -196,6 +196,28 @@ const OnBoarding = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Check if all mandatory fields across all sections are filled
+  const areAllMandatoryFieldsFilled = () => {
+    // Basic section mandatory fields
+    if (!formData.firstName.trim() || !formData.lastName.trim() || 
+        !formData.dob.trim() || !formData.gender.trim()) {
+      return false;
+    }
+
+    // Family section mandatory fields
+    if (!formData.fatherName.trim() || !formData.motherName.trim() || 
+        !formData.motherTongue || formData.motherTongue === 0) {
+      return false;
+    }
+
+    // Contact section mandatory fields
+    if (!formData.contactNumber.trim() || !formData.address.trim()) {
+      return false;
+    }
+
+    return true;
+  };
+
   const goToPrevious = () => {
     if (!isFirst) {
       const prevSection = sections[currentIndex - 1];
@@ -212,6 +234,12 @@ const OnBoarding = () => {
   };
 
   const handleSave = async () => {
+    // Check all mandatory fields before saving
+    if (!areAllMandatoryFieldsFilled()) {
+      setApiError('Please fill in all mandatory fields before saving.');
+      return;
+    }
+    
     if (!validateCurrentSection()) return;
     setIsSaving(true);
     
@@ -1164,22 +1192,83 @@ const OnBoarding = () => {
       <p className="text-sm text-gray-600">This helps us maintain correct personal information!</p>
     </div>
     
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
       {/* Bio */}
-      <div>
+      <div className="md:col-span-2">
         <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
         <textarea
           name="bio"
           value={formData.bio || ''}
           onChange={handleChange}
           placeholder="Share a short story from your life — a moment, a lesson, or a memory you'd like future generations to remember."
-          rows="4"
+          rows="6"
           className="w-full px-4 py-2.5 border border-gray-300 rounded-md text-sm placeholder:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] resize-none"
         />
       </div>
-
-      {/* Family code/Root ID */}
-      <FamilyCodeAutocomplete formData={formData} setFormData={setFormData} />
+      
+      {/* Bio Writing Tips */}
+      <div className="md:col-span-2 mt-6">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+          <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+            <svg className="w-4 h-4 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Bio Tips
+          </h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div className="flex items-start space-x-2">
+                <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center mt-0.5">
+                  <span className="text-gray-700 text-xs font-bold">1</span>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-800">Highlight key moments</p>
+                  <p className="text-xs text-gray-600">Special achievements and celebrations</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-2">
+                <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center mt-0.5">
+                  <span className="text-gray-700 text-xs font-bold">2</span>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-800">Express your values</p>
+                  <p className="text-xs text-gray-600">Your beliefs and what drives you</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-start space-x-2">
+                <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center mt-0.5">
+                  <span className="text-gray-700 text-xs font-bold">3</span>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-800">Share aspirations</p>
+                  <p className="text-xs text-gray-600">Dreams and future goals</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-2">
+                <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center mt-0.5">
+                  <span className="text-gray-700 text-xs font-bold">4</span>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-800">Be authentic</p>
+                  <p className="text-xs text-gray-600">Write in your own voice</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-4 pt-3 border-t border-gray-200">
+            <p className="text-xs text-gray-700 italic text-center">
+              Your story will inspire generations and create unforgettable family memories
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 )}
@@ -1206,9 +1295,13 @@ const OnBoarding = () => {
           )} */}
           {isLast ? (
             <button
-              className="px-6 py-2 rounded-md text-white text-sm bg-primary flex items-center justify-center gap-2 min-w-[80px]"
+              className={`px-6 py-2 rounded-md text-white text-sm flex items-center justify-center gap-2 min-w-[80px] ${
+                !areAllMandatoryFieldsFilled() || isSaving 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-primary hover:bg-primary-dark'
+              }`}
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={!areAllMandatoryFieldsFilled() || isSaving}
             >
               {isSaving ? (
                 <>

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { getTranslation } from '../../utils/languageTranslations';
 import { useLanguage } from '../../Contexts/LanguageContext';
 import { X, UserPlus, Users, Edit, Plus, UserMinus, Camera, Save, ArrowLeft, Send } from 'lucide-react';
 import { fetchRelationships } from '../../utils/familyTreeApi';

@@ -8,7 +8,6 @@ import TreeConnections from '../Components/FamilyTree/TreeConnections';
 import RadialMenu from '../Components/FamilyTree/RadialMenu';
 import AddPersonModal from '../Components/FamilyTree/AddPersonModal';
 import SearchBar from '../Components/FamilyTree/SearchBar';
-import { getTranslation } from '../utils/languageTranslations';
 import { useLanguage } from '../Contexts/LanguageContext';
 import RelationshipCalculator from '../utils/relationshipCalculator';
 import html2canvas from 'html2canvas';
@@ -72,6 +71,7 @@ const FamilyTreePage = () => {
     const [selectedPersonId, setSelectedPersonId] = useState(null);
     const [treeLoading, setTreeLoading] = useState(false);
     const [zoom, setZoom] = useState(1);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false); // 🚀 Track changes
     // Search state
     const [searchResults, setSearchResults] = useState([]);
     const [highlightedPersonId, setHighlightedPersonId] = useState(null);
@@ -212,6 +212,20 @@ const FamilyTreePage = () => {
     const handleTouchEnd = () => {
         if (isPinching) setIsPinching(false);
     };
+
+    // 🚀 Warn user before leaving page with unsaved changes
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        };
+        
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [hasUnsavedChanges]);
 
     // Initialize tree (now with API/sample data support)
     useEffect(() => {
@@ -516,6 +530,7 @@ const FamilyTreePage = () => {
             setTree(newTree);
             updateStats(newTree);
             arrangeTree(newTree);
+            setHasUnsavedChanges(true); // 🚀 Mark as changed
             return;
         }
 
@@ -635,6 +650,7 @@ const FamilyTreePage = () => {
         setTree(newTree);
         updateStats(newTree);
         arrangeTree(newTree);
+        setHasUnsavedChanges(true); // 🚀 Mark as changed
     };
 
     const deletePerson = async (personId) => {
@@ -683,6 +699,7 @@ const FamilyTreePage = () => {
             setTree(newTree);
             updateStats(newTree);
             arrangeTree(newTree);
+            setHasUnsavedChanges(true); // 🚀 Mark as changed
             if (selectedPersonId === personId) {
                 setSelectedPersonId(null);
             }
@@ -690,13 +707,32 @@ const FamilyTreePage = () => {
     };
 
     const resetTree = async () => {
+        console.log('🔵 New Tree button clicked! hasUnsavedChanges:', hasUnsavedChanges);
+        
+        // 🚀 CRITICAL: Warn if there are unsaved changes
+        if (hasUnsavedChanges) {
+            console.warn('⚠️ Blocked: Unsaved changes exist');
+            await Swal.fire({
+                icon: 'error',
+                title: 'Unsaved Changes!',
+                text: 'You have unsaved changes. Please save your current tree before creating a new one.',
+                confirmButtonText: 'OK',
+            });
+            return; // Don't proceed
+        }
+
+        // 🚀 CRITICAL: Warn about data loss
+        const memberCount = tree ? tree.people.size : 0;
         const result = await Swal.fire({
             icon: 'warning',
             title: 'Create New Tree',
-            text: 'Are you sure you want to create a new tree? This will overwrite your current tree.',
+            html: `<p>This will <strong>replace</strong> your current tree with ${memberCount} members.</p>
+                   <p><strong style="color: red;">This action cannot be undone!</strong></p>
+                   <p>Make sure you have saved your current tree first.</p>`,
             showCancelButton: true,
             confirmButtonText: 'Yes, create new tree!',
             cancelButtonText: 'No, keep current tree!',
+            confirmButtonColor: '#d33',
         });
 
         if (result.isConfirmed) {
@@ -713,6 +749,7 @@ const FamilyTreePage = () => {
             updateStats(newTree);
             arrangeTree(newTree);
             setSelectedPersonId(null);
+            setHasUnsavedChanges(true); // 🚀 Mark as changed - new tree needs to be saved!
         }
     };
 
@@ -870,8 +907,35 @@ const FamilyTreePage = () => {
         };
     }, [radialMenu.isActive, radialMenu.activePersonId]);
 
-    const saveTreeToApi = async () => {
-        if (!tree) return;
+    // 🚀 PERFORMANCE: Use useCallback to prevent function re-creation
+    const saveTreeToApi = useCallback(async () => {
+        console.log('🔵 Save button clicked! Current status:', saveStatus);
+        
+        // 🚀 CRITICAL FIX: Prevent multiple simultaneous saves
+        if (saveStatus === 'loading') {
+            console.warn('⚠️ Save already in progress, ignoring click');
+            return;
+        }
+        
+        if (!tree) {
+            console.warn('⚠️ No tree data to save');
+            return;
+        }
+        
+        // 🚀 NEW: Check if there are unsaved changes
+        if (!hasUnsavedChanges) {
+            console.log('ℹ️ No changes detected, skipping save');
+            Swal.fire({
+                icon: 'info',
+                title: 'No Changes',
+                text: 'No changes have been made to save.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            return;
+        }
+        
+        console.log(`🚀 Starting save for ${tree.people.size} members`);
         setSaveStatus('loading');
         setSaveMessage('');
         try {
@@ -921,6 +985,9 @@ const FamilyTreePage = () => {
             if (userInfo && userInfo.familyCode) {
                 formData.append('familyCode', userInfo.familyCode);
             }
+            const apiStartTime = Date.now();
+            console.log(`📤 Sending ${index} members to API...`);
+            
             const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/family/tree/create`, {
                 method: 'POST',
                 body: formData,
@@ -928,6 +995,10 @@ const FamilyTreePage = () => {
                     // Authorization header will be set in authFetch
                 },
             });
+            
+            const apiTime = Date.now() - apiStartTime;
+            console.log(`✅ API response received in ${apiTime}ms (${(apiTime/1000).toFixed(2)}s)`);
+            
             if (!response) return;
             if (!response.ok) throw new Error('Failed to save');
             
@@ -983,11 +1054,14 @@ const FamilyTreePage = () => {
             
             setSaveStatus('success');
             setSaveMessage('Family tree saved successfully!');
+            setHasUnsavedChanges(false); // 🚀 Reset changes flag
+            console.log('✅ Save completed successfully!');
         } catch (err) {
+            console.error('❌ Save failed:', err);
             setSaveStatus('error');
             setSaveMessage('Failed to save family tree.');
         }
-    };
+    }, [tree, saveStatus, userInfo, hasUnsavedChanges]); // Dependencies for useCallback
 
     useEffect(() => {
         if (saveStatus === 'success') {

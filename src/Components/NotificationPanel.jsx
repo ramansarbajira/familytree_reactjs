@@ -38,7 +38,8 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
   const fetchNotifications = async (getAll = false) => {
     try {
       setLoading(true);
-      const url = `${import.meta.env.VITE_API_BASE_URL}/notifications${getAll ? '?all=true' : ''}`;
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      const url = `${baseUrl}/notifications${getAll ? '?all=true' : ''}`;
 
       console.log('🔍 Fetching notifications from:', url);
       console.log('🔑 Using token:', localStorage.getItem('access_token') ? 'Token exists' : 'No token');

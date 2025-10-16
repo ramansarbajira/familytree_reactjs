@@ -1,4 +1,4 @@
-import tamilTranslations from './lang_tamil.js';
+// Removed Tamil translations import - backend provides labels
 
 /**
  * Universal Family Relationship Calculator
@@ -359,42 +359,9 @@ export default class RelationshipCalculator {
    * @returns {string} Human-readable description
    */
   getRelationshipDescription(code, language = 'tamil') {
-    // Try Tamil translations first
-    if (language === 'tamil' && tamilTranslations[code]) {
-      return tamilTranslations[code];
-    }
-
-    // Fallback to English descriptions
-    const englishDescriptions = {
-      'F': 'father',
-      'M': 'mother',
-      'S': 'son',
-      'D': 'daughter',
-      'H': 'husband',
-      'W': 'wife',
-      'B+': 'elder brother',
-      'B-': 'younger brother',
-      'Z+': 'elder sister',
-      'Z-': 'younger sister',
-      'FF': 'grandfather (paternal)',
-      'FM': 'grandmother (paternal)',
-      'MF': 'grandfather (maternal)',
-      'MM': 'grandmother (maternal)',
-      'SS': 'grandson',
-      'SD': 'granddaughter',
-      'DS': 'grandson',
-      'DD': 'granddaughter',
-      'FB+': 'father\'s elder brother',
-      'FB-': 'father\'s younger brother',
-      'FZ+': 'father\'s elder sister',
-      'FZ-': 'father\'s younger sister',
-      'MB+': 'mother\'s elder brother',
-      'MB-': 'mother\'s younger brother',
-      'MZ+': 'mother\'s elder sister',
-      'MZ-': 'mother\'s younger sister'
-    };
-    
-    return englishDescriptions[code] || `relationship: ${code}`;
+    // Backend provides Tamil labels via API, so return the code
+    // Frontend will get proper Tamil labels from backend API
+    return code;
   }
 
   /**
