@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNavBar from './BottomNavBar';
+import { useNotificationSocket } from '../hooks/useNotificationSocket';
 import {
   FiMenu,
   FiBell,
@@ -18,6 +19,7 @@ import { useUser } from '../Contexts/UserContext';
 import ProfileFormModal from './ProfileFormModal';
 import NotificationPanel from './NotificationPanel';
 import { getNotificationType, getNotificationActions } from '../utils/notifications';
+import { getToken } from '../utils/auth';
 
 const Layout = ({ children }) => {
   const [activeTab, setActiveTab] = useState('profile'); // Default to 'profile' tab
@@ -37,28 +39,34 @@ const Layout = ({ children }) => {
     const tabId = pathToTabId[location.pathname];
     if (tabId) setActiveTab(tabId);
   }, [location.pathname]);
-  const [token, setToken] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const sidebarRef = useRef(null);
   const profileRef = useRef(null);
   
   const navigate = useNavigate();
 
-  useEffect(() => {
-      const storedToken = localStorage.getItem('access_token');
-      if (storedToken) {
-          setToken(storedToken);
-      }
-  }, []);
-
-  //user info
+  //user info - Must be declared BEFORE using in useNotificationSocket
   const { userInfo, userLoading, logout } = useUser();
   //console.log(userInfo); // This will log the user info to the console
+
+  // Use WebSocket for real-time notifications (only when user is loaded)
+  const { isConnected, unreadCount, notifications, refetchUnreadCount } = useNotificationSocket(userInfo);
+
+  // Show loading state while user info is being fetched
+  if (userLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary-600 border-solid mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Responsive handling
   useEffect(() => {
@@ -110,33 +118,11 @@ const Layout = ({ children }) => {
     setIsAddMemberModalOpen(false);
   };
 
-  const fetchUnreadCount = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/unread/count`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-      setUnreadCount(data.unreadCount); // Adjust based on API response shape
-    } catch (err) {
-      console.error('Error fetching unread count:', err);
-    }
-  };
-
   const decrementUnreadCount = () => {
-    setUnreadCount(prev => Math.max(0, prev - 1));
-    // Also fetch the actual count to ensure accuracy
-    setTimeout(fetchUnreadCount, 100);
+    // Refetch unread count using the hook's function
+    // This ensures the count is always accurate after marking as read
+    refetchUnreadCount();
   };
-
-  useEffect(() => {
-    if (localStorage.getItem('access_token')) {
-      fetchUnreadCount();
-    }
-  }, [userInfo]);
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-800">
@@ -201,12 +187,17 @@ const Layout = ({ children }) => {
                     setNotificationOpen(!notificationOpen);
                   }}
                   className="p-1 bg-unset text-primary-600 relative rounded-3xl hover:bg-gray-100 text-gray-600"
+                  title={isConnected ? 'Real-time notifications active' : 'Connecting...'}
                 >
                   <FiBell size={20} />
                   {unreadCount > 0 && (
                     <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
                       {unreadCount}
                     </span>
+                  )}
+                  {/* WebSocket connection indicator */}
+                  {isConnected && (
+                    <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-white"></span>
                   )}
                 </button>
               </div>

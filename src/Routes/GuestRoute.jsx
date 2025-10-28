@@ -2,9 +2,10 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useUser } from '../Contexts/UserContext';
 import LoadingSpinner from '../Components/LoadingSpinner';
+import { getToken } from '../utils/auth';
 
 const GuestRoute = ({ children }) => {
-  const token = localStorage.getItem('access_token');
+  const token = getToken();
   const { userLoading } = useUser();
 
   // If no token, allow access to guest routes

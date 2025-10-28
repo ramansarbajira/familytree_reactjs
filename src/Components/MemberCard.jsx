@@ -29,4 +29,5 @@ const MemberCard = React.forwardRef(({ member, onNodeClick }, ref) => (
     </div>
 ));
 
-export default MemberCard;
+// PHASE 3 OPTIMIZATION: Memoize MemberCard to prevent unnecessary re-renders
+export default React.memo(MemberCard);

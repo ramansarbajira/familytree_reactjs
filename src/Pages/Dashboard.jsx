@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Layout from '../Components/Layout';
 import { useUser } from '../Contexts/UserContext'; 
-import CreateEventModal from '../Components/CreateEventModal'; // Import your modal component
+import CreateEventModal from '../Components/CreateEventModal';
 import ProfileFormModal from '../Components/ProfileFormModal';
 import { FiUsers, FiCalendar, FiGift, FiImage, FiPlusCircle, FiShare2, FiHeart, FiMessageCircle, FiEdit3, FiPaperclip, FiTag, FiClock, FiSettings, FiChevronsRight, FiBell, FiSearch, FiLoader } from 'react-icons/fi';
 import CreateAlbumModal from '../Components/CreateAlbumModal';
@@ -11,6 +11,8 @@ import { Link } from 'react-router-dom';
 import { RiUser3Line } from 'react-icons/ri';
 import Swal from 'sweetalert2';
 import { fetchUserFamilyCodes } from '../utils/familyTreeApi';
+import { getToken } from '../utils/auth';
+import { useQuery } from '@tanstack/react-query';
 
 const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
   // State for modal visibility
@@ -18,283 +20,132 @@ const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isCreateAlbumModalOpen, setIsCreateAlbumModalOpen] = useState(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
-  const [upcomingEventsCount, setUpcomingEventsCount] = useState(null);
-  const { userInfo } = useUser();
-  const [token, setToken] = useState(null);
+  const { userInfo, userLoading } = useUser();
   const navigate = useNavigate();
-  const [galleryCount, setGalleryCount] = useState(null);
-  const [familyStats, setFamilyStats] = useState(null);
-  const [upcomingBirthdays, setUpcomingBirthdays] = useState([]);
-  const [upcomingAnniversaries, setUpcomingAnniversaries] = useState([]);
-  const [recentUploads, setRecentUploads] = useState([]);
-  const [latestPhotos, setLatestPhotos] = useState([]);
-  const [recentPosts, setRecentPosts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCountSectionLoading, setIsCountSectionLoading] = useState(true);
-  const [productCount, setProductCount] = useState(null);
-  const [userFamilyCodes, setUserFamilyCodes] = useState(null);
-  const [familyCodesLoading, setFamilyCodesLoading] = useState(true);
+  const token = getToken();
 
-  // const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-
-  useEffect(() => {
-  if (userInfo?.familyCode && token) {
-    fetch(`${apiBaseUrl}/post/by-options?privacy=private&familyCode=${userInfo.familyCode}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log('✅ Fetched posts:', data);
-
-        // Check if data is an array or has a data property
-        let postsArray = [];
-        if (Array.isArray(data)) {
-          postsArray = data;
-        } else if (data.data && Array.isArray(data.data)) {
-          postsArray = data.data;
-        }
-
-        // Latest date first, then slice first 5
-        const sortedPosts = postsArray
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .slice(0, 5);
-
-        // Format for your UI
-        const formattedPosts = sortedPosts.map((post) => ({
-          id: post.id,
-          author: `${post.userProfile.firstName} ${post.userProfile.lastName}`,
-          avatar: post.user?.profile,
-          time: new Date(post.createdAt).toLocaleDateString(),
-          content: post.caption,
-          image: post.postImage,
-          likes: post.likeCount,
-          comments: post.commentCount,
-        }));
-
-        setRecentPosts(formattedPosts);
-      })
-      .catch((error) => {
-        console.error('❌ Error fetching posts:', error);
-        setRecentPosts([]);
-      });
-  }
-}, [apiBaseUrl, userInfo?.familyCode, token]);
-
-
-useEffect(() => {
-  if (userInfo?.familyCode && token) {
-    fetch(
-      `${apiBaseUrl}/family/member/${userInfo.familyCode}/stats`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    )
-      .then((response) => response.json())
-      .then((result) => {
-        console.log('✅ Stats API result:', result);
-        setFamilyStats(result.data);
-      })
-      .catch((error) => {
-        console.error('Error fetching family stats:', error);
-        setFamilyStats({ totalMembers: 0 });
-      });
-  }
-}, [apiBaseUrl, userInfo?.familyCode, token]);
-
-  // Fetch upcoming birthdays
-  useEffect(() => {
-    if (token) {
-      fetch(`${apiBaseUrl}/event/upcoming/birthdays`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          console.log('Birthdays data:', data);
-          if (Array.isArray(data)) {
-            setUpcomingBirthdays(data.slice(0, 3)); // Show first 3 birthdays
-          } else {
-            setUpcomingBirthdays([]);
-          }
-        })
-        .catch((err) => {
-          console.error("Error fetching birthdays:", err);
-          setUpcomingBirthdays([]);
-        });
-    }
-  }, [apiBaseUrl, token]);
-
-  // Fetch upcoming anniversaries
-  useEffect(() => {
-    if (token) {
-      fetch(`${apiBaseUrl}/event/upcoming/anniversaries`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          console.log('Anniversaries data:', data);
-          if (Array.isArray(data)) {
-            setUpcomingAnniversaries(data.slice(0, 3)); // Show first 3 anniversaries
-          } else {
-            setUpcomingAnniversaries([]);
-          }
-        })
-        .catch((err) => {
-          console.error("Error fetching anniversaries:", err);
-          setUpcomingAnniversaries([]);
-        });
-    }
-  }, [apiBaseUrl, token]);
-
- useEffect(() => {
-  if (userInfo?.familyCode && token) {
-    fetch(`${apiBaseUrl}/gallery/by-options?familyCode=${userInfo.familyCode}`, {
-      headers: {
+  // Use React Query for dashboard data with caching
+  const { data: dashboardData, isLoading, isError } = useQuery({
+    queryKey: ['dashboardData', userInfo?.familyCode, userInfo?.userId],
+    queryFn: async () => {
+      const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
-      }
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log('Gallery data:', data);
-        
-        // Check if data is an array or has a data property
-        let galleryArray = [];
-        if (Array.isArray(data)) {
-          galleryArray = data;
-        } else if (data.data && Array.isArray(data.data)) {
-          galleryArray = data.data;
-        }
+      };
 
-        setGalleryCount(galleryArray.length);
-        const latestFive = galleryArray
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .slice(0, 5);
-        setLatestPhotos(latestFive);
+      const [postsRes, statsRes, eventsRes, birthdaysRes, anniversariesRes, galleryRes, productsRes] = 
+        await Promise.all([
+          fetch(`${apiBaseUrl}/post/by-options?privacy=private&familyCode=${userInfo.familyCode}`, { headers }),
+          fetch(`${apiBaseUrl}/family/member/${userInfo.familyCode}/stats`, { headers }),
+          fetch(`${apiBaseUrl}/event/upcoming`, { headers }),
+          fetch(`${apiBaseUrl}/event/upcoming/birthdays`, { headers }),
+          fetch(`${apiBaseUrl}/event/upcoming/anniversaries`, { headers }),
+          fetch(`${apiBaseUrl}/gallery/by-options?familyCode=${userInfo.familyCode}`, { headers }),
+          fetch(`${apiBaseUrl}/product`, { headers: { 'accept': '*/*' } })
+        ]);
 
-        // For this section: take last 3 (most recent)
-        const latestThree = galleryArray
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .slice(0, 3);
-        setRecentUploads(latestThree);
-      })
-      .catch((error) => {
-        console.error('Error fetching gallery data:', error);
-        setGalleryCount(0);
-        setLatestPhotos([]);
-        setRecentUploads([]);
-      });
-  }
-}, [apiBaseUrl, userInfo?.familyCode, token]);
+      const [posts, stats, events, birthdays, anniversaries, gallery, products] = 
+        await Promise.all([
+          postsRes.json(),
+          statsRes.json(),
+          eventsRes.json(),
+          birthdaysRes.json(),
+          anniversariesRes.json(),
+          galleryRes.json(),
+          productsRes.json()
+        ]);
 
-useEffect(() => {
-    const storedToken = localStorage.getItem('access_token');
-    if (storedToken) {
-      setToken(storedToken);
+      return { posts, stats, events, birthdays, anniversaries, gallery, products };
+    },
+    enabled: !!userInfo?.familyCode && !!token,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+  });
+
+  // Process dashboard data with useMemo to avoid recalculation
+  const processedData = useMemo(() => {
+    if (!dashboardData) {
+      return {
+        recentPosts: [],
+        familyStats: { totalMembers: 0, maleCount: 0, femaleCount: 0 },
+        upcomingEventsCount: 0,
+        upcomingBirthdays: [],
+        upcomingAnniversaries: [],
+        galleryCount: 0,
+        latestPhotos: [],
+        productCount: 0
+      };
     }
-  }, []);
 
-  // Set loading to false when userInfo and token are available
-  useEffect(() => {
-    if (userInfo && token) {
-      setIsLoading(false);
+    const { posts, stats, events, birthdays, anniversaries, gallery, products } = dashboardData;
+
+    // Process posts
+    let postsArray = Array.isArray(posts) ? posts : (posts.data && Array.isArray(posts.data) ? posts.data : []);
+    const sortedPosts = postsArray
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5);
+    const recentPosts = sortedPosts.map((post) => ({
+      id: post.id,
+      author: post.userProfile ? `${post.userProfile.firstName || ''} ${post.userProfile.lastName || ''}` : 'Unknown',
+      avatar: post.user?.profile || null,
+      time: post.createdAt ? new Date(post.createdAt).toLocaleDateString() : '',
+      content: post.caption || '',
+      image: post.postImage || null,
+      likes: post.likeCount || 0,
+      comments: post.commentCount || 0,
+    }));
+
+    // Process stats
+    const familyStats = stats.data || { totalMembers: 0, maleCount: 0, femaleCount: 0 };
+
+    // Process events
+    let eventsArray = Array.isArray(events) ? events : (events.data && Array.isArray(events.data) ? events.data : []);
+    const upcomingEventsCount = eventsArray.length;
+
+    // Process birthdays and anniversaries
+    const upcomingBirthdays = Array.isArray(birthdays) ? birthdays.slice(0, 3) : [];
+    const upcomingAnniversaries = Array.isArray(anniversaries) ? anniversaries.slice(0, 3) : [];
+
+    // Process gallery
+    let galleryArray = Array.isArray(gallery) ? gallery : (gallery.data && Array.isArray(gallery.data) ? gallery.data : []);
+    const galleryCount = galleryArray.length;
+    const latestPhotos = galleryArray
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5);
+
+    // Process products
+    let productCount = 0;
+    if (Array.isArray(products)) {
+      productCount = products.length;
+    } else if (products.data && Array.isArray(products.data)) {
+      productCount = products.data.length;
     }
-  }, [userInfo, token]);
 
-  // Set count section loading to false when all count data is available
-  useEffect(() => {
-    if (familyStats !== null && upcomingEventsCount !== null && galleryCount !== null) {
-      setIsCountSectionLoading(false);
-    }
-  }, [familyStats, upcomingEventsCount, galleryCount]);
+    return {
+      recentPosts,
+      familyStats,
+      upcomingEventsCount,
+      upcomingBirthdays,
+      upcomingAnniversaries,
+      galleryCount,
+      latestPhotos,
+      productCount
+    };
+  }, [dashboardData]);
 
-  // Fetch product count for Gifts card
-  useEffect(() => {
-    fetch(`${apiBaseUrl}/product`, {
-      headers: {
-        'accept': '*/*',
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        // If data is an array, set count
-        if (Array.isArray(data)) {
-          setProductCount(data.length);
-        } else if (data.data && Array.isArray(data.data)) {
-          setProductCount(data.data.length);
-        } else {
-          setProductCount(0);
-        }
-      })
-      .catch((error) => {
-        console.error('Error fetching product data:', error);
-        setProductCount(0);
-      });
-  }, [apiBaseUrl]);
-
-  // Fetch main and associated family codes
-  useEffect(() => {
-    if (userInfo?.userId) {
-      setFamilyCodesLoading(true);
-      fetchUserFamilyCodes(userInfo.userId)
-        .then((codes) => {
-          setUserFamilyCodes(codes);
-          setFamilyCodesLoading(false);
-        })
-        .catch(() => setFamilyCodesLoading(false));
-    }
-  }, [userInfo?.userId]);
+  // Use React Query for family codes
+  const { data: userFamilyCodes, isLoading: familyCodesLoading } = useQuery({
+    queryKey: ['userFamilyCodes', userInfo?.userId],
+    queryFn: () => fetchUserFamilyCodes(userInfo.userId),
+    enabled: !!userInfo?.userId,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
 
   const today = new Date();
   const formattedDate = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   // --- RELIABLE LOREM PICSUM IMAGE LINKS ---
   const currentUserAvatar = "https://picsum.photos/seed/user1/300/300"; // Unique seed for current user
-
-   useEffect(() => {
-    console.log('🔗 API Base URL:', apiBaseUrl);
-    console.log('🌍 Environment VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
-  }, [apiBaseUrl]);
-
-   useEffect(() => {
-    // Fetch upcoming events count
-    if (token) {
-      fetch(`${apiBaseUrl}/event/upcoming`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          console.log('Upcoming events count data:', data);
-          // Check if data is an array or has a data property
-          let eventsArray = [];
-          if (Array.isArray(data)) {
-            eventsArray = data;
-          } else if (data.data && Array.isArray(data.data)) {
-            eventsArray = data.data;
-          }
-          setUpcomingEventsCount(eventsArray.length);
-        })
-        .catch((error) => {
-          console.error('Error fetching upcoming events:', error);
-          setUpcomingEventsCount(0);
-        });
-    }
-  }, [apiBaseUrl, token]);
-
 
   // Handler functions for modal
   const handleOpenCreateEventModal = () => {
@@ -322,7 +173,6 @@ useEffect(() => {
     setIsCreateAlbumModalOpen(false);
   };
   const handleAlbumCreated = (newAlbum) => {
-    console.log('New album created:', newAlbum);
     // You can add logic here to refresh your gallery data
     // For example, call a parent function to refresh the albums list
     // onAlbumCreated?.(newAlbum);
@@ -331,7 +181,6 @@ useEffect(() => {
   // Handler for when a new member is successfully added
   const handleAddMember = (newMemberData) => {
     // You can update your state here if needed
-    console.log('New member added:', newMemberData);
     // Optionally show a success message
     Swal.fire({
       icon: 'success',
@@ -342,9 +191,21 @@ useEffect(() => {
   };
 const handleOpenCreatePost = () => setIsCreatePostModalOpen(true);
 const handleCloseCreatePost = () => setIsCreatePostModalOpen(false);
-console.log("userInfo:", userInfo);
-console.log("token:", token);
 
+
+  // Destructure processed data
+  const {
+    recentPosts,
+    familyStats,
+    upcomingEventsCount,
+    upcomingBirthdays,
+    upcomingAnniversaries,
+    galleryCount,
+    latestPhotos,
+    productCount
+  } = processedData;
+
+  const isCountSectionLoading = isLoading;
 
   // Show loading spinner while data is being fetched
   if (isLoading) {

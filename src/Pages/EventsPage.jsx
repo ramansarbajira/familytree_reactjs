@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../Components/Layout';
+import { getToken } from '../utils/auth';
 import { useUser } from '../Contexts/UserContext';
 import Swal from 'sweetalert2';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   FiCalendar,
@@ -33,27 +35,20 @@ import JoinFamilyModal from '../Components/JoinFamilyModal';
 
 const EventsPage = () => {
   const { userInfo, userLoading } = useUser();
+  const queryClient = useQueryClient();
   
-  // true = upcoming, false = my-events, 'all' = all events
   const [activeTab, setActiveTab] = useState('upcoming');
-  const [allEvents, setAllEvents] = useState([]);
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
   const [isEventViewerOpen, setIsEventViewerOpen] = useState(false);
   const [isEditEventModalOpen, setIsEditEventModalOpen] = useState(false);
   const [isCreateFamilyModalOpen, setIsCreateFamilyModalOpen] = useState(false);
   const [isJoinFamilyModalOpen, setIsJoinFamilyModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [eventsLoading, setEventsLoading] = useState(false);
 
-  // Fetch events whenever the tab changes
-  useEffect(() => {
-    // Only fetch events if user has family code and is approved
-    if (!userInfo?.familyCode || userInfo?.approveStatus !== 'approved') {
-      return;
-    }
-
-    const fetchEvents = async () => {
-      setEventsLoading(true);
+  // Use React Query for events with tab-based caching
+  const { data: allEvents = [], isLoading: eventsLoading } = useQuery({
+    queryKey: ['events', activeTab, userInfo?.familyCode],
+    queryFn: async () => {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
       let endpoint;
       
@@ -65,20 +60,20 @@ const EventsPage = () => {
         endpoint = `${apiBaseUrl}/event/all`;
       }
 
-      try {
-        const token = localStorage.getItem('access_token');
-        const response = await fetch(endpoint, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        if (!response.ok) {
-          throw new Error('Failed to fetch events');
-        }
-        const data = await response.json();
-
-        const formattedEvents = data.map(item => {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
+      }
+      
+      const data = await response.json();
+      return data.map(item => {
           // Handle different event types
           let eventData = {
             id: item.id,
@@ -117,19 +112,13 @@ const EventsPage = () => {
             };
           }
 
-          return eventData;
-        });
-
-        setAllEvents(formattedEvents);
-      } catch (error) {
-        console.error('Error fetching events:', error);
-      } finally {
-        setEventsLoading(false);
-      }
-    };
-
-    fetchEvents();
-  }, [activeTab, userInfo?.familyCode, userInfo?.approveStatus]);
+        return eventData;
+      });
+    },
+    enabled: !!userInfo?.familyCode && userInfo?.approveStatus === 'approved',
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+  });
 
   const handleCreateEventClick = () => setIsCreateEventModalOpen(true);
 
@@ -169,7 +158,7 @@ const EventsPage = () => {
     if (!result.isConfirmed) return;
 
     try {
-      const token = localStorage.getItem('access_token');
+      const token = getToken();
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
       const deleteEndpoint = `${apiBaseUrl}/event/${selectedEvent.id}`;
 
@@ -438,7 +427,7 @@ const EventsPage = () => {
     if (!result.isConfirmed) return;
 
     try {
-      const token = localStorage.getItem('access_token');
+      const token = getToken();
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
       const deleteEndpoint = `${apiBaseUrl}/event/${event.id}`;
 
@@ -911,14 +900,14 @@ const EventsPage = () => {
         isOpen={isCreateFamilyModalOpen}
         onClose={() => setIsCreateFamilyModalOpen(false)}
         onFamilyCreated={handleFamilyCreated}
-        token={localStorage.getItem('access_token')}
+        token={getToken()}
       />
 
       <JoinFamilyModal
         isOpen={isJoinFamilyModalOpen}
         onClose={() => setIsJoinFamilyModalOpen(false)}
         onFamilyJoined={handleFamilyJoined}
-        token={localStorage.getItem('access_token')}
+        token={getToken()}
       />
     </Layout>
   );

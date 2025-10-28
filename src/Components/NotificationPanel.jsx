@@ -13,26 +13,31 @@ import {
 } from 'react-icons/fi';
 import { getNotificationType } from '../utils/notifications';
 import AssociationRequestItem from './FamilyTree/AssociationRequestItem';
+import { useNotificationSocket } from '../hooks/useNotificationSocket';
+import { useUser } from '../Contexts/UserContext';
 
 const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
+  const { userInfo } = useUser();
+  const { isConnected, notifications: wsNotifications, refetchUnreadCount } = useNotificationSocket(userInfo);
+  
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processingRequest, setProcessingRequest] = useState(null);
-  const [activeTab, setActiveTab] = useState('all'); // 'all', 'unread', 'read'
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'requests', 'other'
 
   const notificationTypes = {
     request: { icon: <FiUser />, color: 'from-blue-500 to-blue-300' },
     birthday: { icon: <FiGift />, color: 'from-pink-500 to-pink-300' },
     event: { icon: <FiCalendar />, color: 'from-purple-500 to-purple-300' },
     anniversary: { icon: <FiHeart />, color: 'from-red-500 to-red-300' },
-    family_association_request: { icon: <FiUsers />, color: 'from-green-500 to-green-300' },
-    FAMILY_ASSOCIATION_REQUEST: { icon: <FiUsers />, color: 'from-green-500 to-green-300' },
+    family_association_request: { icon: <FiUsers />, color: 'from-blue-500 to-blue-300' },
+    FAMILY_ASSOCIATION_REQUEST: { icon: <FiUsers />, color: 'from-blue-500 to-blue-300' },
     family_association_accepted: { icon: <FiUserPlus />, color: 'from-teal-500 to-teal-300' },
     FAMILY_ASSOCIATION_ACCEPTED: { icon: <FiUserPlus />, color: 'from-teal-500 to-teal-300' },
     family_association_rejected: { icon: <FiUserX />, color: 'from-orange-500 to-orange-300' },
     FAMILY_ASSOCIATION_REJECTED: { icon: <FiUserX />, color: 'from-orange-500 to-orange-300' },
     family_member_removed: { icon: <FiUserX />, color: 'from-red-500 to-red-300' },
-    family_member_joined: { icon: <FiUserPlus />, color: 'from-green-500 to-green-300' },
+    family_member_joined: { icon: <FiUserPlus />, color: 'from-purple-500 to-purple-300' },
   };
 
   const fetchNotifications = async (getAll = false) => {
@@ -116,78 +121,111 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
     }
   };
 
-  const markAllAsRead = async () => {
-    try {
-      await fetch(`${import.meta.env.VITE_API_BASE_URL}/notifications/mark-all-read`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      });
-      // Refetch updated list
-      fetchNotifications();
-      if (onNotificationCountUpdate) {
-        onNotificationCountUpdate();
-      }
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
+  // Sync WebSocket notifications with local state
+  useEffect(() => {
+    if (wsNotifications && wsNotifications.length > 0) {
+      console.log('🔄 WebSocket notifications updated:', wsNotifications.length);
+      // WebSocket provides real-time notifications
+      setNotifications(wsNotifications);
     }
-  };
+  }, [wsNotifications]);
 
   useEffect(() => {
     if (open) {
-      // Fetch all notifications to see if acceptance notifications are there
+      // Fetch initial notifications only once when panel opens
       fetchNotifications(true);
-      
-      // Set up automatic refresh every 30 seconds when panel is open
-      const refreshInterval = setInterval(() => {
-        fetchNotifications();
-      }, 30000); // 30 seconds
-      
-      return () => clearInterval(refreshInterval);
+      console.log('✅ NotificationPanel opened - WebSocket active:', isConnected);
     }
   }, [open]);
 
   if (!open) return null;
 
-  // Filter notifications based on active tab
-  const getFilteredNotifications = () => {
-    const filtered = (() => {
-      switch (activeTab) {
-        case 'unread':
-          return notifications.filter(n => !n.read);
-        case 'read':
-          return notifications.filter(n => n.read);
-        default:
-          return notifications;
-      }
-    })();
-    
-    // Debug: Log filtering results
-    console.log(`🔍 Tab: ${activeTab}, Total: ${notifications.length}, Filtered: ${filtered.length}`);
-    console.log(`🔍 Read notifications:`, notifications.filter(n => n.read).map(n => ({ id: n.id, status: n.status, read: n.read })));
-    console.log(`🔍 Unread notifications:`, notifications.filter(n => !n.read).map(n => ({ id: n.id, status: n.status, read: n.read })));
-    
-    return filtered;
-  };
-
-  const filteredNotifications = getFilteredNotifications();
-
-  // Filter out association requests to handle them separately
-  // Handle both lowercase and uppercase type formats
-  const associationRequests = filteredNotifications.filter(n => 
+  // Separate notifications by type first
+  const allAssociationRequests = notifications.filter(n => 
     n.type === 'family_association_request' || n.type === 'FAMILY_ASSOCIATION_REQUEST'
   );
-  const otherNotifications = filteredNotifications.filter(n => 
+  const allOtherNotifications = notifications.filter(n => 
     n.type !== 'family_association_request' && n.type !== 'FAMILY_ASSOCIATION_REQUEST'
   );
 
+  // Filter based on active tab
+  const getFilteredNotifications = () => {
+    switch (activeTab) {
+      case 'requests':
+        // Only show association requests
+        return { associationRequests: allAssociationRequests, otherNotifications: [] };
+      case 'other':
+        // Only show other notifications
+        return { associationRequests: [], otherNotifications: allOtherNotifications };
+      default:
+        // Show all notifications
+        return { associationRequests: allAssociationRequests, otherNotifications: allOtherNotifications };
+    }
+  };
+
+  // Time-based filtering (Instagram style)
+  const filterByTime = (notificationList) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    return notificationList.filter(n => {
+      const notifDate = new Date(n.createdAt || n.time);
+      // Only show notifications from last 30 days
+      return notifDate >= thirtyDaysAgo;
+    });
+  };
+
+  // Group notifications by time period
+  const groupByTime = (notificationList) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const groups = {
+      today: [],
+      last7Days: [],
+      last30Days: []
+    };
+
+    notificationList.forEach(n => {
+      const notifDate = new Date(n.createdAt || n.time);
+      
+      if (notifDate >= today) {
+        groups.today.push(n);
+      } else if (notifDate >= sevenDaysAgo) {
+        groups.last7Days.push(n);
+      } else if (notifDate >= thirtyDaysAgo) {
+        groups.last30Days.push(n);
+      }
+      // Older than 30 days are not included (hidden)
+    });
+
+    return groups;
+  };
+
+  const { associationRequests, otherNotifications } = getFilteredNotifications();
+  
+  // Filter by time (last 30 days only)
+  const timeFilteredAssociations = filterByTime(associationRequests);
+  const timeFilteredOthers = filterByTime(otherNotifications);
+  
+  // Group by time periods
+  const associationGroups = groupByTime(timeFilteredAssociations);
+  const otherGroups = groupByTime(timeFilteredOthers);
+  
+  const filteredNotifications = [...timeFilteredAssociations, ...timeFilteredOthers];
+
   // Debug: Log the filtering results
-  console.log('Filtered notifications:', {
-    total: filteredNotifications.length,
-    associationRequests: associationRequests.length,
-    otherNotifications: otherNotifications.length,
-    otherTypes: otherNotifications.map(n => n.type)
+  console.log('📊 Time-based filtering:', {
+    activeTab,
+    total: notifications.length,
+    filtered: filteredNotifications.length,
+    today: associationGroups.today.length + otherGroups.today.length,
+    last7Days: associationGroups.last7Days.length + otherGroups.last7Days.length,
+    last30Days: associationGroups.last30Days.length + otherGroups.last30Days.length
   });
 
   const handleAcceptRequest = async (notification) => {
@@ -219,16 +257,16 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
             : n
         ));
         
-        // Update notification count immediately (decrements count and fetches actual count)
+        // Update notification count via WebSocket
+        if (refetchUnreadCount) {
+          refetchUnreadCount();
+        }
         if (onNotificationCountUpdate) {
           onNotificationCountUpdate();
         }
         
-        // Refresh notifications after a longer delay to ensure backend transaction commits
-        setTimeout(() => {
-          console.log('🔄 Refreshing notifications after accept...');
-          fetchNotifications(true);
-        }, 2000);
+        // WebSocket will automatically update notifications in real-time
+        console.log('✅ WebSocket will update notifications automatically');
         
         return true;
       } else {
@@ -271,16 +309,16 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
             : n
         ));
         
-        // Update notification count immediately (decrements count and fetches actual count)
+        // Update notification count via WebSocket
+        if (refetchUnreadCount) {
+          refetchUnreadCount();
+        }
         if (onNotificationCountUpdate) {
           onNotificationCountUpdate();
         }
         
-        // Refresh notifications after a longer delay to ensure backend transaction commits
-        setTimeout(() => {
-          console.log('🔄 Refreshing notifications after reject...');
-          fetchNotifications(true);
-        }, 2000);
+        // WebSocket will automatically update notifications in real-time
+        console.log('✅ WebSocket will update notifications automatically');
         
         return true;
       } else {
@@ -307,54 +345,48 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
           <div className="border-b border-gray-200 bg-white px-4 py-3">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={markAllAsRead}
-                  className="text-sm text-blue-600 hover:text-blue-800"
-                  disabled={notifications.length === 0 || notifications.every(n => n.read)}
-                >
-                  Mark all as read
-                </button>
-                <button
-                  onClick={onClose}
-                  className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
-                >
-                  <FiX className="h-5 w-5" />
-                </button>
-              </div>
+              <button
+                onClick={onClose}
+                className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
             </div>
             
-            {/* Tab Navigation */}
-            <div className="flex space-x-1">
+            {/* Tab Navigation - Uniform Green Style */}
+            <div className="flex gap-2 p-2">
               <button
                 onClick={() => setActiveTab('all')}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                className={`flex-1 px-4 py-3 text-sm font-semibold rounded-lg transition-all ${
                   activeTab === 'all'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                    ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-md'
+                    : 'bg-gradient-to-r from-green-600 to-green-500 text-gray-300 opacity-60 hover:opacity-80'
                 }`}
               >
                 All
+                <span className="ml-1 text-xs">({notifications.length})</span>
               </button>
               <button
-                onClick={() => setActiveTab('unread')}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === 'unread'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                onClick={() => setActiveTab('requests')}
+                className={`flex-1 px-4 py-3 text-sm font-semibold rounded-lg transition-all ${
+                  activeTab === 'requests'
+                    ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-md'
+                    : 'bg-gradient-to-r from-green-600 to-green-500 text-gray-300 opacity-60 hover:opacity-80'
                 }`}
               >
-                Unread
+                Requests
+                <span className="ml-1 text-xs">({allAssociationRequests.length})</span>
               </button>
               <button
-                onClick={() => setActiveTab('read')}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === 'read'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                onClick={() => setActiveTab('other')}
+                className={`flex-1 px-4 py-3 text-sm font-semibold rounded-lg transition-all ${
+                  activeTab === 'other'
+                    ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-md'
+                    : 'bg-gradient-to-r from-green-600 to-green-500 text-gray-300 opacity-60 hover:opacity-80'
                 }`}
               >
-                Read
+                Other
+                <span className="ml-1 text-xs">({allOtherNotifications.length})</span>
               </button>
             </div>
           </div>
@@ -369,113 +401,243 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
               <div className="flex h-full flex-col items-center justify-center p-6 text-center">
                 <FiBell className="mb-2 h-10 w-10 text-gray-400" />
                 <h4 className="text-lg font-medium text-gray-900">
-                  {activeTab === 'unread' ? 'No unread notifications' : 
-                   activeTab === 'read' ? 'No read notifications' : 'No notifications'}
+                  {activeTab === 'requests' ? 'No association requests' : 
+                   activeTab === 'other' ? 'No other notifications' : 'No notifications'}
                 </h4>
                 <p className="mt-1 text-sm text-gray-500">
-                  {activeTab === 'unread' ? 'All caught up!' : 
-                   activeTab === 'read' ? 'No notifications have been read yet.' : 
+                  {activeTab === 'requests' ? 'No pending family association requests.' : 
+                   activeTab === 'other' ? 'No other notifications available.' : 
                    "We'll let you know when there's something new."}
                 </p>
               </div>
             ) : (
               <>
-                {/* Association Requests Section */}
-                {associationRequests.length > 0 && (
-                  <div className="border-b border-gray-200 bg-gray-50 px-4 py-2">
-                    <h4 className="text-sm font-medium text-gray-500">Family Association Requests</h4>
-                  </div>
-                )}
-                {associationRequests.map((notification) => {
-                  // Get the requester ID and name from notification data
-                  const requesterId = notification.data?.requesterId || 
-                                   notification.sender?.id || 
-                                   notification.data?.sender?.id;
-                  
-                  const requesterName = notification.data?.senderName || 
-                                     notification.data?.requesterName || 
-                                     'Someone';
-                  
-                  const requesterFamilyCode = notification.data?.senderFamilyCode || 
-                                           notification.data?.requesterFamilyCode || 
-                                           'Their Family';
-                  
-                  return (
-                    <div key={notification.id} className="border-b border-gray-200">
-                      <AssociationRequestItem
-                        request={{
-                          ...notification, // Pass through all notification data
-                          id: notification.id,
-                          type: notification.type, // Ensure type is passed through
-                          message: notification.message, // Ensure message is passed through
-                          status: notification.status, // Pass notification status
-                          data: {
-                            ...notification.data, // Include all data from the notification
-                            senderId: requesterId,
-                            senderName: requesterName,
-                            senderFamilyCode: requesterFamilyCode,
-                            // Include target user info if available
-                            targetUserId: notification.data?.targetUserId,
-                            targetName: notification.data?.targetName,
-                            targetFamilyCode: notification.data?.targetFamilyCode || notification.data?.familyCode,
-                            requestType: 'family_association'
-                          },
-                          createdAt: notification.createdAt
-                        }}
-                        onAccept={() => handleAcceptRequest(notification)}
-                        onReject={() => handleRejectRequest(notification)}
-                        loading={processingRequest === notification.id}
-                      />
+                {/* Time-grouped notifications - Instagram style */}
+                
+                {/* Today Section */}
+                {(associationGroups.today.length > 0 || otherGroups.today.length > 0) && (
+                  <>
+                    <div className="bg-gray-50 px-4 py-2 sticky top-0 z-10">
+                      <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Today</h4>
                     </div>
-                  );
-                })}
-
-                {/* Other Notifications */}
-                {otherNotifications.length > 0 && (
-                  <div className="border-b border-gray-200 bg-gray-50 px-4 py-2">
-                    <h4 className="text-sm font-medium text-gray-500">Other Notifications</h4>
-                  </div>
-                )}
-                <ul className="divide-y divide-gray-200">
-                  {otherNotifications.map((notification) => (
-                    <li
-                      key={notification.id}
-                      className={`relative px-4 py-3 hover:bg-gray-50 ${!notification.read ? 'bg-blue-50' : ''}`}
-                      onClick={() => !notification.read && markAsRead(notification.id)}
-                    >
-                      <div className="flex items-start">
-                        <div
-                          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${notificationTypes[notification.type]?.color || 'from-gray-400 to-gray-300'}`}
-                        >
-                          {notificationTypes[notification.type]?.icon || <FiBell className="h-5 w-5 text-white" />}
+                    
+                    {/* Today's Association Requests */}
+                    {associationGroups.today.map((notification) => {
+                      const requesterId = notification.data?.requesterId || notification.sender?.id || notification.data?.sender?.id;
+                      const requesterName = notification.data?.senderName || notification.data?.requesterName || 'Someone';
+                      const requesterFamilyCode = notification.data?.senderFamilyCode || notification.data?.requesterFamilyCode || 'Their Family';
+                      
+                      return (
+                        <div key={notification.id} className="border-b border-gray-200">
+                          <AssociationRequestItem
+                            request={{
+                              ...notification,
+                              id: notification.id,
+                              type: notification.type,
+                              message: notification.message,
+                              status: notification.status,
+                              data: {
+                                ...notification.data,
+                                senderId: requesterId,
+                                senderName: requesterName,
+                                senderFamilyCode: requesterFamilyCode,
+                                targetUserId: notification.data?.targetUserId,
+                                targetName: notification.data?.targetName,
+                                targetFamilyCode: notification.data?.targetFamilyCode || notification.data?.familyCode,
+                                requestType: 'family_association'
+                              },
+                              createdAt: notification.createdAt
+                            }}
+                            onAccept={() => handleAcceptRequest(notification)}
+                            onReject={() => handleRejectRequest(notification)}
+                            loading={processingRequest === notification.id}
+                          />
                         </div>
-                        <div className="ml-3 flex-1">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-gray-900">
-                              {notification.title || getNotificationType(notification.type)}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(notification.time).toLocaleDateString([], { 
-                                month: 'short', 
-                                day: 'numeric',
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
-                            </p>
+                      );
+                    })}
+                    
+                    {/* Today's Other Notifications */}
+                    {otherGroups.today.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`relative px-4 py-3 hover:bg-gray-50 border-b border-gray-200 ${!notification.read ? 'bg-blue-50' : ''}`}
+                        onClick={() => !notification.read && markAsRead(notification.id)}
+                      >
+                        <div className="flex items-start">
+                          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${notificationTypes[notification.type]?.color || 'from-gray-400 to-gray-300'}`}>
+                            {notificationTypes[notification.type]?.icon || <FiBell className="h-5 w-5 text-white" />}
                           </div>
-                          <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
-                          {!notification.read && (
-                            <div className="mt-1">
-                              <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-                                New
-                              </span>
+                          <div className="ml-3 flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-gray-900">
+                                {notification.title || getNotificationType(notification.type)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(notification.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
                             </div>
-                          )}
+                            <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
+                            {!notification.read && (
+                              <div className="mt-1">
+                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">New</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </li>
-                  ))}
-                </ul>
+                    ))}
+                  </>
+                )}
+
+                {/* Last 7 Days Section */}
+                {(associationGroups.last7Days.length > 0 || otherGroups.last7Days.length > 0) && (
+                  <>
+                    <div className="bg-gray-50 px-4 py-2 sticky top-0 z-10">
+                      <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Last 7 Days</h4>
+                    </div>
+                    
+                    {/* Last 7 Days Association Requests */}
+                    {associationGroups.last7Days.map((notification) => {
+                      const requesterId = notification.data?.requesterId || notification.sender?.id || notification.data?.sender?.id;
+                      const requesterName = notification.data?.senderName || notification.data?.requesterName || 'Someone';
+                      const requesterFamilyCode = notification.data?.senderFamilyCode || notification.data?.requesterFamilyCode || 'Their Family';
+                      
+                      return (
+                        <div key={notification.id} className="border-b border-gray-200">
+                          <AssociationRequestItem
+                            request={{
+                              ...notification,
+                              id: notification.id,
+                              type: notification.type,
+                              message: notification.message,
+                              status: notification.status,
+                              data: {
+                                ...notification.data,
+                                senderId: requesterId,
+                                senderName: requesterName,
+                                senderFamilyCode: requesterFamilyCode,
+                                targetUserId: notification.data?.targetUserId,
+                                targetName: notification.data?.targetName,
+                                targetFamilyCode: notification.data?.targetFamilyCode || notification.data?.familyCode,
+                                requestType: 'family_association'
+                              },
+                              createdAt: notification.createdAt
+                            }}
+                            onAccept={() => handleAcceptRequest(notification)}
+                            onReject={() => handleRejectRequest(notification)}
+                            loading={processingRequest === notification.id}
+                          />
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Last 7 Days Other Notifications */}
+                    {otherGroups.last7Days.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`relative px-4 py-3 hover:bg-gray-50 border-b border-gray-200 ${!notification.read ? 'bg-blue-50' : ''}`}
+                        onClick={() => !notification.read && markAsRead(notification.id)}
+                      >
+                        <div className="flex items-start">
+                          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${notificationTypes[notification.type]?.color || 'from-gray-400 to-gray-300'}`}>
+                            {notificationTypes[notification.type]?.icon || <FiBell className="h-5 w-5 text-white" />}
+                          </div>
+                          <div className="ml-3 flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-gray-900">
+                                {notification.title || getNotificationType(notification.type)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(notification.time).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                              </p>
+                            </div>
+                            <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
+                            {!notification.read && (
+                              <div className="mt-1">
+                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">New</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {/* Last 30 Days Section */}
+                {(associationGroups.last30Days.length > 0 || otherGroups.last30Days.length > 0) && (
+                  <>
+                    <div className="bg-gray-50 px-4 py-2 sticky top-0 z-10">
+                      <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Last 30 Days</h4>
+                    </div>
+                    
+                    {/* Last 30 Days Association Requests */}
+                    {associationGroups.last30Days.map((notification) => {
+                      const requesterId = notification.data?.requesterId || notification.sender?.id || notification.data?.sender?.id;
+                      const requesterName = notification.data?.senderName || notification.data?.requesterName || 'Someone';
+                      const requesterFamilyCode = notification.data?.senderFamilyCode || notification.data?.requesterFamilyCode || 'Their Family';
+                      
+                      return (
+                        <div key={notification.id} className="border-b border-gray-200">
+                          <AssociationRequestItem
+                            request={{
+                              ...notification,
+                              id: notification.id,
+                              type: notification.type,
+                              message: notification.message,
+                              status: notification.status,
+                              data: {
+                                ...notification.data,
+                                senderId: requesterId,
+                                senderName: requesterName,
+                                senderFamilyCode: requesterFamilyCode,
+                                targetUserId: notification.data?.targetUserId,
+                                targetName: notification.data?.targetName,
+                                targetFamilyCode: notification.data?.targetFamilyCode || notification.data?.familyCode,
+                                requestType: 'family_association'
+                              },
+                              createdAt: notification.createdAt
+                            }}
+                            onAccept={() => handleAcceptRequest(notification)}
+                            onReject={() => handleRejectRequest(notification)}
+                            loading={processingRequest === notification.id}
+                          />
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Last 30 Days Other Notifications */}
+                    {otherGroups.last30Days.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`relative px-4 py-3 hover:bg-gray-50 border-b border-gray-200 ${!notification.read ? 'bg-blue-50' : ''}`}
+                        onClick={() => !notification.read && markAsRead(notification.id)}
+                      >
+                        <div className="flex items-start">
+                          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${notificationTypes[notification.type]?.color || 'from-gray-400 to-gray-300'}`}>
+                            {notificationTypes[notification.type]?.icon || <FiBell className="h-5 w-5 text-white" />}
+                          </div>
+                          <div className="ml-3 flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-gray-900">
+                                {notification.title || getNotificationType(notification.type)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(notification.time).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                              </p>
+                            </div>
+                            <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
+                            {!notification.read && (
+                              <div className="mt-1">
+                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">New</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
               </>
             )}
           </div>

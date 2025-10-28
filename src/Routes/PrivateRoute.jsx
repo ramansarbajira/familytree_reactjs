@@ -2,9 +2,10 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useUser } from '../Contexts/UserContext';
 import LoadingSpinner from '../Components/LoadingSpinner';
+import { getToken } from '../utils/auth';
 
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('access_token');
+  const token = getToken();
   const { userLoading } = useUser();
 
   // If no token, redirect to login
@@ -23,7 +24,7 @@ const PrivateRoute = ({ children }) => {
 
 // New component for role-based access control
 const RoleBasedRoute = ({ children, allowedRoles = [], requireFamilyCode = false, requireApprovedStatus = false }) => {
-  const token = localStorage.getItem('access_token');
+  const token = getToken();
   const { userInfo, userLoading } = useUser();
 
   // If no token, redirect to login

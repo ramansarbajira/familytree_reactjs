@@ -66,6 +66,8 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
         return { text: 'Accepted', color: 'text-green-600', bgColor: 'bg-green-100' };
       case 'rejected':
         return { text: 'Rejected', color: 'text-red-600', bgColor: 'bg-red-100' };
+      case 'expired':
+        return { text: 'Expired', color: 'text-gray-600', bgColor: 'bg-gray-100' };
       default:
         return null;
     }
@@ -77,6 +79,7 @@ const AssociationRequestItem = ({ request, onAccept, onReject, loading = false }
     <div className={`p-4 transition-colors duration-150 border-l-4 ${
       status === 'accepted' ? 'border-green-400 bg-gradient-to-r from-green-50 to-white' :
       status === 'rejected' ? 'border-red-400 bg-gradient-to-r from-red-50 to-white' :
+      status === 'expired' ? 'border-gray-400 bg-gradient-to-r from-gray-50 to-white opacity-75' :
       'border-green-400 bg-gradient-to-r from-green-50 to-white hover:bg-green-50'
     }`}>
       <div className="flex items-start">

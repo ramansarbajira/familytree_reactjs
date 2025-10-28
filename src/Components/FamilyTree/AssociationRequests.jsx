@@ -23,7 +23,9 @@ const AssociationRequests = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/notifications?type=FAMILY_ASSOCIATION_REQUEST`, {
+      
+      // Backend now filters by type and applies 15-day rule automatically
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/notifications?all=true&type=FAMILY_ASSOCIATION_REQUEST`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'accept': 'application/json'
@@ -32,16 +34,17 @@ const AssociationRequests = () => {
       
       if (response.ok) {
         const data = await response.json();
-        // Filter for unread family association requests
+        
+        // Backend already filters by:
+        // - type: FAMILY_ASSOCIATION_REQUEST
+        // - createdAt: last 15 days only
+        // - status: not expired
+        // Frontend only needs to filter for pending status
         const familyRequests = data.filter(n => 
-          !n.isRead && 
-          n.type === 'FAMILY_ASSOCIATION_REQUEST' &&
-          (n.status === 'pending' || !n.status) && // Only show pending requests
-          // Backend sets 'family_association_request'
-          n.data?.requestType === 'family_association_request'
+          n.status === 'pending' || !n.status
         );
         
-        console.log('Filtered family requests:', familyRequests); // Debug log
+        console.log('✅ Family association requests (last 15 days):', familyRequests.length);
         setRequests(familyRequests);
       }
     } catch (error) {

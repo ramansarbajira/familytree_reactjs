@@ -10,7 +10,8 @@ import {
   FiClock,
   FiChevronDown,
   FiCalendar,
-  FiPackage
+  FiPackage,
+  FiLink
 } from 'react-icons/fi';
 import { RiGitMergeLine } from 'react-icons/ri';
 import { FaTimes } from 'react-icons/fa';
@@ -39,7 +40,7 @@ const Sidebar = ({ isMobile, onCloseMobile, setActiveTab, activeTab }) => {
       children: [
         { id: 'myFamily', label: 'My Family', route: '/my-family', icon: <FiUsers size={17} /> },
         { id: 'myFamilyMembers', label: 'All Members', route: '/my-family-member', icon: <FiUsers size={17} /> },
-        { id: 'pendingRequests', label: 'Pending Requests', route: '/pending-request', icon: <FiClock size={17} />, requiresApproval: true },
+        { id: 'pendingRequests', label: 'Invite Links', route: '/pending-request', icon: <FiLink size={17} />, requiresApproval: true },
         // Only show Suggestion Approving for admins
         ...(userInfo?.role === 2 || userInfo?.role === 3 ? [
           { id: 'suggestionApproving', label: 'Suggestion Approving', route: '/suggestion-approving', icon: <FiClock size={17} /> }

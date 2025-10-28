@@ -307,4 +307,5 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
   );
 };
 
-export default FamilyMemberCard;
+// PHASE 3 OPTIMIZATION: Memoize FamilyMemberCard to prevent unnecessary re-renders
+export default React.memo(FamilyMemberCard);

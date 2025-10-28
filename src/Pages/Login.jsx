@@ -2,9 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthLogo from '../Components/AuthLogo';
 import { setAuthData, isAuthenticated } from '../utils/auth';
+import { useUser } from '../Contexts/UserContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { refetchUser } = useUser();
   const usernameRef = useRef(null);
   const passwordRef = useRef(null);
 
@@ -73,6 +75,9 @@ const Login = () => {
       
       // Use our auth utility to handle all storage operations
       setAuthData(data.accessToken, data.user, stayLoggedIn);
+      
+      // Trigger user data fetch immediately after login
+      await refetchUser();
       
       // Redirect to dashboard
       navigate('/dashboard');

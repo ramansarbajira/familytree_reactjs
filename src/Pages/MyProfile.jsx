@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import Layout from '../Components/Layout';
 import { FiEdit3, FiHeart, FiMessageCircle, FiGrid, FiPlusSquare, FiImage, FiSettings, FiCamera, FiTrash2 } from 'react-icons/fi';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import CreatePostModal from '../Components/CreatePostModal';
 import CreateAlbumModal from '../Components/CreateAlbumModal';
@@ -13,13 +14,9 @@ import { Phone, Mail } from 'lucide-react';
 
 const ProfilePage = () => {
     const [token, setToken] = useState(null);
-    const [loadingUserProfile, setLoadingUserProfile] = useState(true);
     const [user, setUser] = useState(null);
-    const { userInfo, userLoading, refetchUserInfo } = useUser();
-    const [userPosts, setUserPosts] = useState([]);
-    const [loadingPosts, setLoadingPosts] = useState(true);
-    const [loadingGalleries, setLoadingGalleries] = useState(true);
-
+    const { userInfo, userLoading } = useUser();
+    const queryClient = useQueryClient();
 
     const [showPosts, setShowPosts] = useState(true);
     const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
@@ -31,7 +28,6 @@ const ProfilePage = () => {
 
     const [isPostViewerOpen, setIsPostViewerOpen] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
-    const [userGalleries, setUserGalleries] = useState([]);
 
     // --- State for Edit operations ---
     const [isEditPostModalOpen, setIsEditPostModalOpen] = useState(false);
@@ -40,7 +36,6 @@ const ProfilePage = () => {
     const [albumToEdit, setAlbumToEdit] = useState(null);
     const [isBioExpanded, setIsBioExpanded] = useState(false);
     const toggleBioExpanded = () => setIsBioExpanded(!isBioExpanded);
-
 
     useEffect(() => {
         const storedToken = localStorage.getItem('access_token');
@@ -61,18 +56,17 @@ const ProfilePage = () => {
             contactNumber: userInfo.contactNumber || "",
             email: userInfo.email || "",
             familyCode: userInfo.familyCode || userInfo.raw?.familyMember?.familyCode || "Not assigned",
-            postsCount: userPosts.length,
-            galleryCount: userGalleries.length,
+            postsCount: 0,
+            galleryCount: 0,
         };
 
         setUser(userObj);  
-        setLoadingUserProfile(false);
-    }, [userInfo, userPosts, userGalleries]);
+    }, [userInfo]);
 
-    const fetchPosts = async () => {
-        if (!userInfo?.userId) return;
-        setLoadingPosts(true);
-        try {
+    // Use React Query for posts with caching
+    const { data: userPosts = [], isLoading: loadingPosts } = useQuery({
+        queryKey: ['userPosts', userInfo?.userId],
+        queryFn: async () => {
             const headers = {};
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
@@ -90,31 +84,28 @@ const ProfilePage = () => {
             const json = await response.json();
             const list = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
 
-            const formattedPosts = list.map((post) => ({
+            return list.map((post) => ({
                 id: post.id,
                 type: 'image',
-                url: post.postImage, // This is the relative path from the API
-                fullImageUrl: post.postImage, // Construct full URL
+                url: post.postImage,
+                fullImageUrl: post.postImage,
                 caption: post.caption,
                 likes: post.likeCount,
                 isLiked: post.isLiked,
                 comments: new Array(post.commentCount).fill(""),
-                privacy: post.privacy, // Add privacy if needed for edit form
-                familyCode: post.familyCode, // Add familyCode if needed for edit form
+                privacy: post.privacy,
+                familyCode: post.familyCode,
             }));
+        },
+        enabled: !!userInfo?.userId && !!token,
+        staleTime: 3 * 60 * 1000, // 3 minutes
+        cacheTime: 10 * 60 * 1000, // 10 minutes
+    });
 
-            setUserPosts(formattedPosts);
-        } catch (error) {
-            console.error("Failed to fetch posts:", error);
-        } finally {
-            setLoadingPosts(false);
-        }
-    };
-
-    const fetchGalleries = async () => {
-        if (!userInfo?.userId) return;
-        setLoadingGalleries(true);
-        try {
+    // Use React Query for galleries with caching
+    const { data: userGalleries = [], isLoading: loadingGalleries } = useQuery({
+        queryKey: ['userGalleries', userInfo?.userId],
+        queryFn: async () => {
             const headers = {};
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
@@ -132,7 +123,7 @@ const ProfilePage = () => {
             const json = await response.json();
             const list = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
 
-            const formattedGalleries = list.map((gallery) => ({
+            return list.map((gallery) => ({
                 id: gallery.id,
                 title: gallery.galleryTitle,
                 description: gallery.galleryDescription,
@@ -150,32 +141,41 @@ const ProfilePage = () => {
                     comments: [],
                 }))
             }));
+        },
+        enabled: !!userInfo?.userId && !!token,
+        staleTime: 3 * 60 * 1000, // 3 minutes
+        cacheTime: 10 * 60 * 1000, // 10 minutes
+    });
 
-            setUserGalleries(formattedGalleries);
-        } catch (error) {
-            console.error("Failed to fetch galleries:", error);
-        } finally {
-            setLoadingGalleries(false);
-        }
-    };
-
+    // Update user profile when userInfo or counts change
     useEffect(() => {
-        if (userInfo?.userId && token) {
-            fetchPosts();
-            fetchGalleries();
-        } else {
-            // Avoid infinite spinners when prerequisites are missing
-            setLoadingPosts(false);
-            setLoadingGalleries(false);
+        if (!userInfo) {
+            setUser(null);
+            return;
         }
-    }, [userInfo, token]);
+
+        const userObj = {
+            profileImage: userInfo.profileUrl || "/assets/user.png",
+            name: userInfo.name || "Username",
+            fullName: `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim(),
+            basicInfo: userInfo.bio ? userInfo.bio.split('.')[0] : "Family member",
+            bio: userInfo.bio || "No bio yet",
+            contactNumber: userInfo.contactNumber || "",
+            email: userInfo.email || "",
+            familyCode: userInfo.familyCode || userInfo.raw?.familyMember?.familyCode || "Not assigned",
+            postsCount: userPosts.length,
+            galleryCount: userGalleries.length,
+        };
+
+        setUser(userObj);
+    }, [userInfo, userPosts.length, userGalleries.length]);
 
     const handlePostCreated = () => {
-        fetchPosts();
+        queryClient.invalidateQueries({ queryKey: ['userPosts', userInfo?.userId] });
     };
 
     const onGalleryCreated = () => {
-        fetchGalleries();
+        queryClient.invalidateQueries({ queryKey: ['userGalleries', userInfo?.userId] });
     };
 
     const handleCreatePostClick = () => setIsCreatePostModalOpen(true);
@@ -219,8 +219,9 @@ const ProfilePage = () => {
         });
     };
 
-    const handleLikeToggle = async (postId, currentIsLiked) => {
-        try {
+    // Use mutation for like toggle with optimistic updates
+    const likeMutation = useMutation({
+        mutationFn: async ({ postId, currentIsLiked }) => {
             const url = `${import.meta.env.VITE_API_BASE_URL}/post/${postId}/${currentIsLiked ? 'unlike' : 'like'}`;
             const response = await fetch(url, {
                 method: 'POST',
@@ -233,17 +234,32 @@ const ProfilePage = () => {
             if (!response.ok) {
                 throw new Error(`Failed to toggle like: ${response.statusText}`);
             }
-
-            setUserPosts(prevPosts =>
-                prevPosts.map(post =>
+            return response.json();
+        },
+        onMutate: async ({ postId, currentIsLiked }) => {
+            // Optimistically update the cache
+            await queryClient.cancelQueries({ queryKey: ['userPosts', userInfo?.userId] });
+            const previousPosts = queryClient.getQueryData(['userPosts', userInfo?.userId]);
+            
+            queryClient.setQueryData(['userPosts', userInfo?.userId], (old) =>
+                old?.map(post =>
                     post.id === postId
                         ? { ...post, isLiked: !currentIsLiked, likes: currentIsLiked ? post.likes - 1 : post.likes + 1 }
                         : post
                 )
             );
-        } catch (error) {
-            console.error("Error toggling like:", error);
-        }
+            
+            return { previousPosts };
+        },
+        onError: (err, variables, context) => {
+            // Rollback on error
+            queryClient.setQueryData(['userPosts', userInfo?.userId], context.previousPosts);
+            console.error("Error toggling like:", err);
+        },
+    });
+
+    const handleLikeToggle = (postId, currentIsLiked) => {
+        likeMutation.mutate({ postId, currentIsLiked });
     };
 
     // --- Edit Handler for Posts ---
@@ -309,7 +325,7 @@ const ProfilePage = () => {
                 confirmButtonColor: '#3f982c',
             });
 
-            fetchPosts(); // Refresh posts
+            queryClient.invalidateQueries({ queryKey: ['userPosts', userInfo?.userId] }); // Refresh posts
             } catch (error) {
             console.error("Error deleting post:", error);
             Swal.fire({
@@ -325,7 +341,7 @@ const ProfilePage = () => {
     const handlePostUpdated = () => {
         setIsEditPostModalOpen(false);
         setPostToEditDetails(null);
-        fetchPosts();
+        queryClient.invalidateQueries({ queryKey: ['userPosts', userInfo?.userId] });
     };
 
     const handleEditAlbum = async (e, albumId, userId) => {
@@ -374,7 +390,7 @@ const ProfilePage = () => {
     const handleAlbumUpdated = () => {
         setIsEditAlbumModalOpen(false);
         setAlbumToEdit(null);
-        fetchGalleries();
+        queryClient.invalidateQueries({ queryKey: ['userGalleries', userInfo?.userId] });
     };
 
     const handleDeleteAlbum = async (e, albumId) => {
@@ -410,7 +426,7 @@ const ProfilePage = () => {
                     confirmButtonColor: '#3f982c',
                 });
 
-                fetchGalleries(); // Refresh album list
+                queryClient.invalidateQueries({ queryKey: ['userGalleries', userInfo?.userId] }); // Refresh album list
             } catch (error) {
                 console.error("Error deleting gallery:", error);
                 Swal.fire({
@@ -423,6 +439,8 @@ const ProfilePage = () => {
         }
     };
 
+    const loadingUserProfile = userLoading || !user;
+
     return (
         <Layout>
             <div className="mx-auto px-4 py-4 md:px-6 lg:px-8 space-y-8 font-inter">
@@ -431,7 +449,7 @@ const ProfilePage = () => {
                     <div className="flex justify-center items-center h-64">
                         <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-primary-600 border-solid"></div>
                     </div>
-                ) : (
+                ) : user && (
                     <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-8 border border-gray-100">
                         <div className="flex-shrink-0">
                             <img
