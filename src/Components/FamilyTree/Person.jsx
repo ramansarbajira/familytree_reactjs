@@ -6,6 +6,64 @@ import { FiEye } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { useNavigate, useParams } from 'react-router-dom';
 
+// Helper function to get inverse/opposite relationship code
+const getInverseRelationship = (relationshipCode) => {
+    if (!relationshipCode || relationshipCode === 'SELF') return relationshipCode;
+    
+    // Mapping of relationships to their inverses
+    const inverseMap = {
+        // Spouse relationships (opposite gender)
+        'H': 'W',
+        'W': 'H',
+        
+        // Parent-child relationships (opposite direction)
+        'F': 'S',  // Father -> Son (from child's perspective, father becomes son)
+        'M': 'D',  // Mother -> Daughter (from child's perspective, mother becomes daughter)
+        'S': 'F',  // Son -> Father
+        'D': 'M',  // Daughter -> Mother
+        
+        // Sibling relationships (opposite gender, same age order)
+        'B+': 'Z+', // Elder brother -> Elder sister
+        'B-': 'Z-', // Younger brother -> Younger sister
+        'Z+': 'B+', // Elder sister -> Elder brother
+        'Z-': 'B-', // Younger sister -> Younger brother
+        'B': 'Z',   // Brother -> Sister
+        'Z': 'B',   // Sister -> Brother
+    };
+    
+    // Parse the relationship code into components
+    const components = [];
+    let i = 0;
+    
+    while (i < relationshipCode.length) {
+        let char = relationshipCode[i];
+        let nextChar = relationshipCode[i + 1];
+        
+        // Check for two-character codes (like B+, B-, Z+, Z-)
+        if (nextChar === '+' || nextChar === '-') {
+            components.push(char + nextChar);
+            i += 2;
+        } else {
+            // Single character code
+            components.push(char);
+            i += 1;
+        }
+    }
+    
+    // Inverse each component
+    const inversedComponents = components.map(comp => inverseMap[comp] || comp);
+    
+    // Reverse the order for complex paths
+    // Example: "FB+" (Father's elder brother) becomes "Z+S" (Elder sister's son)
+    // This is because from the uncle's perspective, you are his sibling's child
+    inversedComponents.reverse();
+    
+    const result = inversedComponents.join('');
+    console.log(`🔄 Inverse relationship: ${relationshipCode} → ${result} (components: ${components.join(',')} → ${inversedComponents.join(',')})`);
+    
+    return result;
+};
+
 // Helper function to get proper gender label
 const getGenderLabel = (person, tree, currentUserId) => {
     if (!person.gender || person.gender === 'unknown' || person.gender === '') return '';
@@ -327,11 +385,60 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
         // All validations passed - proceed with navigation
         console.log(`✅ Navigation allowed: ${person.name} (${personFamilyCode}) → Current: ${code} → User: ${userInfo?.familyCode}`);
         
-        // Navigate to person's family tree with focus on this person
-        const uid = person.memberId || person.userId;
-        const query = new URLSearchParams({
-            focus: uid ? String(uid) : ''
-        }).toString();
+        // Determine focus and source based on relationship type
+        let focusUserId = person.memberId || person.userId;
+        let sourceCode = null;
+        
+        // Check if relationship ends with H or W (spouse relationship like Z+H, B+W)
+        if (relationshipCode && (relationshipCode.endsWith('H') || relationshipCode.endsWith('W'))) {
+            // For Z+H (Elder Sister's Husband):
+            // - Focus should be on Z+ (Elder Sister), not on the husband
+            // - Source should be Z+ (the spouse's relationship)
+            
+            // Find the spouse in the tree (the person who has this clicked person as spouse)
+            let spouseFound = null;
+            if (tree && tree.people) {
+                for (const [personId, p] of tree.people.entries()) {
+                    // Check if this person has the clicked person as their spouse
+                    const spouses = p.spouses instanceof Set 
+                        ? Array.from(p.spouses)
+                        : Array.isArray(p.spouses) 
+                        ? p.spouses 
+                        : [];
+                    
+                    if (spouses.includes(person.id)) {
+                        spouseFound = p;
+                        break;
+                    }
+                }
+            }
+            
+            if (spouseFound) {
+                // Focus on the spouse (Z+ instead of Z+H)
+                focusUserId = spouseFound.memberId || spouseFound.userId;
+                // Source is the spouse's relationship (Z+ from Z+H)
+                sourceCode = relationshipCode.slice(0, -1);
+                console.log(`🔗 Spouse relationship: ${relationshipCode} → Focus on spouse: ${spouseFound.name} (${focusUserId}), source: ${sourceCode}`);
+            } else {
+                // Fallback if spouse not found
+                sourceCode = relationshipCode.slice(0, -1);
+                console.log(`⚠️ Spouse not found in tree for ${relationshipCode}, using clicked person as focus`);
+            }
+        } else if (relationshipCode) {
+            // For direct relationships (Z+, B+, W, H, etc.), use inverse
+            sourceCode = getInverseRelationship(relationshipCode);
+            console.log(`🔗 Direct relationship: ${relationshipCode} → Focus: ${person.name}, inverse source: ${sourceCode}`);
+        }
+        
+        const queryParams = {
+            focus: focusUserId ? String(focusUserId) : ''
+        };
+        
+        if (sourceCode) {
+            queryParams.source = sourceCode;
+        }
+        
+        const query = new URLSearchParams(queryParams).toString();
         
         navigate(`/family-tree/${personFamilyCode}?${query}`);
     };

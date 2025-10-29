@@ -235,15 +235,19 @@ const FamilyTreePage = () => {
             console.log('🔍 Debug - code from URL:', code);
             console.log('🔍 Debug - userInfo.familyCode:', userInfo?.familyCode);
             console.log('🔍 Debug - familyCodeToUse:', familyCodeToUse);
-            // Read optional focus user from query string (use local var; state would be async)
+            // Read optional focus user and source from query string (use local var; state would be async)
             let focusFromQuery = null;
             let focusNameFromQuery = null;
+            let sourceFromQuery = null;
             try {
                 const params = new URLSearchParams(window.location.search);
                 const focus = params.get('focus');
                 focusFromQuery = focus ? String(focus) : null;
                 const fName = params.get('focusName');
                 focusNameFromQuery = fName ? String(fName) : null;
+                const source = params.get('source');
+                sourceFromQuery = source ? String(source) : null;
+                console.log('🔍 Debug - Query params:', { focus: focusFromQuery, focusName: focusNameFromQuery, source: sourceFromQuery });
             } catch {}
             
             if (!userInfo || !familyCodeToUse) {

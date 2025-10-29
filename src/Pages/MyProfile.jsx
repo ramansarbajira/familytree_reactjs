@@ -15,7 +15,7 @@ import { Phone, Mail } from 'lucide-react';
 const ProfilePage = () => {
     const [token, setToken] = useState(null);
     const [user, setUser] = useState(null);
-    const { userInfo, userLoading } = useUser();
+    const { userInfo, userLoading, refetchUser } = useUser();
     const queryClient = useQueryClient();
 
     const [showPosts, setShowPosts] = useState(true);
@@ -731,7 +731,7 @@ const ProfilePage = () => {
                 isOpen={isProfileFormModalOpen}
                 onClose={() => setIsProfileFormModalOpen(false)}
                 mode="edit-profile"
-                onProfileUpdated={refetchUserInfo}
+                onProfileUpdated={refetchUser}
             />
             <CreatePostModal
                 isOpen={isCreatePostModalOpen}
