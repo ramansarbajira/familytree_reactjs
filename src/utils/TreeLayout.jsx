@@ -22,23 +22,23 @@ export function autoArrange(tree) {
     const memberCount = tree.people.size;
     let nodesep, ranksep, marginx, marginy, coupleSpacing, nodeWidth, nodeHeight;
     
-    // Dynamic spacing based on tree size
+    // Dynamic spacing based on tree size - INCREASED to prevent overlap
     if (memberCount > 100) {
-        nodesep = 150;  // Increased horizontal spacing between nodes
-        ranksep = 180;  // Vertical spacing between generations
-        coupleSpacing = 40;  // Space between spouses (reduced for side-by-side)
+        nodesep = 250;  // Increased horizontal spacing between nodes
+        ranksep = 220;  // Vertical spacing between generations
+        coupleSpacing = 80;  // Space between spouses (increased to prevent overlap)
         nodeWidth = 200;  // Node width
         nodeHeight = 80;   // Node height
     } else if (memberCount > 50) {
-        nodesep = 140;
-        ranksep = 160;
-        coupleSpacing = 40;
+        nodesep = 220;
+        ranksep = 200;
+        coupleSpacing = 70;
         nodeWidth = 180;
         nodeHeight = 75;
     } else {
-        nodesep = 120;
-        ranksep = 140;
-        coupleSpacing = 40;  // Consistent spacing for side-by-side
+        nodesep = 200;
+        ranksep = 180;
+        coupleSpacing = 60;  // Increased spacing for side-by-side
         nodeWidth = 160;
         nodeHeight = 70;
     }
@@ -57,14 +57,10 @@ export function autoArrange(tree) {
         ranker: 'network-simplex',
         // Force same rank for spouses
         align: 'UL',
-        // Edge constraints for better spacing
-        edgesep: 50,
+        // Edge constraints for better spacing (FIXED: removed duplicate)
+        edgesep: 80,
         // Allow edges to be very short
         minlen: 1,
-        // Better edge routing
-        edgesep: 10,
-        // Use simpler edge routing
-        ranker: 'tight-tree',
         // Disable complex acyclicer to prevent errors
         acyclicer: undefined,
         // Optimize for large graphs
@@ -73,16 +69,16 @@ export function autoArrange(tree) {
     });
     g.setDefaultEdgeLabel(() => ({}));
 
-    const personNodeSize = memberCount > 80 ? 100 : 130; // Smaller nodes for large trees
+    const personNodeSize = memberCount > 80 ? 200 : 220; // Match actual card dimensions
     const familyNodeSize = 10;
     const familyUnits = new Map();
 
-    // Add all people as nodes
+    // Add all people as nodes with proper dimensions
     tree.people.forEach(p => {
         g.setNode(p.id.toString(), { 
             label: p.name, 
-            width: personNodeSize, 
-            height: personNodeSize,
+            width: nodeWidth,  // Use actual card width
+            height: nodeHeight, // Use actual card height
             // Add generation info for better clustering
             generation: p.generation || 0
         });
@@ -268,26 +264,26 @@ export function autoArrange(tree) {
             relationship: 'spouse'
         });
         
-        // Set node options for both spouses
+        // Set node options for both spouses with increased spacing
         const nodeOptions = {
             width: nodeWidth,  // Use the dynamic width based on tree size
             height: nodeHeight,  // Use the dynamic height based on tree size
             rank: 'same',
             constraint: true,
-            marginx: 30,  // Horizontal margin
-            marginy: 20,  // Vertical margin
-            padding: 20,  // Padding around nodes
+            marginx: 50,  // Increased horizontal margin
+            marginy: 30,  // Increased vertical margin
+            padding: 30,  // Increased padding around nodes
             fixed: false,
             // Add minimum spacing
-            minlen: 4,  // Increased minimum length
+            minlen: 2,  // Reduced for better spacing control
             // Ensure nodes don't overlap
             overlap: 'false',
             // Add more spacing around nodes
-            margin: 20,
+            margin: 30,
             // Fixed size constraints
             fixedsize: true,
             // More space for labels
-            labeloffset: 15,
+            labeloffset: 20,
             // Force node dimensions
             nodeDimensionsIncludeLabels: true
         };
