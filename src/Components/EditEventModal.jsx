@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiCalendar, FiClock, FiMapPin, FiFileText, FiImage, FiPlus, FiTrash2, FiLoader } from 'react-icons/fi';
 import {jwtDecode} from 'jwt-decode';
 import Swal from 'sweetalert2';
+import { useUser } from '../Contexts/UserContext';
 
 const EditEventModal = ({
   isOpen,
@@ -22,6 +23,8 @@ const EditEventModal = ({
 
   const [userId, setUserId] = useState(null);
   const [familyCode, setFamilyCode] = useState(null);
+
+  const { userInfo } = useUser();
 
   // Populate form with existing event data when modal opens
   useEffect(() => {
@@ -105,9 +108,9 @@ const EditEventModal = ({
       }
     };
 
-    if (isOpen) {
-      fetchUserData();
-    }
+    // if (isOpen) {
+    //   fetchUserData();
+    // }
   }, [isOpen, apiBaseUrl]);
 
   if (!isOpen || !event) return null;
@@ -127,7 +130,7 @@ const EditEventModal = ({
     e.preventDefault();
     setIsLoading(true);
 
-    if (!userId || !familyCode) {
+    if (!userInfo?.userId || !userInfo?.familyCode) {
       Swal.fire({
         icon: 'error',
         title: 'Missing Information',
@@ -147,7 +150,7 @@ const EditEventModal = ({
       formData.append('eventDate', date);
       formData.append('eventTime', time);
       formData.append('location', location);
-      formData.append('familyCode', familyCode);
+      formData.append('familyCode', userInfo?.familyCode);
 
       // Add new images
       images.forEach((img) => {

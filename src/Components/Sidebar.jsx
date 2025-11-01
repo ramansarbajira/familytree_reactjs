@@ -17,7 +17,7 @@ import { RiGitMergeLine } from 'react-icons/ri';
 import { FaTimes } from 'react-icons/fa';
 import { useUser } from '../Contexts/UserContext';
 
-const Sidebar = ({ isMobile, onCloseMobile, setActiveTab, activeTab }) => {
+const Sidebar = ({ isMobile, onCloseMobile, setActiveTab, activeTab , collapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedParents, setExpandedParents] = useState({});
@@ -155,22 +155,17 @@ const Sidebar = ({ isMobile, onCloseMobile, setActiveTab, activeTab }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white  border-gray-100 shadow-xl"> {/* Adjusted shadow and border-radius */}
-      <div className="flex items-center justify-between px-6 py-3  flex-shrink-0 shadow-md">
-        {isMobile && (
-          <button onClick={onCloseMobile} className="text-gray-500 hover:text-gray-700 transition-colors mr-4">
-            <FaTimes size={24} />
-          </button>
-        )}
-        <div className="flex items-center gap-3 ml-auto sm:ml-0">
-          <div className="w-10 h-10 flex-shrink-0"> {/* Adjusted to w-10 h-10 for consistency */}
-            <img src="/assets/logo-green-light.png" alt="Familyss Logo" className="w-full h-full object-cover rounded-full" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800">Familyss</h2> {/* Removed hidden sm:block, assuming desktop sidebar is always wide enough */}
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto py-5 px-4 custom-scrollbar scroll-smooth">
+    <div
+      className={`flex flex-col h-full bg-white border-gray-100 shadow-xl sidebar-content transition-all  duration-200 ${
+        collapsed ? "w-20" : "w-74"
+      }`}
+    >
+      {/* Removed Logo and Heading */}
+      <div
+        className={`${
+          isMobile ? "pt-0" : "pt-6"
+        } flex-1 overflow-y-auto py-5 px-4 custom-scrollbar scroll-smooth`}
+      >
         <nav className="space-y-1.5">
           {filteredMenuItems.map((item) => (
             <div key={item.id}>
@@ -178,38 +173,58 @@ const Sidebar = ({ isMobile, onCloseMobile, setActiveTab, activeTab }) => {
                 <div>
                   <button
                     className={`bg-unset flex items-center w-full px-4 py-3 rounded-lg text-left transition-all duration-200 focus:outline-none focus:ring-2
-                      ${isLinkActive(item)
-                        ? 'text-primary-700 bg-primary-50 font-semibold'
-                        : 'text-gray-700 hover:text-primary-600 hover:bg-gray-50'
+                      ${
+                        isLinkActive(item)
+                          ? "text-primary-700 bg-primary-50 font-semibold"
+                          : "text-gray-700 hover:text-primary-600 hover:bg-gray-50"
                       }`}
                     onClick={() => handleItemClick(item)}
                   >
-                    <span className={`mr-4 text-xl ${isLinkActive(item) ? 'text-primary-500' : 'text-gray-500'}`}>
+                    <span
+                      className={`mr-4 text-xl ${
+                        isLinkActive(item)
+                          ? "text-primary-500"
+                          : "text-gray-500"
+                      }`}
+                    >
                       {item.icon}
                     </span>
-                    <span className="flex-1 text-base">{item.label}</span>
-                    <span className={`transform transition-transform duration-200 text-gray-500 ${
-                      expandedParents[item.id] ? 'rotate-180' : ''
-                    }`}>
-                      <FiChevronDown size={16} />
-                    </span>
+                    {!collapsed && (
+                      <span className="flex-1 text-base">{item.label}</span>
+                    )}
+                    {!collapsed && (
+                      <span
+                        className={`transform transition-transform duration-200 text-gray-500 ${
+                          expandedParents[item.id] ? "rotate-180" : ""
+                        }`}
+                      >
+                        <FiChevronDown size={16} />
+                      </span>
+                    )}
                   </button>
-                  {expandedParents[item.id] && (
+                  {expandedParents[item.id] && !collapsed && (
                     <div className="ml-12 mt-1 space-y-1 border-l border-gray-200 pl-2">
                       {item.children.map((child) => (
                         <button
                           key={child.id}
                           className={`bg-unset flex items-center w-full px-4 py-2.5 rounded-lg text-left text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-200
-                            ${isChildActive(child)
-                              ? 'text-primary-600 bg-primary-50 font-medium'
-                              : 'text-gray-600 hover:text-primary-500 hover:bg-gray-100'
+                            ${
+                              isChildActive(child)
+                                ? "text-primary-600 bg-primary-50 font-medium"
+                                : "text-gray-600 hover:text-primary-500 hover:bg-gray-100"
                             }`}
                           onClick={() => handleItemClick(child)}
                         >
-                          <span className={`mr-3 ${isChildActive(child) ? 'text-primary-400' : 'text-gray-400'}`}>
+                          <span
+                            className={`mr-3 ${
+                              isChildActive(child)
+                                ? "text-primary-400"
+                                : "text-gray-400"
+                            }`}
+                          >
                             {child.icon}
                           </span>
-                          {child.label}
+                          {!collapsed && child.label}
                         </button>
                       ))}
                     </div>
@@ -218,16 +233,23 @@ const Sidebar = ({ isMobile, onCloseMobile, setActiveTab, activeTab }) => {
               ) : (
                 <button
                   className={`bg-unset flex items-center w-full px-4 py-3 rounded-lg text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-300
-                    ${isLinkActive(item)
-                      ? 'text-primary-700 bg-primary-50 font-semibold'
-                      : 'text-gray-700 hover:text-primary-600 hover:bg-gray-50'
+                    ${
+                      isLinkActive(item)
+                        ? "text-primary-700 bg-primary-50 font-semibold"
+                        : "text-gray-700 hover:text-primary-600 hover:bg-gray-50"
                     }`}
                   onClick={() => handleItemClick(item)}
                 >
-                  <span className={`mr-4 text-xl ${isLinkActive(item) ? 'text-primary-500' : 'text-gray-500'}`}>
+                  <span
+                    className={`mr-4 text-xl ${
+                      isLinkActive(item) ? "text-primary-500" : "text-gray-500"
+                    }`}
+                  >
                     {item.icon}
                   </span>
-                  <span className="text-base">{item.label}</span>
+                  {!collapsed && (
+                    <span className="text-base">{item.label}</span>
+                  )}
                 </button>
               )}
             </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiCalendar, FiClock, FiMapPin, FiFileText, FiImage, FiPlus, FiLoader, FiCheckCircle } from 'react-icons/fi';
 import {jwtDecode} from 'jwt-decode';
 import Swal from 'sweetalert2';
+import { useUser } from '../Contexts/UserContext';
 
 const CreateEventModal = ({
   isOpen,
@@ -22,7 +23,10 @@ const CreateEventModal = ({
   const [userId, setUserId] = useState(null);
   const [familyCode, setFamilyCode] = useState(null);
 
+  const { userInfo } = useUser();
+
   useEffect(() => {
+    console.log("User Info in CreateEventModal:", userInfo);
     // console.log('🔗 API Base URL:', apiBaseUrl);
     // console.log('🌍 Environment VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
   }, [apiBaseUrl]);
@@ -91,9 +95,9 @@ const CreateEventModal = ({
       }
     };
 
-    if (isOpen) {
-      fetchUserData();
-    }
+    // if (isOpen) {
+    //   fetchUserData();
+    // }
   }, [isOpen, apiBaseUrl]);
 
   if (!isOpen) return null;
@@ -108,7 +112,7 @@ const CreateEventModal = ({
     e.preventDefault();
     setIsLoading(true);
 
-    if (!userId || !familyCode) {
+    if (!userInfo?.userId || !userInfo?.familyCode) {
       Swal.fire({ icon: 'warning', title: 'Missing info', text: 'User ID or Family Code missing.' });
       setIsLoading(false);
       return;
@@ -118,13 +122,13 @@ const CreateEventModal = ({
       const token = localStorage.getItem('access_token');
 
       const formData = new FormData();
-      formData.append('userId', userId);
+      formData.append("userId", userInfo?.userId);
       formData.append('eventTitle', title);
       formData.append('eventDescription', description);
       formData.append('eventDate', date);
       formData.append('eventTime', time);
       formData.append('location', location);
-      formData.append('familyCode', familyCode);
+      formData.append("familyCode", userInfo?.familyCode);
 
       images.forEach((img) => {
         formData.append('eventImages', img);  
