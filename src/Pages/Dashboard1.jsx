@@ -1,3 +1,6 @@
+
+//nov 2 - dash board view changes
+
 import React, { useState, useMemo } from "react";
 import Layout from "../Components/Layout";
 import { useUser } from "../Contexts/UserContext";
@@ -13,7 +16,7 @@ import { getToken } from "../utils/auth";
 import { useQuery } from "@tanstack/react-query";
 import PostPage from "./PostPage";
 
-const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
+const Dashboard1 = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isCreateAlbumModalOpen, setIsCreateAlbumModalOpen] = useState(false);
@@ -236,4 +239,4 @@ const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
   );
 };
 
-export default Dashboard;
+export default Dashboard1;
