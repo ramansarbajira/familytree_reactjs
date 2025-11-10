@@ -1,7 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { FiX, FiCalendar, FiClock, FiMapPin, FiFileText, FiImage, FiPlus, FiTrash2, FiLoader } from 'react-icons/fi';
-import {jwtDecode} from 'jwt-decode';
-import Swal from 'sweetalert2';
+import React, { useState, useEffect } from "react";
+import {
+  FiX,
+  FiCalendar,
+  FiClock,
+  FiMapPin,
+  FiFileText,
+  FiImage,
+  FiPlus,
+  FiTrash2,
+  FiLoader,
+} from "react-icons/fi";
+import { jwtDecode } from "jwt-decode";
+import Swal from "sweetalert2";
 
 const EditEventModal = ({
   isOpen,
@@ -10,11 +20,11 @@ const EditEventModal = ({
   onEventUpdated,
   apiBaseUrl = import.meta.env.VITE_API_BASE_URL,
 }) => {
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-  const [location, setLocation] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
@@ -26,11 +36,11 @@ const EditEventModal = ({
   // Populate form with existing event data when modal opens
   useEffect(() => {
     if (isOpen && event) {
-      setTitle(event.title || '');
-      setDate(event.date || '');
-      setTime(event.time || '');
-      setLocation(event.location || '');
-      setDescription(event.description || '');
+      setTitle(event.title || "");
+      setDate(event.date || "");
+      setTime(event.time || "");
+      setLocation(event.location || "");
+      setDescription(event.description || "");
       setExistingImages(event.eventImages || []);
       setImages([]);
       setImagePreviews([]);
@@ -41,14 +51,14 @@ const EditEventModal = ({
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem("access_token");
 
         if (!token) {
           Swal.fire({
-            icon: 'error',
-            title: 'Authentication Error',
-            text: 'No access token found.',
-            confirmButtonColor: '#10b981'
+            icon: "error",
+            title: "Authentication Error",
+            text: "No access token found.",
+            confirmButtonColor: "#10b981",
           });
           return;
         }
@@ -57,10 +67,10 @@ const EditEventModal = ({
         const uid = decoded.id || decoded.userId;
         if (!uid) {
           Swal.fire({
-            icon: 'error',
-            title: 'Authentication Error',
-            text: 'User ID not found in token.',
-            confirmButtonColor: '#10b981'
+            icon: "error",
+            title: "Authentication Error",
+            text: "User ID not found in token.",
+            confirmButtonColor: "#10b981",
           });
           return;
         }
@@ -73,12 +83,12 @@ const EditEventModal = ({
 
         if (!res.ok) {
           const errorText = await res.text();
-          console.error('❌ User API failed:', errorText);
+          console.error("❌ User API failed:", errorText);
           Swal.fire({
-            icon: 'error',
-            title: 'API Error',
+            icon: "error",
+            title: "API Error",
             text: `API Error: ${res.status} - ${errorText}`,
-            confirmButtonColor: '#10b981'
+            confirmButtonColor: "#10b981",
           });
           return;
         }
@@ -90,17 +100,17 @@ const EditEventModal = ({
 
         if (fc) {
           setFamilyCode(fc);
-          console.log('✅ Family Code set:', fc);
+          console.log("✅ Family Code set:", fc);
         } else {
-          console.warn('❌ No familyCode found in API response');
+          console.warn("❌ No familyCode found in API response");
         }
       } catch (err) {
-        console.error('💥 Fetch user error:', err);
+        console.error("💥 Fetch user error:", err);
         Swal.fire({
-          icon: 'error',
-          title: 'Error',
+          icon: "error",
+          title: "Error",
           text: `Error fetching user data: ${err.message}`,
-          confirmButtonColor: '#10b981'
+          confirmButtonColor: "#10b981",
         });
       }
     };
@@ -129,40 +139,40 @@ const EditEventModal = ({
 
     if (!userId || !familyCode) {
       Swal.fire({
-        icon: 'error',
-        title: 'Missing Information',
-        text: 'User ID or Family Code missing.',
-        confirmButtonColor: '#10b981'
+        icon: "error",
+        title: "Missing Information",
+        text: "User ID or Family Code missing.",
+        confirmButtonColor: "#10b981",
       });
       setIsLoading(false);
       return;
     }
 
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem("access_token");
 
       const formData = new FormData();
-      formData.append('eventTitle', title);
-      formData.append('eventDescription', description);
-      formData.append('eventDate', date);
-      formData.append('eventTime', time);
-      formData.append('location', location);
-      formData.append('familyCode', familyCode);
+      formData.append("eventTitle", title);
+      formData.append("eventDescription", description);
+      formData.append("eventDate", date);
+      formData.append("eventTime", time);
+      formData.append("location", location);
+      formData.append("familyCode", familyCode);
 
       // Add new images
       images.forEach((img) => {
-        formData.append('eventImages', img);
+        formData.append("eventImages", img);
       });
 
       // Add remaining existing images (those that weren't removed)
       existingImages.forEach((img) => {
-        formData.append('eventImages', img);
+        formData.append("eventImages", img);
       });
 
       const updateEndpoint = `${apiBaseUrl}/event/edit/${event.id}`;
 
       const response = await fetch(updateEndpoint, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -171,19 +181,19 @@ const EditEventModal = ({
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error('❌ Update event API error:', errText);
+        console.error("❌ Update event API error:", errText);
         Swal.fire({
-          icon: 'error',
-          title: 'Update Event Error',
+          icon: "error",
+          title: "Update Event Error",
           text: `Update Event Error: ${response.status} - ${errText}`,
-          confirmButtonColor: '#10b981'
+          confirmButtonColor: "#10b981",
         });
         setIsLoading(false);
         return;
       }
 
       const resData = await response.json();
-      console.log('✅ Event updated successfully:', resData);
+      console.log("✅ Event updated successfully:", resData);
 
       // Call the callback to refresh events
       if (onEventUpdated) {
@@ -192,12 +202,12 @@ const EditEventModal = ({
 
       onClose();
     } catch (err) {
-      console.error('💥 Error updating event:', err);
+      console.error("💥 Error updating event:", err);
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
+        icon: "error",
+        title: "Error",
         text: `Something went wrong: ${err.message}`,
-        confirmButtonColor: '#10b981'
+        confirmButtonColor: "#10b981",
       });
     } finally {
       setIsLoading(false);
@@ -222,7 +232,9 @@ const EditEventModal = ({
               </div>
               <div>
                 <h2 className="text-xl font-bold">Edit Event</h2>
-                <p className="text-primary-100 text-xs">Update your event details</p>
+                <p className="text-primary-100 text-xs">
+                  Update your event details
+                </p>
               </div>
             </div>
           </div>
@@ -359,7 +371,7 @@ const EditEventModal = ({
                 </div>
                 Add New Images
               </label>
-              
+
               {imagePreviews.length > 0 ? (
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -371,14 +383,18 @@ const EditEventModal = ({
                           className="w-full h-24 object-cover rounded-xl border-2 border-gray-200"
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                          <span className="text-white text-xs font-medium">New Image {idx + 1}</span>
+                          <span className="text-white text-xs font-medium">
+                            New Image {idx + 1}
+                          </span>
                         </div>
                       </div>
                     ))}
                   </div>
                   <button
                     type="button"
-                    onClick={() => document.getElementById('edit-event-image-input').click()}
+                    onClick={() =>
+                      document.getElementById("edit-event-image-input").click()
+                    }
                     className="bg-unset w-full py-3 border-2 border-dashed border-primary-300 rounded-xl text-primary-600 hover:bg-primary-50 transition-colors flex items-center justify-center gap-2"
                   >
                     <FiPlus size={16} />
@@ -388,16 +404,22 @@ const EditEventModal = ({
               ) : (
                 <div
                   className="w-full min-h-32 border-2 border-dashed border-primary-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-primary-50 transition-colors p-6"
-                  onClick={() => document.getElementById('edit-event-image-input').click()}
+                  onClick={() =>
+                    document.getElementById("edit-event-image-input").click()
+                  }
                 >
                   <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mb-3">
                     <FiImage size={24} className="text-primary-600" />
                   </div>
-                  <p className="text-primary-600 font-medium mb-1">Add New Images</p>
-                  <p className="text-gray-500 text-sm text-center">Click to select multiple images</p>
+                  <p className="text-primary-600 font-medium mb-1">
+                    Add New Images
+                  </p>
+                  <p className="text-gray-500 text-sm text-center">
+                    Click to select multiple images
+                  </p>
                 </div>
               )}
-              
+
               <input
                 id="edit-event-image-input"
                 type="file"
@@ -433,7 +455,7 @@ const EditEventModal = ({
                   Updating...
                 </>
               ) : (
-                'Update Event'
+                "Update Event"
               )}
             </button>
           </div>
@@ -443,4 +465,4 @@ const EditEventModal = ({
   );
 };
 
-export default EditEventModal; 
+export default EditEventModal;

@@ -152,16 +152,16 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 margin: '2px'
             };
         } else {
-            // Normal size for small trees
+            // Normal size for small trees - compact for better layout
             return {
-                width: window.innerWidth <= 600 ? 110 : 170,
-                height: window.innerWidth <= 600 ? 140 : 220,
-                fontSizeName: window.innerWidth <= 600 ? 11 : 13,
-                fontSizeDetails: window.innerWidth <= 600 ? 10 : 12,
-                fontSizeRelationship: window.innerWidth <= 600 ? 9 : 11,
-                profileSize: window.innerWidth <= 600 ? 40 : 64,
-                padding: window.innerWidth <= 600 ? '4px' : '6px',
-                margin: window.innerWidth <= 600 ? '1px' : '8px'
+                width: window.innerWidth <= 600 ? 110 : 160, // Reduced width
+                height: window.innerWidth <= 600 ? 100 : 140, // Reduced height for compact display
+                fontSizeName: window.innerWidth <= 600 ? 11 : 12,
+                fontSizeDetails: window.innerWidth <= 600 ? 10 : 11,
+                fontSizeRelationship: window.innerWidth <= 600 ? 9 : 10,
+                profileSize: window.innerWidth <= 600 ? 38 : 52, // Smaller profile
+                padding: window.innerWidth <= 600 ? '2px' : '3px', // Minimal padding
+                margin: window.innerWidth <= 600 ? '1px' : '4px' // Minimal margin
             };
         }
     }, [memberCount]);
@@ -450,7 +450,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
 
 
     return (
-        <div id={`person-${person.id}`} className="person-container" style={{ position: 'absolute', left: `${person.x - width / 2}px`, top: `${person.y - height / 2}px` }}>
+        <div id={`person-${person.id}`} className="person-container" style={{ position: 'absolute', left: `${person.x - width / 2}px`, top: `${person.y - height / 2}px`, zIndex: 10 }}>
             {/* Main Person Card */}
             <div
                 className={`person ${person.gender} ${isRoot ? 'root' : ''} ${isNew ? 'person-new' : ''} ${isSelected ? 'person-selected' : ''} ${
@@ -460,10 +460,16 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                     position: 'relative',
                     minWidth: width,
                     maxWidth: memberCount > 50 ? 200 : 250,
-                    width: 'fit-content',
+                    width: width, // Fixed width instead of fit-content
                     minHeight: height,
+                    height: height, // Fixed height
                     margin: margin,
                     padding: padding,
+                    borderRadius: '4px', // Minimal rounded corners - almost square for perfect line connection
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     opacity: person.lifeStatus === 'remembering' ? 0.8 : 1,
                     background: isRoot
                       ? 'linear-gradient(135deg, #fceabb 0%, #f8b500 100%)' // gold gradient for root
@@ -619,12 +625,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                         {person.name || [person.firstName, person.lastName].filter(Boolean).join(' ').trim() || (language === 'tamil' ? 'பெயரில்லாத உறுப்பினர்' : 'Family Member')}
                     </span>
                 </div>
-                {/* Show relationship code and label below name */}
-                {relationshipCode && (
-                  <span className="details text-xs text-blue-700 text-center font-mono mb-1" style={{fontSize: `${fontSizeDetails}px`}}>
-                    {displayRelationshipCode}
-                  </span>
-                )}
+                {/* Relationship code removed - not needed for display */}
                 <span 
                     className="details text-xs text-gray-600 text-center font-medium mb-1" 
                     style={{fontSize: `${fontSizeDetails}px`}}

@@ -13,6 +13,7 @@ const MyProfile = lazy(() => import('./Pages/MyProfile'));
 const MyFamilyMember = lazy(() => import('./Pages/MyFamilyMember'));
 const MyFamily = lazy(() => import('./Pages/MyFamily'));
 const FamilyTreePage = lazy(() => import('./Pages/FamilyTreePage'));
+const FamilyTreeHierarchical = lazy(() => import('./Pages/FamilyTreeHierarchical'));
 const PendingFamilyRequests = lazy(() => import('./Pages/PendingFamilyRequests'));
 const PostsAndFeedsPage = lazy(() => import('./Pages/PostsAndFeedsPage'));
 const FamilyGalleryPage = lazy(() => import('./Pages/FamilyGalleryPage'));
@@ -78,6 +79,9 @@ function App() {
           <Route path="/my-family" element={<PrivateRoute><LanguageProvider><MyFamily /></LanguageProvider></PrivateRoute>  } />
           <Route path="/family-tree" element={<PrivateRoute><LanguageProvider><FamilyTreePage /></LanguageProvider></PrivateRoute>  } />
           <Route path="/family-tree/:code" element={<PrivateRoute><LanguageProvider><FamilyTreePage /></LanguageProvider></PrivateRoute>  } />
+          {/* Alternative hierarchical-only view */}
+          <Route path="/family-tree-hierarchical" element={<PrivateRoute><LanguageProvider><FamilyTreeHierarchical /></LanguageProvider></PrivateRoute>  } />
+          <Route path="/family-tree-hierarchical/:code" element={<PrivateRoute><LanguageProvider><FamilyTreeHierarchical /></LanguageProvider></PrivateRoute>  } />
           <Route path="/associated-family-tree/:code" element={<PrivateRoute><LanguageProvider><FamilyTreeProvider><AssociatedFamilyTreePage /></FamilyTreeProvider></LanguageProvider></PrivateRoute>} />
           <Route path="/associated-family-tree-user/:userId" element={<PrivateRoute><LanguageProvider><FamilyTreeProvider><AssociatedFamilyTreePage /></FamilyTreeProvider></LanguageProvider></PrivateRoute>} />
 

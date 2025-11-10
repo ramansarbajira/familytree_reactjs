@@ -1,18 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { FiX, FiCalendar, FiClock, FiMapPin, FiFileText, FiImage, FiPlus, FiLoader, FiCheckCircle } from 'react-icons/fi';
-import {jwtDecode} from 'jwt-decode';
-import Swal from 'sweetalert2';
+import React, { useState, useEffect } from "react";
+import {
+  FiX,
+  FiCalendar,
+  FiClock,
+  FiMapPin,
+  FiFileText,
+  FiImage,
+  FiPlus,
+  FiLoader,
+  FiCheckCircle,
+} from "react-icons/fi";
+import { jwtDecode } from "jwt-decode";
+import Swal from "sweetalert2";
+import { useUser } from "../Contexts/UserContext";
 
 const CreateEventModal = ({
   isOpen,
   onClose,
   apiBaseUrl = import.meta.env.VITE_API_BASE_URL,
 }) => {
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-  const [location, setLocation] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +33,10 @@ const CreateEventModal = ({
   const [userId, setUserId] = useState(null);
   const [familyCode, setFamilyCode] = useState(null);
 
+  const { userInfo } = useUser();
+
   useEffect(() => {
+    console.log("User Info in CreateEventModal:", userInfo);
     // console.log('🔗 API Base URL:', apiBaseUrl);
     // console.log('🌍 Environment VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
   }, [apiBaseUrl]);
@@ -30,11 +44,11 @@ const CreateEventModal = ({
   // NEW: Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setTitle('');
-      setDate('');
-      setTime('');
-      setLocation('');
-      setDescription('');
+      setTitle("");
+      setDate("");
+      setTime("");
+      setLocation("");
+      setDescription("");
       setImages([]);
       setImagePreviews([]);
       setShowSuccess(false);
@@ -44,10 +58,14 @@ const CreateEventModal = ({
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem("access_token");
 
         if (!token) {
-          Swal.fire({ icon: 'warning', title: 'No access token', text: 'Please sign in again.' });
+          Swal.fire({
+            icon: "warning",
+            title: "No access token",
+            text: "Please sign in again.",
+          });
           return;
         }
 
@@ -55,7 +73,11 @@ const CreateEventModal = ({
 
         const uid = decoded.id || decoded.userId;
         if (!uid) {
-          Swal.fire({ icon: 'error', title: 'User ID not found', text: 'Please sign in again.' });
+          Swal.fire({
+            icon: "error",
+            title: "User ID not found",
+            text: "Please sign in again.",
+          });
           return;
         }
         setUserId(uid);
@@ -68,8 +90,12 @@ const CreateEventModal = ({
 
         if (!res.ok) {
           const errorText = await res.text();
-          console.error('❌ User API failed:', errorText);
-          Swal.fire({ icon: 'error', title: 'API Error', text: `${res.status} - ${errorText}` });
+          console.error("❌ User API failed:", errorText);
+          Swal.fire({
+            icon: "error",
+            title: "API Error",
+            text: `${res.status} - ${errorText}`,
+          });
           return;
         }
 
@@ -81,19 +107,23 @@ const CreateEventModal = ({
 
         if (fc) {
           setFamilyCode(fc);
-          console.log('✅ Family Code set:', fc);
+          console.log("✅ Family Code set:", fc);
         } else {
-          console.warn('❌ No familyCode found in API response');
+          console.warn("❌ No familyCode found in API response");
         }
       } catch (err) {
-        console.error('💥 Fetch user error:', err);
-        Swal.fire({ icon: 'error', title: 'Fetch failed', text: `Error fetching user data: ${err.message}` });
+        console.error("💥 Fetch user error:", err);
+        Swal.fire({
+          icon: "error",
+          title: "Fetch failed",
+          text: `Error fetching user data: ${err.message}`,
+        });
       }
     };
 
-    if (isOpen) {
-      fetchUserData();
-    }
+    // if (isOpen) {
+    //   fetchUserData();
+    // }
   }, [isOpen, apiBaseUrl]);
 
   if (!isOpen) return null;
@@ -108,32 +138,36 @@ const CreateEventModal = ({
     e.preventDefault();
     setIsLoading(true);
 
-    if (!userId || !familyCode) {
-      Swal.fire({ icon: 'warning', title: 'Missing info', text: 'User ID or Family Code missing.' });
+    if (!userInfo?.userId || !userInfo?.familyCode) {
+      Swal.fire({
+        icon: "warning",
+        title: "Missing info",
+        text: "User ID or Family Code missing.",
+      });
       setIsLoading(false);
       return;
     }
 
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem("access_token");
 
       const formData = new FormData();
-      formData.append('userId', userId);
-      formData.append('eventTitle', title);
-      formData.append('eventDescription', description);
-      formData.append('eventDate', date);
-      formData.append('eventTime', time);
-      formData.append('location', location);
-      formData.append('familyCode', familyCode);
+      formData.append("userId", userInfo?.userId);
+      formData.append("eventTitle", title);
+      formData.append("eventDescription", description);
+      formData.append("eventDate", date);
+      formData.append("eventTime", time);
+      formData.append("location", location);
+      formData.append("familyCode", userInfo?.familyCode);
 
       images.forEach((img) => {
-        formData.append('eventImages', img);  
+        formData.append("eventImages", img);
       });
 
       const createEndpoint = `${apiBaseUrl}/event/create`;
 
       const response = await fetch(createEndpoint, {
-        method: 'POST',
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -142,8 +176,12 @@ const CreateEventModal = ({
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error('❌ Create event API error:', errText);
-        Swal.fire({ icon: 'error', title: 'Create Event Error', text: `${response.status} - ${errText}` });
+        console.error("❌ Create event API error:", errText);
+        Swal.fire({
+          icon: "error",
+          title: "Create Event Error",
+          text: `${response.status} - ${errText}`,
+        });
         setIsLoading(false);
         return;
       }
@@ -152,10 +190,13 @@ const CreateEventModal = ({
 
       // NEW: Show success popup
       setShowSuccess(true);
-
     } catch (err) {
-      console.error('💥 Error creating event:', err);
-      Swal.fire({ icon: 'error', title: 'Something went wrong', text: err.message });
+      console.error("💥 Error creating event:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Something went wrong",
+        text: err.message,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -171,18 +212,22 @@ const CreateEventModal = ({
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 mx-auto">
                 <FiCheckCircle size={40} className="text-green-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">Success!</h3>
-              <p className="text-gray-600 mb-6 text-lg">Event created successfully.</p>
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                Success!
+              </h3>
+              <p className="text-gray-600 mb-6 text-lg">
+                Event created successfully.
+              </p>
               <button
                 className="bg-green-600 text-white px-8 py-2 rounded-full font-semibold text-lg shadow hover:bg-green-700 transition"
                 onClick={() => {
                   setShowSuccess(false);
                   // Reset form
-                  setTitle('');
-                  setDate('');
-                  setTime('');
-                  setLocation('');
-                  setDescription('');
+                  setTitle("");
+                  setDate("");
+                  setTime("");
+                  setLocation("");
+                  setDescription("");
                   setImages([]);
                   setImagePreviews([]);
                   onClose();
@@ -209,7 +254,9 @@ const CreateEventModal = ({
               </div>
               <div>
                 <h2 className="text-xl font-bold">Create New Event</h2>
-                <p className="text-primary-100 text-xs">Plan your next family gathering</p>
+                <p className="text-primary-100 text-xs">
+                  Plan your next family gathering
+                </p>
               </div>
             </div>
           </div>
@@ -313,7 +360,7 @@ const CreateEventModal = ({
                 </div>
                 Event Images
               </label>
-              
+
               {imagePreviews.length > 0 ? (
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -325,15 +372,19 @@ const CreateEventModal = ({
                           className="w-full h-24 object-cover rounded-xl border-2 border-gray-200"
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                          <span className="text-white text-xs font-medium">Image {idx + 1}</span>
+                          <span className="text-white text-xs font-medium">
+                            Image {idx + 1}
+                          </span>
                         </div>
                       </div>
                     ))}
                   </div>
                   <button
                     type="button"
-                    onClick={() => document.getElementById('event-image-input').click()}
-                   className="w-full py-3 border-2 border-dashed border-primary-300 rounded-xl text-primary-600 bg-white hover:bg-primary-50 transition-colors flex items-center justify-center gap-2"
+                    onClick={() =>
+                      document.getElementById("event-image-input").click()
+                    }
+                    className="w-full py-3 border-2 border-dashed border-primary-300 rounded-xl text-primary-600 bg-white hover:bg-primary-50 transition-colors flex items-center justify-center gap-2"
                   >
                     <FiPlus size={16} />
                     Add More Images
@@ -342,16 +393,22 @@ const CreateEventModal = ({
               ) : (
                 <div
                   className="w-full min-h-32 border-2 border-dashed border-primary-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-primary-50 transition-colors p-6"
-                  onClick={() => document.getElementById('event-image-input').click()}
+                  onClick={() =>
+                    document.getElementById("event-image-input").click()
+                  }
                 >
                   <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mb-3">
                     <FiImage size={24} className="text-primary-600" />
                   </div>
-                  <p className="text-primary-600 font-medium mb-1">Upload Event Images</p>
-                  <p className="text-gray-500 text-sm text-center">Click to select multiple images</p>
+                  <p className="text-primary-600 font-medium mb-1">
+                    Upload Event Images
+                  </p>
+                  <p className="text-gray-500 text-sm text-center">
+                    Click to select multiple images
+                  </p>
                 </div>
               )}
-              
+
               <input
                 id="event-image-input"
                 type="file"
@@ -387,7 +444,7 @@ const CreateEventModal = ({
                   Creating...
                 </>
               ) : (
-                'Create Event'
+                "Create Event"
               )}
             </button>
           </div>
