@@ -1176,9 +1176,9 @@ const FamilyTreePage = () => {
     return (
         <FamilyTreeProvider language={language}>
             {/* All components that use useFamilyTreeLabels must be children here */}
-            <Layout>
+            <Layout noScroll={true}>
                 {/* Main container for tree and controls */}
-                <div className="relative flex flex-col h-[calc(100vh-56px)] w-full bg-gray-100 overflow-hidden">
+                <div className="relative flex flex-col h-full w-full bg-gray-100">
                     {/* Navigation buttons when viewing another family's tree */}
 
                     {/* Mobile Header */}

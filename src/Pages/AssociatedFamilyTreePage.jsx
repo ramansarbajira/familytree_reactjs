@@ -20,8 +20,8 @@ const AssociatedFamilyTreePage = () => {
     : `Associated Family Tree: ${code}`;
 
   return (
-    <Layout>
-      <div className="p-4 md:p-8">
+    <Layout noScroll={true}>
+      <div className="p-4 md:p-8 h-full overflow-auto">
         <div className="mb-6 flex justify-between items-start">
           <div>
             <h2 className="text-2xl font-bold mb-2 text-gray-800">{displayTitle}</h2>

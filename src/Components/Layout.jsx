@@ -9,7 +9,7 @@ import { useUser } from "../Contexts/UserContext";
 import ProfileFormModal from "./ProfileFormModal";
 import NotificationPanel from "./NotificationPanel";
 
-const Layout = ({ children }) => {
+const Layout = ({ children, noScroll = false }) => {
   const [activeTab, setActiveTab] = useState("profile");
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,7 +65,7 @@ const Layout = ({ children }) => {
         !profileRef.current.contains(e.target)
       ) {
         setProfileOpen(false);
-        setNotificationOpen(false);
+        // NotificationPanel handles its own overlay click-to-close, so don't close it here
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -112,20 +112,16 @@ const Layout = ({ children }) => {
       {!isMobile && (
         <div
           ref={sidebarRef}
+          onMouseLeave={() => setSidebarCollapsed(true)}
+          onMouseEnter={() => setSidebarCollapsed(false)}
           className={`flex flex-col bg-white shadow-md border-r border-gray-100 transition-all duration-300 ${
             sidebarCollapsed ? "w-20" : "w-72"
           }`}
         >
           {/* Sidebar Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <button
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-800"
-              onClick={handleSidebarCollapseToggle}
-            >
-              <FiMenu size={22} />
-            </button>
+          <div className="flex items-center justify-center px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              {!sidebarCollapsed && (
+              {!sidebarCollapsed ? (
                 <>
                   <div className="w-12 h-12">
                     <img
@@ -136,9 +132,16 @@ const Layout = ({ children }) => {
                   </div>
                   <h2 className="text-2xl font-bold text-gray-800">Familyss</h2>
                 </>
+              ) : (
+                <div className="w-10 h-10">
+                  <img
+                    src="/assets/logo-green-light.png"
+                    alt="Familyss Logo"
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                </div>
               )}
             </div>
-            {/* Collapse / Expand Button */}
           </div>
 
           {/* Sidebar Content */}
@@ -161,6 +164,7 @@ const Layout = ({ children }) => {
       {isMobile && (
         <div
           ref={sidebarRef}
+          onMouseLeave={() => setSidebarOpen(false)}
           className={`fixed top-0 left-0 z-[60] w-64 h-full bg-white shadow-2xl rounded-r-2xl transform transition-transform duration-300 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
@@ -319,7 +323,7 @@ const Layout = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-y-auto p-1 md:p-2 bg-gray-50">
+        <div className={`flex-1 ${noScroll ? 'overflow-hidden' : 'overflow-y-auto'} p-1 md:p-2 bg-gray-50`}>
           {children}
         </div>
 
