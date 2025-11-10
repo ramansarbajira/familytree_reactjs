@@ -3,8 +3,10 @@ import Layout from '../Components/Layout';
 import { useUser } from '../Contexts/UserContext';
 import { FamilyTree } from '../utils/FamilyTree';
 import { autoArrange } from '../utils/TreeLayout';
+import { calculateHierarchicalLayout } from '../utils/HierarchicalTreeLayout';
 import Person from '../Components/FamilyTree/Person';
 import TreeConnections from '../Components/FamilyTree/TreeConnections';
+import HierarchicalConnections from '../Components/FamilyTree/HierarchicalConnections';
 import RadialMenu from '../Components/FamilyTree/RadialMenu';
 import AddPersonModal from '../Components/FamilyTree/AddPersonModal';
 import SearchBar from '../Components/FamilyTree/SearchBar';
@@ -53,6 +55,8 @@ const FamilyTreePage = () => {
     const [dagreGraph, setDagreGraph] = useState(null);
     const [dagreLayoutOffsetX, setDagreLayoutOffsetX] = useState(0);
     const [dagreLayoutOffsetY, setDagreLayoutOffsetY] = useState(0);
+    const [hierarchicalLayout, setHierarchicalLayout] = useState({ positions: new Map(), connections: [] });
+    const [useHierarchical, setUseHierarchical] = useState(true); // Use hierarchical layout by default
     const [radialMenu, setRadialMenu] = useState({
         isActive: false,
         position: { x: 0, y: 0 },
@@ -92,7 +96,7 @@ const FamilyTreePage = () => {
     // Check approval status and familyCode
     useEffect(() => {
         if (userLoading) return; // Wait for user data to load
-        
+
         if (!userInfo) {
             // User not logged in, redirect to login
             navigate('/login');
@@ -104,7 +108,7 @@ const FamilyTreePage = () => {
             Swal.fire({
                 icon: 'warning',
                 title: 'Access Restricted',
-                text: userInfo.approveStatus !== 'approved' 
+                text: userInfo.approveStatus !== 'approved'
                     ? 'Your family membership is pending approval. Please wait for admin approval.'
                     : 'You need to create or join a family first.',
                 confirmButtonText: 'Go to My Family',
@@ -144,19 +148,19 @@ const FamilyTreePage = () => {
     const handleFocusPerson = useCallback((personId, person) => {
         setHighlightedPersonId(personId);
         setSelectedPersonId(personId);
-        
+
         // Scroll to the person's position accounting for zoom level
         if (containerRef.current && person) {
             const memberCount = tree ? tree.people.size : 0;
             const personSize = memberCount > 50 ? 80 : 100;
-            
+
             // Apply zoom scaling to the person's coordinates
             const scaledX = person.x * zoom;
             const scaledY = person.y * zoom;
-            
+
             const targetX = scaledX - containerRef.current.clientWidth / 2;
             const targetY = scaledY - containerRef.current.clientHeight / 2;
-            
+
             containerRef.current.scrollTo({
                 left: targetX,
                 top: targetY,
@@ -222,7 +226,7 @@ const FamilyTreePage = () => {
                 return e.returnValue;
             }
         };
-        
+
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [hasUnsavedChanges]);
@@ -248,24 +252,24 @@ const FamilyTreePage = () => {
                 const source = params.get('source');
                 sourceFromQuery = source ? String(source) : null;
                 console.log('🔍 Debug - Query params:', { focus: focusFromQuery, focusName: focusNameFromQuery, source: sourceFromQuery });
-            } catch {}
-            
+            } catch { }
+
             if (!userInfo || !familyCodeToUse) {
                 console.log('❌ Debug - Missing userInfo or familyCodeToUse');
                 return;
             }
-            
+
             setTreeLoading(true);
             let data = null;
             try {
                 const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/family/tree/${familyCodeToUse}`;
                 console.log('🌐 Debug - Making API call to:', apiUrl);
-                
+
                 const response = await authFetch(apiUrl, {
                     headers: { 'accept': '*/*' }
                 });
                 console.log('📡 Debug - Response status:', response.status);
-                
+
                 if (response.ok) {
                     data = await response.json();
                     console.log('✅ Debug - API response data:', data);
@@ -378,6 +382,20 @@ const FamilyTreePage = () => {
                     console.warn('Focus selection -> falling back to first person', { focusFromQuery, focusNameFromQuery });
                     newTree.rootId = data.people[0].id;
                 }
+                
+                // ✅ FIX GENERATION INCONSISTENCIES: Ensure spouses have same generation
+                newTree.people.forEach(person => {
+                    if (person.spouses && person.spouses.size > 0) {
+                        person.spouses.forEach(spouseId => {
+                            const spouse = newTree.people.get(spouseId);
+                            if (spouse && spouse.generation !== person.generation) {
+                                console.log(`🔧 Initial load: Fixing generation for spouse ${spouse.name}: ${spouse.generation} → ${person.generation}`);
+                                spouse.generation = person.generation;
+                            }
+                        });
+                    }
+                });
+                
                 setTree(newTree);
                 updateStats(newTree);
                 arrangeTree(newTree);
@@ -394,29 +412,47 @@ const FamilyTreePage = () => {
     const arrangeTree = (treeInstance) => {
         // For large trees, show loading state during arrangement
         const memberCount = treeInstance.people.size;
-        if (memberCount > 50) {
-            setTreeLoading(true);
-            // Use setTimeout to allow UI to update before heavy computation
-            setTimeout(() => {
-        const layout = autoArrange(treeInstance);
-        if (layout) {
-            setDagreGraph(layout.g);
-            setDagreLayoutOffsetX(layout.dagreLayoutOffsetX);
-            setDagreLayoutOffsetY(layout.dagreLayoutOffsetY);
-        }
-                setTree(treeInstance);
-                setTreeLoading(false);
-            }, 100);
-        } else {
-            const layout = autoArrange(treeInstance);
-            if (layout) {
-                setDagreGraph(layout.g);
-                setDagreLayoutOffsetX(layout.dagreLayoutOffsetX);
-                setDagreLayoutOffsetY(layout.dagreLayoutOffsetY);
-        }
-        setTree(treeInstance);
-        }
         
+        if (useHierarchical) {
+            // Use hierarchical layout (GoJS-inspired)
+            const layout = calculateHierarchicalLayout(treeInstance);
+            setHierarchicalLayout(layout);
+            
+            // Update person positions in tree from layout
+            layout.positions.forEach((pos, personId) => {
+                const person = treeInstance.people.get(personId);
+                if (person) {
+                    person.x = pos.x;
+                    person.y = pos.y;
+                }
+            });
+            
+            setTree(treeInstance);
+        } else {
+            // Use dagre layout (old method)
+            if (memberCount > 50) {
+                setTreeLoading(true);
+                setTimeout(() => {
+                    const layout = autoArrange(treeInstance);
+                    if (layout) {
+                        setDagreGraph(layout.g);
+                        setDagreLayoutOffsetX(layout.dagreLayoutOffsetX);
+                        setDagreLayoutOffsetY(layout.dagreLayoutOffsetY);
+                    }
+                    setTree(treeInstance);
+                    setTreeLoading(false);
+                }, 100);
+            } else {
+                const layout = autoArrange(treeInstance);
+                if (layout) {
+                    setDagreGraph(layout.g);
+                    setDagreLayoutOffsetX(layout.dagreLayoutOffsetX);
+                    setDagreLayoutOffsetY(layout.dagreLayoutOffsetY);
+                }
+                setTree(treeInstance);
+            }
+        }
+
         // Debug: Log positions of each person (only for smaller trees)
         if (treeInstance && treeInstance.people && memberCount <= 25) {
             console.log('Person positions:', Array.from(treeInstance.people.values()).map(p => ({ id: p.id, name: p.name, x: p.x, y: p.y })));
@@ -443,36 +479,36 @@ const FamilyTreePage = () => {
 
         const items = [];
         if (person.parents.size === 0) {
-            items.push({ 
+            items.push({
                 label: 'Add Parents',
                 action: () => setModal({ isOpen: true, action: { type: 'parents', person } }),
                 icon: icons['Add Parents']
             });
         }
-        items.push({ 
+        items.push({
             label: 'Add Spouse',
             action: () => setModal({ isOpen: true, action: { type: 'spouse', person } }),
             icon: icons['Add Spouse']
         });
-        items.push({ 
+        items.push({
             label: 'Add Child',
             action: () => setModal({ isOpen: true, action: { type: 'children', person } }),
             icon: icons['Add Child']
         });
         if (person.parents.size > 0) {
-            items.push({ 
+            items.push({
                 label: 'Add Sibling',
                 action: () => setModal({ isOpen: true, action: { type: 'siblings', person } }),
                 icon: icons['Add Sibling']
             });
         }
-        items.push({ 
+        items.push({
             label: 'Edit',
             action: () => setModal({ isOpen: true, action: { type: 'edit', person } }),
             icon: icons['Edit']
         });
         if (person.id !== tree?.rootId) {
-            items.push({ 
+            items.push({
                 label: 'Delete',
                 action: () => deletePerson(personId),
                 icon: icons['Delete']
@@ -501,11 +537,11 @@ const FamilyTreePage = () => {
 
     const handleAddPersons = (persons) => {
         if (!tree) return;
-        
+
         if (!persons || persons.length === 0) {
             return;
         }
-        
+
         const newTree = new FamilyTree();
         newTree.people = new Map(tree.people);
         newTree.nextId = tree.nextId;
@@ -592,7 +628,7 @@ const FamilyTreePage = () => {
             arrangeTree(newTree);
             return;
         }
-        
+
         // Make sure basePerson exists in the new tree
         const basePersonInNewTree = newTree.people.get(basePerson.id);
         if (!basePersonInNewTree) {
@@ -602,7 +638,7 @@ const FamilyTreePage = () => {
             arrangeTree(newTree);
             return;
         }
-        
+
         if (type === 'parents') {
             persons.forEach(personData => {
                 const parentId = personIdMap.get(personData);
@@ -685,12 +721,12 @@ const FamilyTreePage = () => {
 
             const personToDelete = newTree.people.get(personId);
             if (!personToDelete) return;
-            
+
             const relatives = new Set([...personToDelete.parents, ...personToDelete.children, ...personToDelete.spouses, ...personToDelete.siblings]);
 
             relatives.forEach(relId => {
                 const relative = newTree.people.get(relId);
-                if(relative){
+                if (relative) {
                     relative.parents.delete(personId);
                     relative.children.delete(personId);
                     relative.spouses.delete(personId);
@@ -699,7 +735,7 @@ const FamilyTreePage = () => {
             });
 
             newTree.people.delete(personId);
-            
+
             setTree(newTree);
             updateStats(newTree);
             arrangeTree(newTree);
@@ -712,7 +748,7 @@ const FamilyTreePage = () => {
 
     const resetTree = async () => {
         console.log('🔵 New Tree button clicked! hasUnsavedChanges:', hasUnsavedChanges);
-        
+
         // 🚀 CRITICAL: Warn if there are unsaved changes
         if (hasUnsavedChanges) {
             console.warn('⚠️ Blocked: Unsaved changes exist');
@@ -837,24 +873,24 @@ const FamilyTreePage = () => {
 
     const centerTreeInView = () => {
         if (!containerRef.current) return;
-        
+
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         const memberCount = tree.people.size;
         const personSize = memberCount > 50 ? 80 : 100; // Dynamic person size
-        
+
         tree.people.forEach(person => {
             minX = Math.min(minX, person.x - personSize / 2);
             minY = Math.min(minY, person.y - personSize / 2);
             maxX = Math.max(maxX, person.x + personSize / 2);
             maxY = Math.max(maxY, person.y + personSize / 2);
         });
-        
+
         const treeWidth = maxX - minX;
         const treeHeight = maxY - minY;
-        
+
         // For large trees, center both horizontally and vertically
         if (memberCount > 50) {
-        containerRef.current.scrollLeft = (minX + treeWidth / 2) - containerRef.current.clientWidth / 2;
+            containerRef.current.scrollLeft = (minX + treeWidth / 2) - containerRef.current.clientWidth / 2;
             containerRef.current.scrollTop = (minY + treeHeight / 2) - containerRef.current.clientHeight / 2;
         } else {
             // For smaller trees, center horizontally, align to top vertically
@@ -874,7 +910,7 @@ const FamilyTreePage = () => {
         if (tree && tree.people.size > 0 && window.innerWidth <= 600 && containerRef.current) {
             const memberCount = tree.people.size;
             const personSize = memberCount > 50 ? 80 : 100; // Dynamic person size
-            
+
             containerRef.current.scrollTop = 0;
             // Center horizontally
             let minX = Infinity, maxX = -Infinity;
@@ -914,18 +950,18 @@ const FamilyTreePage = () => {
     // 🚀 PERFORMANCE: Use useCallback to prevent function re-creation
     const saveTreeToApi = useCallback(async () => {
         console.log('🔵 Save button clicked! Current status:', saveStatus);
-        
+
         // 🚀 CRITICAL FIX: Prevent multiple simultaneous saves
         if (saveStatus === 'loading') {
             console.warn('⚠️ Save already in progress, ignoring click');
             return;
         }
-        
+
         if (!tree) {
             console.warn('⚠️ No tree data to save');
             return;
         }
-        
+
         // 🚀 NEW: Check if there are unsaved changes
         if (!hasUnsavedChanges) {
             console.log('ℹ️ No changes detected, skipping save');
@@ -938,7 +974,7 @@ const FamilyTreePage = () => {
             });
             return;
         }
-        
+
         console.log(`🚀 Starting save for ${tree.people.size} members`);
         setSaveStatus('loading');
         setSaveMessage('');
@@ -976,8 +1012,8 @@ const FamilyTreePage = () => {
                         formData.append(`person_${index}_img`, person.img);
                     } else if (typeof person.img === 'string') {
                         // Extract filename from URL if it's a URL, otherwise use as is
-                        const imgValue = person.img.includes('/') 
-                            ? person.img.split('/').pop() 
+                        const imgValue = person.img.includes('/')
+                            ? person.img.split('/').pop()
                             : person.img;
                         formData.append(`person_${index}_img`, imgValue);
                     }
@@ -991,7 +1027,7 @@ const FamilyTreePage = () => {
             }
             const apiStartTime = Date.now();
             console.log(`📤 Sending ${index} members to API...`);
-            
+
             const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/family/tree/create`, {
                 method: 'POST',
                 body: formData,
@@ -999,15 +1035,15 @@ const FamilyTreePage = () => {
                     // Authorization header will be set in authFetch
                 },
             });
-            
+
             const apiTime = Date.now() - apiStartTime;
-            console.log(`✅ API response received in ${apiTime}ms (${(apiTime/1000).toFixed(2)}s)`);
-            
+            console.log(`✅ API response received in ${apiTime}ms (${(apiTime / 1000).toFixed(2)}s)`);
+
             if (!response) return;
             if (!response.ok) throw new Error('Failed to save');
-            
+
             // ✅ RELOAD TREE DATA FROM SERVER AFTER SUCCESSFUL SAVE
-            // This ensures the UI shows the actual saved data
+            // ✅ PRESERVE EXISTING POSITIONS - No recalculation needed!
             try {
                 const treeResponse = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/family/tree/${userInfo.familyCode}`, {
                     headers: { 'accept': '*/*' }
@@ -1015,21 +1051,33 @@ const FamilyTreePage = () => {
                 if (treeResponse.ok) {
                     const treeData = await treeResponse.json();
                     if (treeData && treeData.people && treeData.people.length > 0) {
+                        // ✅ PRESERVE POSITIONS: Store current positions before rebuilding
+                        const currentPositions = new Map();
+                        tree.people.forEach((person, id) => {
+                            currentPositions.set(id, { x: person.x, y: person.y });
+                        });
+
                         // Rebuild tree from server data
                         const newTree = new FamilyTree();
                         newTree.people = new Map();
                         treeData.people.forEach(person => {
+                            // ✅ RESTORE POSITIONS: Use saved positions if available
+                            const savedPosition = currentPositions.get(person.id);
+                            
                             newTree.people.set(person.id, {
                                 ...person,
                                 memberId: person.memberId !== undefined ? person.memberId : null,
                                 parents: new Set((person.parents || []).map(id => Number(id))),
                                 children: new Set((person.children || []).map(id => Number(id))),
                                 spouses: new Set((person.spouses || []).map(id => Number(id))),
-                                siblings: new Set((person.siblings || []).map(id => Number(id)))
+                                siblings: new Set((person.siblings || []).map(id => Number(id))),
+                                // ✅ KEEP EXACT SAME POSITIONS - No recalculation!
+                                x: savedPosition ? savedPosition.x : person.x,
+                                y: savedPosition ? savedPosition.y : person.y
                             });
                         });
                         newTree.nextId = Math.max(...treeData.people.map(p => parseInt(p.id))) + 1;
-                        
+
                         // Set rootId to the person whose memberId matches the logged-in user's userId
                         let rootPersonId = null;
                         const userIdStr = String(userInfo.userId);
@@ -1044,18 +1092,58 @@ const FamilyTreePage = () => {
                         } else {
                             newTree.rootId = treeData.people[0].id;
                         }
+
+                        // ✅ FIX GENERATION INCONSISTENCIES: Ensure spouses have same generation
+                        newTree.people.forEach(person => {
+                            if (person.spouses && person.spouses.size > 0) {
+                                person.spouses.forEach(spouseId => {
+                                    const spouse = newTree.people.get(spouseId);
+                                    if (spouse && spouse.generation !== person.generation) {
+                                        console.log(`🔧 Fixing generation for spouse ${spouse.name}: ${spouse.generation} → ${person.generation}`);
+                                        spouse.generation = person.generation;
+                                    }
+                                });
+                            }
+                        });
+
+                        // ✅ CRITICAL: Only recalculate if new people were added
+                        const hasNewPeople = treeData.people.some(p => !currentPositions.has(p.id));
                         
-                        // Update the tree state with fresh server data
-                        setTree(newTree);
-                        updateStats(newTree);
-                        arrangeTree(newTree);
+                        if (hasNewPeople) {
+                            // New people added - need to recalculate layout
+                            console.log('🔄 New people detected - recalculating layout');
+                            setTree(newTree);
+                            updateStats(newTree);
+                            arrangeTree(newTree);
+                        } else {
+                            // Same people - keep exact positions!
+                            console.log('✅ No new people - preserving exact positions');
+                            
+                            // Update hierarchical layout with preserved positions
+                            const preservedLayout = {
+                                positions: new Map(),
+                                connections: hierarchicalLayout.connections
+                            };
+                            newTree.people.forEach((person, id) => {
+                                preservedLayout.positions.set(id, {
+                                    x: person.x,
+                                    y: person.y,
+                                    person: person
+                                });
+                            });
+                            
+                            setHierarchicalLayout(preservedLayout);
+                            setTree(newTree);
+                            updateStats(newTree);
+                            // ✅ NO arrangeTree() call - positions already perfect!
+                        }
                     }
                 }
             } catch (reloadErr) {
                 console.warn('Failed to reload tree after save:', reloadErr);
                 // Continue with success status even if reload fails
             }
-            
+
             setSaveStatus('success');
             setSaveMessage('Family tree saved successfully!');
             setHasUnsavedChanges(false); // 🚀 Reset changes flag
@@ -1092,7 +1180,7 @@ const FamilyTreePage = () => {
                 {/* Main container for tree and controls */}
                 <div className="relative flex flex-col h-[calc(100vh-56px)] w-full bg-gray-100 overflow-hidden">
                     {/* Navigation buttons when viewing another family's tree */}
-                    
+
                     {/* Mobile Header */}
                     {canEdit && (
                         <div className="sm:hidden w-full bg-white border-b-2 border-gray-100 shadow-sm z-40">
@@ -1112,7 +1200,7 @@ const FamilyTreePage = () => {
                                         <span className="font-medium">Gen:</span> <span className="font-bold text-gray-900">{stats.generations}</span>
                                     </span>
                                 </div>
-                                
+
                                 {/* Controls Row */}
                                 <div className="flex items-center justify-center gap-3">
                                     <LanguageSwitcher />
@@ -1138,23 +1226,23 @@ const FamilyTreePage = () => {
                                         {/* Navigation Buttons */}
                                         {code && code !== userInfo.familyCode && (
                                             <div className="flex items-center gap-2 pr-3 border-r border-gray-300">
-                                                <button 
-                                                    className="inline-flex items-center justify-center w-9 h-9 bg-gray-100 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 hover:border-gray-400 active:scale-95 transition-all duration-200 shadow-sm" 
-                                                    onClick={() => navigate(-1)} 
+                                                <button
+                                                    className="inline-flex items-center justify-center w-9 h-9 bg-gray-100 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 hover:border-gray-400 active:scale-95 transition-all duration-200 shadow-sm"
+                                                    onClick={() => navigate(-1)}
                                                     title="Back"
                                                 >
                                                     <FaArrowLeft className="text-sm" />
                                                 </button>
-                                                <button 
-                                                    className="inline-flex items-center justify-center w-9 h-9 bg-blue-600 border border-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-200 shadow-sm" 
-                                                    onClick={() => navigate('/family-tree')} 
+                                                <button
+                                                    className="inline-flex items-center justify-center w-9 h-9 bg-blue-600 border border-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-200 shadow-sm"
+                                                    onClick={() => navigate('/family-tree')}
                                                     title="My Birth Family Tree"
                                                 >
                                                     <FaHome className="text-sm" />
                                                 </button>
                                             </div>
                                         )}
-                                        
+
                                         {/* Stats Inline */}
                                         <div className="flex items-center gap-6 text-sm">
                                             <span className="text-gray-700">
@@ -1178,7 +1266,7 @@ const FamilyTreePage = () => {
                                         <div className="flex items-center">
                                             <LanguageSwitcher />
                                         </div>
-                                        
+
                                         {/* Search */}
                                         <SearchBar
                                             tree={tree}
@@ -1187,10 +1275,10 @@ const FamilyTreePage = () => {
                                             onClearSearch={handleClearSearch}
                                             language={language}
                                         />
-                                        
+
                                         {/* Vertical Separator */}
                                         <div className="w-px h-8 bg-gray-300"></div>
-                                        
+
                                         {/* Action Buttons */}
                                         <div className="flex items-center gap-2">
                                             <button
@@ -1239,7 +1327,7 @@ const FamilyTreePage = () => {
                                         <span className="font-medium">Gen:</span> <span className="font-bold text-gray-900">{stats.generations}</span>
                                     </span>
                                 </div>
-                                
+
                                 {/* Controls Row */}
                                 <div className="flex items-center justify-center gap-3">
                                     <LanguageSwitcher />
@@ -1265,23 +1353,23 @@ const FamilyTreePage = () => {
                                         {/* Navigation Buttons */}
                                         {code && code !== userInfo.familyCode && (
                                             <div className="flex items-center gap-2 pr-3 border-r border-gray-300">
-                                                <button 
-                                                    className="inline-flex items-center justify-center w-9 h-9 bg-gray-100 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 hover:border-gray-400 active:scale-95 transition-all duration-200 shadow-sm" 
-                                                    onClick={() => navigate(-1)} 
+                                                <button
+                                                    className="inline-flex items-center justify-center w-9 h-9 bg-gray-100 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 hover:border-gray-400 active:scale-95 transition-all duration-200 shadow-sm"
+                                                    onClick={() => navigate(-1)}
                                                     title="Back"
                                                 >
                                                     <FaArrowLeft className="text-sm" />
                                                 </button>
-                                                <button 
-                                                    className="inline-flex items-center justify-center w-9 h-9 bg-blue-600 border border-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-200 shadow-sm" 
-                                                    onClick={() => navigate('/family-tree')} 
+                                                <button
+                                                    className="inline-flex items-center justify-center w-9 h-9 bg-blue-600 border border-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-200 shadow-sm"
+                                                    onClick={() => navigate('/family-tree')}
                                                     title="My Birth Family Tree"
                                                 >
                                                     <FaHome className="text-sm" />
                                                 </button>
                                             </div>
                                         )}
-                                        
+
                                         {/* Stats Inline */}
                                         <div className="flex items-center gap-6 text-sm">
                                             <span className="text-gray-700">
@@ -1302,7 +1390,7 @@ const FamilyTreePage = () => {
                                     {/* Bottom Section: Controls */}
                                     <div className="flex items-center justify-center lg:justify-end gap-3 lg:gap-4 flex-shrink-0">
                                         <LanguageSwitcher />
-                                        
+
                                         <SearchBar
                                             tree={tree}
                                             onSearchResults={handleSearchResults}
@@ -1344,12 +1432,19 @@ const FamilyTreePage = () => {
                             }}
                         >
                             {/* Tree SVG connections */}
-                            {dagreGraph && (
-                                <TreeConnections 
-                                    dagreGraph={dagreGraph}
-                                    dagreLayoutOffsetX={dagreLayoutOffsetX}
-                                    dagreLayoutOffsetY={dagreLayoutOffsetY}
+                            {useHierarchical ? (
+                                <HierarchicalConnections
+                                    positions={hierarchicalLayout.positions}
+                                    connections={hierarchicalLayout.connections}
                                 />
+                            ) : (
+                                dagreGraph && (
+                                    <TreeConnections
+                                        dagreGraph={dagreGraph}
+                                        dagreLayoutOffsetX={dagreLayoutOffsetX}
+                                        dagreLayoutOffsetY={dagreLayoutOffsetY}
+                                    />
+                                )
                             )}
                             {/* Render person cards with optimization for large trees */}
                             {tree && Array.from(tree.people.values())
@@ -1361,21 +1456,21 @@ const FamilyTreePage = () => {
                                     return a.x - b.x;
                                 })
                                 .map(person => (
-                                <Person
-                                    key={person.id}
-                                    person={person}
-                                    isRoot={person.id === tree.rootId}
-                                    onClick={canEdit ? handlePersonClick : undefined}
-                                    rootId={tree.rootId}
-                                    tree={tree}
-                                    language={language}
-                                    isSelected={selectedPersonId === person.id}
-                                    isHighlighted={highlightedPersonId === person.id}
-                                    isSearchResult={searchResults.some(result => result.id === person.id)}
-                                    currentUserId={userInfo?.userId} // <-- Pass userId
-                                    currentFamilyId={userInfo?.familyId || userInfo?.familyCode} // <-- Pass familyId or familyCode
-                                />
-                            ))}
+                                    <Person
+                                        key={person.id}
+                                        person={person}
+                                        isRoot={person.id === tree.rootId}
+                                        onClick={canEdit ? handlePersonClick : undefined}
+                                        rootId={tree.rootId}
+                                        tree={tree}
+                                        language={language}
+                                        isSelected={selectedPersonId === person.id}
+                                        isHighlighted={highlightedPersonId === person.id}
+                                        isSearchResult={searchResults.some(result => result.id === person.id)}
+                                        currentUserId={userInfo?.userId} // <-- Pass userId
+                                        currentFamilyId={userInfo?.familyId || userInfo?.familyCode} // <-- Pass familyId or familyCode
+                                    />
+                                ))}
                         </div>
                     </div>
 

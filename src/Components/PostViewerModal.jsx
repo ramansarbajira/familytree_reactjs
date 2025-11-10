@@ -139,16 +139,16 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken }) => {
             <div className="flex flex-1 flex-col md:flex-row overflow-hidden">
               {/* Left image section */}
               <div className="relative flex-1 bg-gray-950 flex items-center justify-center p-3 sm:p-5 overflow-hidden">
-                {post.url ? (
-                    <img
-                        src={post.url}
-                        alt={post.caption || "Post image"}
-                        className="max-h-full max-w-full object-contain rounded-lg shadow-md"
-                    />
+                {post.url || post.fullImageUrl ? (
+                  <img
+                    src={post.url || post.fullImageUrl}
+                    alt={post.caption || "Post image"}
+                    className="max-h-full max-w-full object-contain rounded-lg shadow-md"
+                  />
                 ) : (
-                    <div className="text-white text-center text-lg italic">
-                        No image available for this post.
-                    </div>
+                  <div className="text-white text-center text-lg italic">
+                    No image available for this post.
+                  </div>
                 )}
               </div>
 
@@ -157,7 +157,11 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken }) => {
                 {/* Caption / Post Content */}
                 <div
                   className="text-gray-900 mb-3 leading-relaxed overflow-auto max-h-[15vh] md:max-h-[18vh] pr-2"
-                  style={{ fontSize: "16px", fontWeight: "normal", whiteSpace: "pre-wrap" }}
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: "normal",
+                    whiteSpace: "pre-wrap",
+                  }}
                   title={post.caption}
                 >
                   {post.caption || "No Caption"}
@@ -218,7 +222,8 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken }) => {
                             />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 select-none">
-                              {comment.user?.firstName?.[0]?.toUpperCase() || "?"}
+                              {comment.user?.firstName?.[0]?.toUpperCase() ||
+                                "?"}
                             </div>
                           )}
                           <div className="flex flex-col">
@@ -249,7 +254,9 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken }) => {
                       onClick={handlePostComment}
                       disabled={!newComment.trim() || isCommentLoading}
                       className={`mt-2 w-full py-2 rounded-lg font-semibold transition-colors shadow-md ${
-                        isCommentLoading ? "bg-gray-400" : "bg-primary-600 hover:bg-primary-700 text-white"
+                        isCommentLoading
+                          ? "bg-gray-400"
+                          : "bg-primary-600 hover:bg-primary-700 text-white"
                       }`}
                     >
                       {isCommentLoading ? "Posting..." : "Post Comment"}
