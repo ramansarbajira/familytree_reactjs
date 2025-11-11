@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaRegHeart, FaHeart, FaCommentDots, FaTimes } from "react-icons/fa";
 import { AnimatePresence, motion } from "framer-motion";
+import CommentItem from './CommentItem';
+import { buildCommentTree, countComments } from '../utils/commentUtils';
 
-const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken }) => {
+const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken, currentUser }) => {
   const [likeCount, setLikeCount] = useState(post?.likes || 0);
   const [isLiked, setIsLiked] = useState(post?.isLiked || false);
   const [comments, setComments] = useState([]);
@@ -96,6 +98,65 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken }) => {
       console.error("Error posting comment:", error);
     }
     setIsCommentLoading(false);
+  };
+
+  const handleEditComment = async (commentId, newText) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/post/comment/${commentId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ comment: newText })
+      });
+      if (response.ok) {
+        await fetchComments();
+      }
+    } catch (error) {
+      console.error('Failed to edit comment:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/post/comment/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      if (response.ok) {
+        await fetchComments();
+      }
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+      throw error;
+    }
+  };
+
+  const handleReplyComment = async (parentCommentId, replyText) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/post/comment/reply`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          postId: post.id,
+          parentCommentId,
+          comment: replyText
+        })
+      });
+      if (response.ok) {
+        await fetchComments();
+      }
+    } catch (error) {
+      console.error('Failed to reply to comment:', error);
+      throw error;
+    }
   };
 
   if (!post) return null;
@@ -196,43 +257,24 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken }) => {
                 {/* Comments section */}
                 <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
                   <h4 className="font-semibold text-lg text-gray-800 mb-3 flex-shrink-0">
-                    Comments ({comments.length})
+                    Comments ({countComments(buildCommentTree(comments))})
                   </h4>
 
                   <div
                     ref={commentsRef}
                     className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-grow"
-                    style={{ maxHeight: "calc(100% - 110px)" }} // leave space for textarea + buttons
+                    style={{ maxHeight: "calc(100% - 110px)" }}
                   >
                     {comments.length > 0 ? (
-                      comments.map((comment) => (
-                        <motion.div
+                      buildCommentTree(comments).map((comment) => (
+                        <CommentItem
                           key={comment.id}
-                          className="flex gap-3 items-start text-sm text-gray-800 bg-gray-100 p-3 rounded-lg shadow-sm border border-gray-200"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          {/* Show profile image if available, else fallback */}
-                          {comment.user?.profile ? (
-                            <img
-                              src={comment.user.profile}
-                              alt="Profile"
-                              className="w-8 h-8 rounded-full object-cover border border-gray-300 flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 select-none">
-                              {comment.user?.firstName?.[0]?.toUpperCase() ||
-                                "?"}
-                            </div>
-                          )}
-                          <div className="flex flex-col">
-                            <div className="font-semibold text-primary-700">
-                              {comment.user?.firstName} {comment.user?.lastName}
-                            </div>
-                            <div>{comment.content}</div>
-                          </div>
-                        </motion.div>
+                          comment={comment}
+                          currentUserId={currentUser?.userId}
+                          onEdit={handleEditComment}
+                          onDelete={handleDeleteComment}
+                          onReply={handleReplyComment}
+                        />
                       ))
                     ) : (
                       <p className="text-md text-gray-500 italic p-3 bg-gray-100 rounded-lg">

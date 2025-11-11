@@ -224,12 +224,12 @@ const SearchBar = ({
     }, []);
 
     return (
-        <div className="relative z-50">
-            {/* Search Toggle Button */}
+        <>
+            {/* Search Toggle Button - Circular Icon */}
             {!isSearchOpen && (
                 <button
                     onClick={toggleSearch}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-semibold active:scale-95 transition-all duration-200 shadow-sm"
+                    className="w-10 h-10 sm:w-auto sm:h-auto sm:px-3 sm:py-2 bg-blue-600 sm:bg-white border-2 border-blue-600 text-white sm:text-blue-600 rounded-full sm:rounded-lg hover:bg-blue-700 sm:hover:bg-blue-50 font-semibold active:scale-95 transition-all duration-200 shadow-md flex items-center justify-center sm:gap-1.5"
                     title="Search family members"
                 >
                     <FaSearch className="text-sm" />
@@ -237,60 +237,64 @@ const SearchBar = ({
                 </button>
             )}
 
-            {/* Search Bar */}
+            {/* Search Modal - Centered on Mobile */}
             {isSearchOpen && (
-                <div className="flex items-center gap-2 bg-white rounded-lg shadow-xl border-2 border-blue-300 p-3 w-[280px] sm:w-[320px] backdrop-blur-sm">
-                    <FaSearch className="text-blue-500 text-sm ml-2" />
-                    <input
-                        ref={searchInputRef}
-                        type="text"
-                        value={searchQuery}
-                        onChange={handleSearchChange}
-                        onKeyDown={handleKeyDown}
-                        onFocus={() => {
-                            // Always show results when focusing, even if empty (shows all members)
-                            if (tree && tree.people.size > 0) {
-                                setShowResults(true);
-                            }
-                        }}
-                        placeholder={language === 'tamil' ? 'குடும்ப உறுப்பினர்களைத் தேடுங்கள்...' : 'Search family members...'}
-                        className="flex-1 px-2 py-1 border-none outline-none text-gray-700 placeholder-gray-400"
-                        autoComplete="off"
+                <>
+                    {/* Backdrop */}
+                    <div 
+                        className="sm:hidden fixed inset-0 bg-black/50 z-[9998]"
+                        onClick={handleClearSearch}
                     />
                     
-                    
-                    {/* Clear Button */}
-                    <button
-                        onClick={handleClearSearch}
-                        className="p-1.5 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-all duration-200 border border-gray-200 hover:border-red-300"
-                        title="Clear search"
-                    >
-                        <FaTimes className="text-sm" />
-                    </button>
-                </div>
-            )}
+                    {/* Search Container */}
+                    <div className="fixed sm:relative inset-0 sm:inset-auto z-[9999] flex items-center justify-center sm:block p-4 sm:p-0">
+                        <div className="flex flex-col gap-2 bg-white rounded-2xl sm:rounded-lg shadow-2xl border-2 border-blue-300 p-4 sm:p-2 w-full max-w-md sm:max-w-[320px] backdrop-blur-sm max-h-[80vh] overflow-hidden">
+                            {/* Search Input */}
+                            <div className="flex items-center gap-2">
+                                <FaSearch className="text-blue-500 text-sm" />
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={handleSearchChange}
+                                    onKeyDown={handleKeyDown}
+                                    onFocus={() => {
+                                        if (tree && tree.people.size > 0) {
+                                            setShowResults(true);
+                                        }
+                                    }}
+                                    placeholder={language === 'tamil' ? 'குடும்ப உறுப்பினர்களைத் தேடுங்கள்...' : 'Search family members...'}
+                                    className="flex-1 px-2 py-2 border-none outline-none text-gray-700 placeholder-gray-400"
+                                    autoComplete="off"
+                                />
+                                <button
+                                    onClick={handleClearSearch}
+                                    className="p-1.5 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-all duration-200"
+                                    title="Close"
+                                >
+                                    <FaTimes className="text-sm" />
+                                </button>
+                            </div>
 
-            {/* Search Results Dropdown */}
-            {isSearchOpen && showResults && searchResults.length > 0 && (
-                <div
-                    ref={resultsRef}
-                    className="absolute top-full left-0 right-0 mt-3 bg-white rounded-xl shadow-2xl border-2 border-blue-200 max-h-72 overflow-y-auto z-[9999] backdrop-blur-sm w-[280px] sm:w-[320px] max-w-[90vw]"
-                >
-                    <div className="p-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-                        <span className="text-sm font-semibold text-blue-700">
-                            {!searchQuery.trim() 
-                                ? (language === 'tamil' 
-                                    ? `அனைத்து குடும்ப உறுப்பினர்கள் (${searchResults.length})` 
-                                    : `All Family Members (${searchResults.length})`)
-                                : `${searchResults.length} ${language === 'tamil' ? 'முடிவுகள்' : 'results'} found`
-                            }
-                        </span>
-                    </div>
-                    {searchResults.map((result, index) => (
+                            {/* Search Results */}
+                            {showResults && searchResults.length > 0 && (
+                                <div className="flex flex-col overflow-hidden rounded-lg border border-gray-200">
+                                    <div className="p-2 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                                        <span className="text-xs sm:text-sm font-semibold text-blue-700">
+                                            {!searchQuery.trim() 
+                                                ? (language === 'tamil' 
+                                                    ? `அனைத்து குடும்ப உறுப்பினர்கள் (${searchResults.length})` 
+                                                    : `All Family Members (${searchResults.length})`)
+                                                : `${searchResults.length} ${language === 'tamil' ? 'முடிவுகள்' : 'results'} found`
+                                            }
+                                        </span>
+                                    </div>
+                                    <div className="overflow-y-auto max-h-96">
+                                        {searchResults.map((result, index) => (
                         <div
                             key={result.id}
                             onClick={() => handleResultClick(index)}
-                            className={`flex items-center gap-3 p-4 hover:bg-blue-50 cursor-pointer transition-all duration-200 border-b border-gray-100 last:border-b-0 ${
+                            className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-4 hover:bg-blue-50 cursor-pointer transition-all duration-200 border-b border-gray-100 last:border-b-0 ${
                                 index === currentResultIndex ? 'bg-gradient-to-r from-blue-100 to-indigo-100 border-blue-300 shadow-sm' : ''
                             }`}
                         >
@@ -299,7 +303,7 @@ const SearchBar = ({
                                     <img
                                         src={result.person.img}
                                         alt={result.displayName}
-                                        className="w-10 h-10 rounded-full object-cover border-2 border-blue-200 shadow-sm"
+                                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-blue-200 shadow-sm"
                                         onError={(e) => {
                                             e.target.style.display = 'none';
                                             e.target.nextSibling.style.display = 'flex';
@@ -307,24 +311,24 @@ const SearchBar = ({
                                     />
                                 ) : null}
                                 <div 
-                                    className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center border-2 border-gray-300 shadow-sm"
+                                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center border-2 border-gray-300 shadow-sm"
                                     style={{ display: result.person.img ? 'none' : 'flex' }}
                                 >
-                                    <FaUser className="text-gray-500 text-sm" />
+                                    <FaUser className="text-gray-500 text-xs sm:text-sm" />
                                 </div>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-gray-900 truncate text-sm">
+                                <div className="font-semibold text-gray-900 truncate text-xs sm:text-sm">
                                     {result.displayName}
                                 </div>
-                                <div className="text-xs text-gray-600 mt-1 flex items-center gap-2">
+                                <div className="text-xs text-gray-600 mt-0.5 sm:mt-1 flex items-center gap-1 sm:gap-2 flex-wrap">
                                     {result.person.gender && (
-                                        <span className="capitalize bg-gray-100 px-2 py-0.5 rounded-full font-medium">
+                                        <span className="capitalize bg-gray-100 px-1.5 sm:px-2 py-0.5 rounded-full font-medium text-[10px] sm:text-xs">
                                             {result.person.gender}
                                         </span>
                                     )}
                                     {result.person.age && (
-                                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                                        <span className="bg-blue-100 text-blue-700 px-1.5 sm:px-2 py-0.5 rounded-full font-medium text-[10px] sm:text-xs">
                                             Age: {result.person.age}
                                         </span>
                                     )}
@@ -332,14 +336,19 @@ const SearchBar = ({
                             </div>
                             {index === currentResultIndex && (
                                 <div className="flex-shrink-0">
-                                    <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full shadow-sm animate-pulse"></div>
+                                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full shadow-sm animate-pulse"></div>
                                 </div>
                             )}
                         </div>
-                    ))}
-                </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </>
             )}
-        </div>
+        </>
     );
 };
 

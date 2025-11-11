@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaRegHeart, FaHeart, FaCommentDots, FaTimes, FaChevronLeft, FaChevronRight, FaInfoCircle, FaShareAlt } from 'react-icons/fa';
 import { AnimatePresence, motion } from 'framer-motion';
+import CommentItem from './CommentItem';
+import { buildCommentTree, countComments } from '../utils/commentUtils';
 
 const GalleryViewerModal = ({ isOpen, onClose, album, currentUser, authToken }) => {
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -95,7 +97,6 @@ const GalleryViewerModal = ({ isOpen, onClose, album, currentUser, authToken }) 
         setCommentLoading(true);
 
         try {
-            // Step 1: Post the comment
             const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gallery/comment`, {
                 method: 'POST',
                 headers: {
@@ -116,8 +117,66 @@ const GalleryViewerModal = ({ isOpen, onClose, album, currentUser, authToken }) 
         } catch (err) {
             console.error('Failed to post comment:', err);
         } finally {
-            // Step 6: Turn off loading **after all is done**
             setCommentLoading(false);
+        }
+    };
+
+    const handleEditComment = async (commentId, newText) => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gallery/comment/${commentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ comment: newText })
+            });
+            if (response.ok) {
+                await fetchComments();
+            }
+        } catch (error) {
+            console.error('Failed to edit comment:', error);
+            throw error;
+        }
+    };
+
+    const handleDeleteComment = async (commentId) => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gallery/comment/${commentId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+            if (response.ok) {
+                await fetchComments();
+            }
+        } catch (error) {
+            console.error('Failed to delete comment:', error);
+            throw error;
+        }
+    };
+
+    const handleReplyComment = async (parentCommentId, replyText) => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gallery/comment/reply`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    galleryId: album.id,
+                    parentCommentId,
+                    comment: replyText
+                })
+            });
+            if (response.ok) {
+                await fetchComments();
+            }
+        } catch (error) {
+            console.error('Failed to reply to comment:', error);
+            throw error;
         }
     };
 
@@ -237,48 +296,29 @@ const GalleryViewerModal = ({ isOpen, onClose, album, currentUser, authToken }) 
                                     <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
                                         <FaCommentDots size={18} /> {comments.length}
                                     </button>
-                                    {/* <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
-                                        <FaShareAlt size={18} /> Share
-                                    </button> */}
                                 </div>
 
-                                {/* Comments Section (now for the entire album) */}
+                                {/* Comments Section */}
                                 <div className="flex-grow flex flex-col overflow-hidden">
-                                    <h4 className="font-semibold text-lg text-gray-800 mb-3">Comments ({comments.length})</h4>
+                                    <h4 className="font-semibold text-lg text-gray-800 mb-3">
+                                        Comments ({countComments(buildCommentTree(comments))})
+                                    </h4>
                                     <div
-                                    ref={commentsRef}
-                                    className="space-y-3 overflow-y-auto pr-2 custom-scrollbar"
-                                    style={{ maxHeight: '200px' }}
+                                        ref={commentsRef}
+                                        className="space-y-3 overflow-y-auto pr-2 custom-scrollbar"
+                                        style={{ maxHeight: '200px' }}
                                     >
                                         {comments.length > 0 ? (
-                                            comments.map((comment, index) => {
-                                                const user = comment.user || {};
-                                                const fullName = `${user.firstName || 'Unknown'} ${user.lastName || ''}`.trim();
-                                                const profileUrl = user.profile || '/assets/user.png';
-
-                                                return (
-                                                    <motion.div
-                                                        key={index}
-                                                        className="flex gap-3 items-start bg-gray-100 p-3 rounded-lg shadow-sm border border-gray-200"
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    >
-                                                        {/* Avatar */}
-                                                        <img
-                                                            src={profileUrl}
-                                                            alt={fullName}
-                                                            className="w-9 h-9 rounded-full object-cover border border-gray-300"
-                                                        />
-
-                                                        {/* Comment Content */}
-                                                        <div>
-                                                            <div className="font-semibold text-sm text-primary-700">{fullName || `User${index + 1}`}</div>
-                                                            <div className="text-sm text-gray-800">{comment.comment}</div>
-                                                        </div>
-                                                    </motion.div>
-                                                );
-                                            })
+                                            buildCommentTree(comments).map((comment) => (
+                                                <CommentItem
+                                                    key={comment.id}
+                                                    comment={comment}
+                                                    currentUserId={currentUser?.userId}
+                                                    onEdit={handleEditComment}
+                                                    onDelete={handleDeleteComment}
+                                                    onReply={handleReplyComment}
+                                                />
+                                            ))
                                         ) : (
                                             <p className="text-md text-gray-500 italic p-3 bg-gray-100 rounded-lg">
                                                 No comments yet for this album. Be the first!

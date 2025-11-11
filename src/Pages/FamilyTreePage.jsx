@@ -75,6 +75,8 @@ const FamilyTreePage = () => {
     const [selectedPersonId, setSelectedPersonId] = useState(null);
     const [treeLoading, setTreeLoading] = useState(false);
     const [zoom, setZoom] = useState(1);
+    const [showMobileHeader, setShowMobileHeader] = useState(true);
+    const [lastScrollY, setLastScrollY] = useState(0);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false); // 🚀 Track changes
     // Search state
     const [searchResults, setSearchResults] = useState([]);
@@ -92,6 +94,49 @@ const FamilyTreePage = () => {
     // Allow editing only when viewing user's own birth family tree and role permits
     const isOwnTree = !code || code === userInfo.familyCode;
     const canEdit = isOwnTree && userInfo && (userInfo.role === 2 || userInfo.role === 3);
+
+    // Zoom helper functions
+    const zoomIn = () => setZoom(prev => Math.min(2, prev + 0.1));
+    const zoomOut = () => setZoom(prev => Math.max(0.5, prev - 0.1));
+
+    // Auto-hide mobile header on scroll
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            if (currentScrollY < lastScrollY || currentScrollY < 50) {
+                // Scrolling up or at top - show header
+                setShowMobileHeader(true);
+            } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+                // Scrolling down - hide header
+                setShowMobileHeader(false);
+            }
+            setLastScrollY(currentScrollY);
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [lastScrollY]);
+    const resetZoom = () => setZoom(1);
+
+    // Set initial zoom based on screen size
+    useEffect(() => {
+        const setInitialZoom = () => {
+            if (window.innerWidth <= 640) {
+                // Mobile: start with smaller zoom
+                setZoom(0.7);
+            } else if (window.innerWidth <= 1024) {
+                // Tablet: slightly smaller
+                setZoom(0.85);
+            } else {
+                // Desktop: normal zoom
+                setZoom(1);
+            }
+        };
+
+        setInitialZoom();
+        window.addEventListener('resize', setInitialZoom);
+        return () => window.removeEventListener('resize', setInitialZoom);
+    }, []);
 
     // Check approval status and familyCode
     useEffect(() => {
@@ -133,11 +178,6 @@ const FamilyTreePage = () => {
             </Layout>
         );
     }
-
-    // Zoom controls
-    const zoomIn = () => setZoom(prev => Math.min(2, +(prev + 0.1).toFixed(2)));
-    const zoomOut = () => setZoom(prev => Math.max(0.1, +(prev - 0.1).toFixed(2)));
-    const resetZoom = () => setZoom(1);
 
     // Search handlers - memoized to prevent infinite re-renders
     const handleSearchResults = useCallback((results) => {
@@ -1181,39 +1221,82 @@ const FamilyTreePage = () => {
                 <div className="relative flex flex-col h-full w-full bg-gray-100">
                     {/* Navigation buttons when viewing another family's tree */}
 
-                    {/* Mobile Header */}
+                    {/* Mobile Top Header - Edit Mode */}
                     {canEdit && (
-                        <div className="sm:hidden w-full bg-white border-b-2 border-gray-100 shadow-sm z-40">
-                            <div className="w-full px-4 py-3">
-                                {/* Stats Row */}
-                                <div className="flex items-center justify-center gap-4 text-xs mb-3">
-                                    <span className="text-gray-700">
-                                        <span className="font-medium">Total:</span> <span className="font-bold text-gray-900">{stats.total}</span>
-                                    </span>
-                                    <span className="text-gray-700">
-                                        <span className="font-medium">Male:</span> <span className="font-bold text-gray-900">{stats.male}</span>
-                                    </span>
-                                    <span className="text-gray-700">
-                                        <span className="font-medium">Female:</span> <span className="font-bold text-gray-900">{stats.female}</span>
-                                    </span>
-                                    <span className="text-gray-700">
-                                        <span className="font-medium">Gen:</span> <span className="font-bold text-gray-900">{stats.generations}</span>
-                                    </span>
-                                </div>
+                        <>
+                            {/* Compact Top Bar */}
+                            <div className="sm:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm z-50 px-3 py-2">
+                                <div className="flex items-center justify-between gap-2">
+                                    {/* Left: Menu Icon (placeholder - you can add menu functionality) */}
+                                    <button className="w-10 h-10 bg-green-600 text-white rounded-lg flex items-center justify-center active:scale-95 transition-transform">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                        </svg>
+                                    </button>
 
-                                {/* Controls Row */}
-                                <div className="flex items-center justify-center gap-3">
-                                    <LanguageSwitcher />
-                                    <SearchBar
-                                        tree={tree}
-                                        onSearchResults={handleSearchResults}
-                                        onFocusPerson={handleFocusPerson}
-                                        onClearSearch={handleClearSearch}
-                                        language={language}
-                                    />
+                                    {/* Center: Search */}
+                                    <div className="flex-1">
+                                        <SearchBar
+                                            tree={tree}
+                                            onSearchResults={handleSearchResults}
+                                            onFocusPerson={handleFocusPerson}
+                                            onClearSearch={handleClearSearch}
+                                            language={language}
+                                        />
+                                    </div>
+
+                                    {/* Right: Language Switcher */}
+                                    <div className="flex-shrink-0">
+                                        <LanguageSwitcher />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+
+                            {/* Bottom Left Corner: Zoom Controls */}
+                            <div className="sm:hidden fixed bottom-[88px] left-3 z-50 flex flex-col gap-2">
+                                <button
+                                    onClick={zoomIn}
+                                    className="w-11 h-11 bg-white text-gray-700 rounded-full shadow-lg border border-gray-200 flex items-center justify-center active:scale-95 transition-transform"
+                                >
+                                    <FaPlus className="text-sm" />
+                                </button>
+                                <div className="w-11 h-11 bg-white text-gray-700 rounded-full shadow-lg border border-gray-200 flex items-center justify-center text-[10px] font-bold">
+                                    {Math.round(zoom * 100)}%
+                                </div>
+                                <button
+                                    onClick={zoomOut}
+                                    className="w-11 h-11 bg-white text-gray-700 rounded-full shadow-lg border border-gray-200 flex items-center justify-center active:scale-95 transition-transform"
+                                >
+                                    <FaMinus className="text-sm" />
+                                </button>
+                            </div>
+
+                            {/* Bottom Right Corner: Action Buttons */}
+                            <div className="sm:hidden fixed bottom-[88px] right-3 z-50 flex flex-col gap-2">
+                                <button
+                                    onClick={resetTree}
+                                    className="w-12 h-12 bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+                                    title="New Tree"
+                                >
+                                    <FaPlus className="text-lg" />
+                                </button>
+                                <button
+                                    onClick={saveTreeToApi}
+                                    disabled={saveStatus === 'loading'}
+                                    className="w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-transform disabled:opacity-60"
+                                    title="Save"
+                                >
+                                    {saveStatus === 'loading' ? (
+                                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                        </svg>
+                                    ) : (
+                                        <FaSave className="text-lg" />
+                                    )}
+                                </button>
+                            </div>
+                        </>
                     )}
 
                     {/* Desktop Header */}
@@ -1308,39 +1391,56 @@ const FamilyTreePage = () => {
                             </div>
                         </div>
                     )}
-                    {/* Mobile Header - Non Edit */}
+                    {/* Mobile Top Header - View Mode */}
                     {!canEdit && (
-                        <div className="sm:hidden w-full bg-white border-b-2 border-gray-100 shadow-sm z-40">
-                            <div className="w-full px-4 py-3">
-                                {/* Stats Row */}
-                                <div className="flex items-center justify-center gap-4 text-xs mb-3">
-                                    <span className="text-gray-700">
-                                        <span className="font-medium">Total:</span> <span className="font-bold text-gray-900">{stats.total}</span>
-                                    </span>
-                                    <span className="text-gray-700">
-                                        <span className="font-medium">Male:</span> <span className="font-bold text-gray-900">{stats.male}</span>
-                                    </span>
-                                    <span className="text-gray-700">
-                                        <span className="font-medium">Female:</span> <span className="font-bold text-gray-900">{stats.female}</span>
-                                    </span>
-                                    <span className="text-gray-700">
-                                        <span className="font-medium">Gen:</span> <span className="font-bold text-gray-900">{stats.generations}</span>
-                                    </span>
-                                </div>
+                        <>
+                            {/* Compact Top Bar */}
+                            <div className="sm:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm z-50 px-3 py-2">
+                                <div className="flex items-center justify-between gap-2">
+                                    {/* Left: Menu Icon (placeholder - you can add menu functionality) */}
+                                    <button className="w-10 h-10 bg-green-600 text-white rounded-lg flex items-center justify-center active:scale-95 transition-transform">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                        </svg>
+                                    </button>
 
-                                {/* Controls Row */}
-                                <div className="flex items-center justify-center gap-3">
-                                    <LanguageSwitcher />
-                                    <SearchBar
-                                        tree={tree}
-                                        onSearchResults={handleSearchResults}
-                                        onFocusPerson={handleFocusPerson}
-                                        onClearSearch={handleClearSearch}
-                                        language={language}
-                                    />
+                                    {/* Center: Search */}
+                                    <div className="flex-1">
+                                        <SearchBar
+                                            tree={tree}
+                                            onSearchResults={handleSearchResults}
+                                            onFocusPerson={handleFocusPerson}
+                                            onClearSearch={handleClearSearch}
+                                            language={language}
+                                        />
+                                    </div>
+
+                                    {/* Right: Language Switcher */}
+                                    <div className="flex-shrink-0">
+                                        <LanguageSwitcher />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+
+                            {/* Bottom Left Corner: Zoom Controls */}
+                            <div className="sm:hidden fixed bottom-[88px] left-3 z-50 flex flex-col gap-2">
+                                <button
+                                    onClick={zoomIn}
+                                    className="w-11 h-11 bg-white text-gray-700 rounded-full shadow-lg border border-gray-200 flex items-center justify-center active:scale-95 transition-transform"
+                                >
+                                    <FaPlus className="text-sm" />
+                                </button>
+                                <div className="w-11 h-11 bg-white text-gray-700 rounded-full shadow-lg border border-gray-200 flex items-center justify-center text-[10px] font-bold">
+                                    {Math.round(zoom * 100)}%
+                                </div>
+                                <button
+                                    onClick={zoomOut}
+                                    className="w-11 h-11 bg-white text-gray-700 rounded-full shadow-lg border border-gray-200 flex items-center justify-center active:scale-95 transition-transform"
+                                >
+                                    <FaMinus className="text-sm" />
+                                </button>
+                            </div>
+                        </>
                     )}
 
                     {/* Desktop Header - Non Edit */}
@@ -1406,7 +1506,7 @@ const FamilyTreePage = () => {
                     {/* Tree visualization area */}
                     <div
                         ref={containerRef}
-                        className="flex-1 w-full h-full min-h-0 min-w-0 overflow-auto"
+                        className="flex-1 w-full h-full min-h-0 min-w-0 overflow-auto touch-pan-x touch-pan-y pt-14 sm:pt-0"
                         onTouchStart={handleTouchStart}
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
@@ -1425,10 +1525,11 @@ const FamilyTreePage = () => {
                             ref={treeCanvasRef}
                             className="tree-canvas relative w-max h-max mx-auto flex flex-col items-start justify-start sm:items-center sm:justify-center"
                             style={{
-                                minWidth: tree && tree.people.size > 50 ? '1200px' : '900px',
-                                minHeight: tree && tree.people.size > 50 ? '800px' : '600px',
+                                minWidth: tree && tree.people.size > 50 ? (window.innerWidth <= 640 ? '600px' : '1200px') : (window.innerWidth <= 640 ? '400px' : '900px'),
+                                minHeight: tree && tree.people.size > 50 ? (window.innerWidth <= 640 ? '500px' : '800px') : (window.innerWidth <= 640 ? '400px' : '600px'),
                                 transform: `scale(${zoom})`,
-                                transformOrigin: 'top left',
+                                transformOrigin: window.innerWidth <= 640 ? 'top left' : 'center center',
+                                padding: window.innerWidth <= 640 ? '10px' : '20px',
                             }}
                         >
                             {/* Tree SVG connections */}
@@ -1474,81 +1575,24 @@ const FamilyTreePage = () => {
                         </div>
                     </div>
 
-                    {/* Mobile Zoom Controls */}
-                    <div className="fixed right-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-2 z-40 sm:hidden">
-                        <button
-                            className="w-12 h-12 bg-white border-2 border-gray-300 rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:bg-gray-50 active:scale-95 transition-all duration-200"
-                            onClick={zoomIn}
-                            disabled={zoom >= 2}
-                            title="Zoom In"
-                        >
-                            <FaPlus className="text-lg" />
-                        </button>
-                        <div className="w-12 h-8 bg-white border-2 border-gray-300 rounded-lg shadow-lg flex items-center justify-center text-xs font-semibold text-gray-700">
-                            {Math.round(zoom * 100)}%
-                        </div>
-                        <button
-                            className="w-12 h-12 bg-white border-2 border-gray-300 rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:bg-gray-50 active:scale-95 transition-all duration-200"
-                            onClick={zoomOut}
-                            disabled={zoom <= 0.1}
-                            title="Zoom Out"
-                        >
-                            <FaMinus className="text-lg" />
-                        </button>
-                        <button
-                            className="w-12 h-8 bg-white border-2 border-gray-300 rounded-lg shadow-lg flex items-center justify-center text-xs font-semibold text-gray-700 hover:bg-gray-50 active:scale-95 transition-all duration-200"
-                            onClick={resetZoom}
-                            title="Reset Zoom"
-                        >
-                            1:1
-                        </button>
-                    </div>
 
-                    {/* Desktop Zoom Controls (Plus/Minus only) */}
-                    <div className="hidden sm:flex fixed right-4 top-1/2 transform -translate-y-1/2 flex-col gap-3 z-40">
-                        <button
-                            className="w-12 h-12 bg-white border-2 border-gray-300 rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:bg-gray-50 active:scale-95 transition-all duration-200"
-                            onClick={zoomIn}
-                            disabled={zoom >= 2}
-                            title="Zoom In"
-                        >
-                            <FaPlus className="text-lg" />
-                        </button>
-                        <button
-                            className="w-12 h-12 bg-white border-2 border-gray-300 rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:bg-gray-50 active:scale-95 transition-all duration-200"
-                            onClick={zoomOut}
-                            disabled={zoom <= 0.1}
-                            title="Zoom Out"
-                        >
-                            <FaMinus className="text-lg" />
-                        </button>
-                    </div>
-
-                    {canEdit && (
-                        <div className="fixed left-0 w-full bg-gradient-to-r from-white to-gray-50 border-t border-gray-200 shadow-lg flex justify-center items-center py-4 z-50 sm:hidden" style={{ bottom: '60px' }}>
-                            <div className="flex items-center gap-4 px-4">
-                                <button
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg text-sm font-semibold active:scale-95 transition-all duration-200 border border-green-600"
-                                    onClick={resetTree}
-                                >
-                                    <FaPlus className="text-sm" />
-                                    <span>New Tree</span>
-                                </button>
-                                <button
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg shadow-md hover:shadow-lg text-sm font-semibold active:scale-95 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed border border-blue-700"
-                                    onClick={saveTreeToApi}
-                                    disabled={saveStatus === 'loading'}
-                                >
-                                    {saveStatus === 'loading' && (
-                                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                                        </svg>
-                                    )}
-                                    <FaSave className="text-sm" />
-                                    <span>Save</span>
-                                </button>
-                            </div>
+                    {/* Mobile Navigation Buttons (when viewing other family tree) */}
+                    {code && code !== userInfo.familyCode && (
+                        <div className="sm:hidden fixed top-16 left-4 z-40 flex gap-2">
+                            <button
+                                className="w-10 h-10 bg-white border-2 border-gray-300 text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all duration-200 shadow-lg flex items-center justify-center"
+                                onClick={() => navigate(-1)}
+                                title="Back"
+                            >
+                                <FaArrowLeft className="text-sm" />
+                            </button>
+                            <button
+                                className="w-10 h-10 bg-blue-600 border-2 border-blue-600 text-white rounded-full hover:bg-blue-700 active:scale-95 transition-all duration-200 shadow-lg flex items-center justify-center"
+                                onClick={() => navigate('/family-tree')}
+                                title="My Family Tree"
+                            >
+                                <FaHome className="text-sm" />
+                            </button>
                         </div>
                     )}
                 </div>
@@ -1605,4 +1649,3 @@ const FamilyTreePage = () => {
     );
 };
 export default FamilyTreePage;
-

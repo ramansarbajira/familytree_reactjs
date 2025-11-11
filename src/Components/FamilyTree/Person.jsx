@@ -127,41 +127,43 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
     const urlSourceRelationship = urlParams.get('source');
     
     const cardDimensions = useMemo(() => {
+        const isMobile = window.innerWidth <= 640; // Tailwind sm breakpoint
+        
         if (memberCount > 100) {
-            // Very compact for large trees
+            // Compact for very large trees
             return {
-                width: window.innerWidth <= 600 ? 90 : 140,
-                height: window.innerWidth <= 600 ? 110 : 160,
-                fontSizeName: window.innerWidth <= 600 ? 10 : 11,
-                fontSizeDetails: window.innerWidth <= 600 ? 9 : 10,
-                fontSizeRelationship: window.innerWidth <= 600 ? 8 : 9,
-                profileSize: window.innerWidth <= 600 ? 32 : 48,
-                padding: window.innerWidth <= 600 ? '2px' : '4px',
-                margin: '1px'
-            };
-        } else if (memberCount > 50) {
-            // Compact for medium trees
-            return {
-                width: window.innerWidth <= 600 ? 100 : 150,
-                height: window.innerWidth <= 600 ? 120 : 180,
-                fontSizeName: window.innerWidth <= 600 ? 11 : 12,
-                fontSizeDetails: window.innerWidth <= 600 ? 10 : 11,
-                fontSizeRelationship: window.innerWidth <= 600 ? 9 : 10,
-                profileSize: window.innerWidth <= 600 ? 36 : 56,
-                padding: window.innerWidth <= 600 ? '3px' : '5px',
+                width: isMobile ? 120 : 170,
+                height: isMobile ? 125 : 165,
+                fontSizeName: isMobile ? 12 : 14,
+                fontSizeDetails: isMobile ? 10 : 11,
+                fontSizeRelationship: isMobile ? 10 : 11,
+                profileSize: isMobile ? 70 : 90,
+                padding: '0px',
                 margin: '2px'
             };
-        } else {
-            // Normal size for small trees - compact for better layout
+        } else if (memberCount > 50) {
+            // Medium trees
             return {
-                width: window.innerWidth <= 600 ? 110 : 160, // Reduced width
-                height: window.innerWidth <= 600 ? 100 : 140, // Reduced height for compact display
-                fontSizeName: window.innerWidth <= 600 ? 11 : 12,
-                fontSizeDetails: window.innerWidth <= 600 ? 10 : 11,
-                fontSizeRelationship: window.innerWidth <= 600 ? 9 : 10,
-                profileSize: window.innerWidth <= 600 ? 38 : 52, // Smaller profile
-                padding: window.innerWidth <= 600 ? '2px' : '3px', // Minimal padding
-                margin: window.innerWidth <= 600 ? '1px' : '4px' // Minimal margin
+                width: isMobile ? 130 : 180,
+                height: isMobile ? 135 : 175,
+                fontSizeName: isMobile ? 13 : 15,
+                fontSizeDetails: isMobile ? 11 : 12,
+                fontSizeRelationship: isMobile ? 11 : 12,
+                profileSize: isMobile ? 75 : 95,
+                padding: '0px',
+                margin: '3px'
+            };
+        } else {
+            // Small trees - Premium
+            return {
+                width: isMobile ? 140 : 190,
+                height: isMobile ? 145 : 185,
+                fontSizeName: isMobile ? 14 : 16,
+                fontSizeDetails: isMobile ? 12 : 13,
+                fontSizeRelationship: isMobile ? 12 : 14,
+                profileSize: isMobile ? 80 : 100,
+                padding: '0px',
+                margin: isMobile ? '3px' : '5px'
             };
         }
     }, [memberCount]);
@@ -472,43 +474,43 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                     justifyContent: 'center',
                     opacity: person.lifeStatus === 'remembering' ? 0.8 : 1,
                     background: isRoot
-                      ? 'linear-gradient(135deg, #fceabb 0%, #f8b500 100%)' // gold gradient for root
+                      ? 'linear-gradient(135deg, #fef2f2 0%, #ffe4e6 50%, #fce7f3 100%)' // premium rose gradient for root
                       : isNew
-                      ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' // pink to red gradient for new
+                      ? 'linear-gradient(135deg, #f0f9ff 0%, #dbeafe 50%, #e0f2fe 100%)' // premium sky gradient for new
                       : person.gender === 'male'
-                      ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' // blue gradient for males
+                      ? 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' // premium blue gradient for males
                       : person.gender === 'female'
-                      ? 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' // pink to yellow gradient for females
-                      : 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', // soft teal to pink for others
+                      ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' // premium rose gradient for females
+                      : 'linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%)', // premium light gradient for others
                     border: isHighlighted
-                      ? '4px solid #ff6b35' // orange border for highlighted (search focus)
+                      ? '3px solid #ec4899' // vibrant pink border for highlighted
                       : isSearchResult
-                      ? '3px solid #ffd700' // gold border for search results
+                      ? '3px solid #06b6d4' // vibrant cyan border for search results
                       : isRoot
-                      ? '4px solid #f8b500' // gold border for root
+                      ? '3px solid #db2777' // deep pink border for root
                       : isNew
-                      ? '2.5px dashed #f093fb' // pink border for new
+                      ? '2.5px dashed #0891b2' // vibrant cyan border for new
                       : isSelected
-                      ? '3px solid #4facfe' // blue border for selected
+                      ? '3px solid #ec4899' // vibrant pink border for selected
                       : person.gender === 'male'
-                      ? '2.5px solid #4facfe' // blue border for males
+                      ? '3px solid #0ea5e9' // vibrant sky blue border for males
                       : person.gender === 'female'
-                      ? '2.5px solid #fa709a' // pink border for females
-                      : '2.5px solid #a8edea', // teal border for others
+                      ? '3px solid #f472b6' // vibrant pink border for females
+                      : '3px solid #22d3ee', // vibrant cyan border for others
                     borderRadius: memberCount > 50 ? 12 : 18,
                     boxShadow: isHighlighted
-                      ? '0 0 0 8px rgba(255, 107, 53, 0.3), 0 12px 36px rgba(255, 107, 53, 0.2), 0 0 20px rgba(255, 107, 53, 0.4)' // orange glow for highlighted
+                      ? '0 0 0 4px rgba(236, 72, 153, 0.3), 0 8px 24px rgba(236, 72, 153, 0.25), 0 4px 16px rgba(236, 72, 153, 0.2)' // vibrant pink glow
                       : isSearchResult
-                      ? '0 0 0 6px rgba(255, 215, 0, 0.25), 0 8px 24px rgba(255, 215, 0, 0.15)' // gold glow for search results
+                      ? '0 0 0 4px rgba(6, 182, 212, 0.3), 0 8px 24px rgba(6, 182, 212, 0.25), 0 4px 16px rgba(6, 182, 212, 0.2)' // vibrant cyan glow
                       : isRoot
-                      ? '0 0 0 8px rgba(248, 181, 0, 0.25), 0 12px 36px rgba(248, 181, 0.18)'
+                      ? '0 0 0 8px rgba(219, 39, 119, 0.4), 0 0 25px rgba(219, 39, 119, 0.5), 0 0 40px rgba(219, 39, 119, 0.35), 0 12px 32px rgba(219, 39, 119, 0.3)' // premium pink glitter for root
                       : isSelected
-                      ? '0 12px 36px rgba(79, 172, 254, 0.13)'
+                      ? '0 0 0 4px rgba(236, 72, 153, 0.35), 0 8px 24px rgba(236, 72, 153, 0.3), 0 4px 16px rgba(236, 72, 153, 0.25)' // vibrant pink for selected
                       : person.gender === 'male'
-                      ? `0 6px 24px rgba(79, 172, 254, ${shadowIntensity})`
+                      ? '0 6px 16px rgba(14, 165, 233, 0.2), 0 3px 8px rgba(14, 165, 233, 0.15)' // vibrant sky blue shadow
                       : person.gender === 'female'
-                      ? `0 6px 24px rgba(250, 112, 154, ${shadowIntensity})`
-                      : `0 6px 24px rgba(168, 237, 234, ${shadowIntensity})`,
+                      ? '0 6px 16px rgba(244, 114, 182, 0.2), 0 3px 8px rgba(244, 114, 182, 0.15)' // vibrant pink shadow
+                      : '0 6px 16px rgba(34, 211, 238, 0.18), 0 3px 8px rgba(34, 211, 238, 0.12)', // vibrant cyan shadow
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -526,7 +528,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             {!viewOnly && hasAssociatedTree && (
                 <div className="absolute top-1 left-1 flex flex-col items-center z-10">
                     <button
-                        className="w-6 h-6 bg-white/90 hover:bg-green-100 text-green-700 rounded-full flex items-center justify-center shadow-md transition-all duration-200 border border-green-200"
+                        className="w-6 h-6 bg-gradient-to-br from-cyan-50 to-sky-50 hover:from-cyan-100 hover:to-sky-100 text-sky-700 rounded-full flex items-center justify-center shadow-md transition-all duration-200 border-2 border-cyan-400"
                         onClick={handleViewPersonBirthFamily}
                         title={`Go to ${person.name}'s Family Tree`}
                         style={{
@@ -543,10 +545,10 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             {/* Radial Menu Button - Top Right Corner (hide in viewOnly mode) */}
             {!viewOnly && (
                 <button
-                    className="radial-menu-button absolute top-1 right-1 w-5 h-5 bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-lg hover:shadow-xl transition-all duration-200 z-10 border border-white"
+                    className="radial-menu-button absolute top-1 right-1 w-5 h-5 bg-gradient-to-br from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-lg hover:shadow-xl transition-all duration-200 z-10 border-2 border-white"
                     onClick={handleRadialMenuClick}
                     style={{
-                        boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+                        boxShadow: '0 4px 14px rgba(6, 182, 212, 0.45)',
                         width: memberCount > 50 ? '16px' : '24px',
                         height: memberCount > 50 ? '16px' : '24px',
                         top: memberCount > 50 ? '2px' : '8px',
@@ -557,114 +559,141 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                     +
                 </button>
             )}
-            {/* Profile pic and info (always show) */}
-            <div className="profile-pic-container flex items-center justify-center relative">
-                {person.lifeStatus === 'remembering' && (
-                    <>
-                        {/* Purple tint overlay */}
-                        <div className="absolute inset-0 rounded-full bg-purple-500 bg-opacity-20 z-10"></div>
-                        {/* Tiny ribbon badge */}
+            {/* Profile Picture - Overlapping Top Edge */}
+            <div className="absolute left-1/2 transform -translate-x-1/2 z-20" style={{ top: `-${profileSize / 3}px` }}>
+                <div className="relative">
+                    {person.lifeStatus === 'remembering' && (
                         <span
-                            className="absolute -top-1 -left-1 bg-purple-600 text-white text-[10px] font-semibold px-[6px] py-[1px] rounded-sm rotate-[-12deg] shadow-lg select-none z-20"
+                            className="absolute -top-1 -left-1 bg-red-600 text-white text-[10px] font-semibold px-[6px] py-[1px] rounded-sm rotate-[-12deg] shadow-lg select-none z-30"
                             title="In Loving Memory"
                         >
                             ✝
                         </span>
-                    </>
-                )}
-                <div 
-                    className={`profile-pic-circle rounded-full overflow-hidden bg-gray-100 border-4 ${isRoot ? 'border-yellow-400 shadow-yellow-200' : person.gender === 'male' ? 'border-blue-300' : person.gender === 'female' ? 'border-pink-200' : 'border-gray-300'} shadow-lg group-hover:shadow-2xl transition-all duration-200`}
-                    style={{
-                        width: `${profileSize}px`,
-                        height: `${profileSize}px`,
-                        borderWidth: memberCount > 50 ? '2px' : '4px'
-                    }}
-                >
-                    <img
-                        src={person.imgPreview ? person.imgPreview : (typeof person.img === 'string' && person.img ? person.img : 'https://cdn-icons-png.flaticon.com/512/149/149071.png')}
-                        alt="Profile"
-                        className="w-full h-full object-cover rounded-full"
-                        onError={(e) => {
-                            e.target.src = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+                    )}
+                    <div 
+                        className="rounded-full overflow-hidden bg-white border-4 shadow-lg"
+                        style={{
+                            width: `${profileSize}px`,
+                            height: `${profileSize}px`,
+                            borderColor: isRoot ? '#db2777' : isSelected ? '#ec4899' : person.gender === 'male' ? '#0ea5e9' : person.gender === 'female' ? '#f472b6' : '#22d3ee',
+                            borderWidth: '4px',
+                            boxShadow: isRoot 
+                              ? '0 0 24px rgba(219, 39, 119, 0.45), 0 6px 16px rgba(219, 39, 119, 0.35)'
+                              : isSelected
+                              ? '0 0 20px rgba(236, 72, 153, 0.4), 0 6px 14px rgba(236, 72, 153, 0.3)'
+                              : person.gender === 'male'
+                              ? '0 6px 16px rgba(14, 165, 233, 0.25)'
+                              : '0 6px 16px rgba(244, 114, 182, 0.25)'
                         }}
-                    />
+                    >
+                        <img
+                            src={person.imgPreview ? person.imgPreview : (typeof person.img === 'string' && person.img ? person.img : 'https://cdn-icons-png.flaticon.com/512/149/149071.png')}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                e.target.src = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+                            }}
+                        />
+                    </div>
+                    {isNew && !viewOnly && (
+                      <span className="absolute -bottom-1 -right-1 bg-gradient-to-br from-cyan-500 to-sky-600 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold text-xs shadow-lg" style={{ boxShadow: '0 4px 14px rgba(6, 182, 212, 0.45)' }}>+</span>
+                    )}
+                    {isSelected && !isNew && !viewOnly && !isHighlighted && (
+                      <span className="absolute -bottom-1 -right-1 bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold text-xs shadow-lg" style={{ boxShadow: '0 4px 14px rgba(236, 72, 153, 0.45)' }}>✓</span>
+                    )}
+                    {isHighlighted && (
+                      <span className="absolute -bottom-1 -right-1 bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shadow-lg animate-pulse" style={{ boxShadow: '0 6px 18px rgba(236, 72, 153, 0.55)' }}>🔍</span>
+                    )}
                 </div>
-                {isNew && !viewOnly && (
-                  <span className="absolute -top-1 -right-1 bg-gradient-to-br from-green-400 to-teal-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold text-xs shadow-md">+</span>
-                )}
-                {isSelected && !isNew && !viewOnly && !isHighlighted && (
-                  <span className="absolute -top-1 -right-1 bg-gradient-to-br from-green-500 to-green-700 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold text-xs shadow-md">✓</span>
-                )}
-                {isHighlighted && (
-                  <span className="absolute -top-1 -right-1 bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold text-xs shadow-lg animate-pulse">🔍</span>
-                )}
             </div>
-            {/* All info inside the card */}
-            <div className="mt-1 w-full flex flex-col items-center justify-center">
+
+            {/* Card Content - Grid Layout */}
+            <div className="w-full h-full flex flex-col" style={{ paddingTop: `${profileSize * 0.7}px` }}>
                 {person.lifeStatus === 'remembering' && (
-                    <div className="mb-1 px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full font-medium">
-                        In Loving Memory
+                    <div className="text-center mb-1 px-2 py-0.5 bg-red-50 text-red-700 text-xs font-semibold rounded">
+                        In Memory
                     </div>
                 )}
-                <div className="flex flex-col items-center">
-                    <span 
-                        className="bg-white/90 px-2 py-0.5 rounded-full shadow text-gray-900 font-semibold border border-green-100 backdrop-blur-md tracking-wide text-center" 
-                        style={{
-                            lineHeight: '1.2', 
-                            fontSize: `${fontSizeName}px`, 
-                            maxWidth: memberCount > 50 ? '100px' : '140px', 
-                            overflowWrap: 'break-word', 
-                            wordBreak: 'break-word',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: 'block'
-                        }}
-                        title={person.name || [person.firstName, person.lastName].filter(Boolean).join(' ').trim() || 'Unnamed Family Member'}
-                    >
-                        {person.name || [person.firstName, person.lastName].filter(Boolean).join(' ').trim() || (language === 'tamil' ? 'பெயரில்லாத உறுப்பினர்' : 'Family Member')}
-                    </span>
+                
+                {/* 2-Column Grid for Age & Gender */}
+                <div className="grid grid-cols-2 gap-1 px-2 mb-1">
+                    {person.age && (
+                        <div className="text-center">
+                            <div className="text-sky-600 font-extrabold" style={{ fontSize: `${fontSizeDetails}px` }}>
+                                {person.age}
+                            </div>
+                            <div className="text-cyan-500 text-[8px] font-bold uppercase tracking-wider">AGE</div>
+                        </div>
+                    )}
+                    {getGenderLabel(person, tree, currentUserId) && (
+                        <div className="text-center">
+                            <div className="text-pink-600 font-extrabold" style={{ fontSize: `${fontSizeDetails}px` }}>
+                                {getGenderLabel(person, tree, currentUserId)}
+                            </div>
+                            <div className="text-fuchsia-500 text-[8px] font-bold uppercase tracking-wider">GENDER</div>
+                        </div>
+                    )}
                 </div>
-                {/* Relationship code removed - not needed for display */}
-                <span 
-                    className="details text-xs text-gray-600 text-center font-medium mb-1" 
-                    style={{fontSize: `${fontSizeDetails}px`}}
-                >
-                    {getGenderLabel(person, tree, currentUserId)}{ageText}
-                </span>
-                {/* Hide edit label in viewOnly mode */}
-                {relationshipText && !isEditingLabel && !viewOnly && (
-                    <span 
-                        className={`relationship inline-block px-2 py-0.5 rounded-full font-semibold text-center tracking-wide shadow-sm mt-1 cursor-pointer transition ${
-                            isViewingBirthFamily 
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                                : 'bg-green-200 text-green-800 hover:bg-green-300 border border-green-400'
-                        }`}
+
+                {/* Name - Clean, No Background - AFTER Age/Gender */}
+                <div className="text-center px-2 mb-1">
+                    <h3 
+                        className="font-black text-gray-900 leading-tight"
                         style={{
-                            fontSize: `${fontSizeRelationship}px`, 
-                            maxWidth: memberCount > 50 ? '60px' : '80px', 
-                            overflowWrap: 'break-word', 
-                            wordBreak: 'break-word'
+                            fontSize: `${fontSizeName}px`,
+                            lineHeight: '1.2',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
                         }}
-                        title="Click to edit label"
-                        onClick={handleEditLabelClick}
+                        title={person.name || [person.firstName, person.lastName].filter(Boolean).join(' ').trim() || 'Unnamed'}
                     >
-                        {relationshipText} ✏️
-                    </span>
+                        {person.name || [person.firstName, person.lastName].filter(Boolean).join(' ').trim() || (language === 'tamil' ? 'பெயரில்லாத' : 'Member')}
+                    </h3>
+                </div>
+
+                {/* Relationship Label - Clean with Border */}
+                {relationshipText && !isEditingLabel && !viewOnly && (
+                    <div className="px-2">
+                        <div 
+                            className={`text-center py-1 px-2 rounded-lg font-bold cursor-pointer transition-all duration-200 border-2 shadow-sm ${
+                                isViewingBirthFamily 
+                                    ? 'bg-gradient-to-r from-cyan-50 to-sky-50 text-sky-700 border-cyan-400 hover:from-cyan-100 hover:to-sky-100 hover:shadow-md' 
+                                    : 'bg-gradient-to-r from-pink-50 to-fuchsia-50 text-pink-700 border-pink-400 hover:from-pink-100 hover:to-fuchsia-100 hover:shadow-md'
+                            }`}
+                            style={{
+                                fontSize: `${fontSizeRelationship}px`,
+                                lineHeight: '1.2',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                            }}
+                            title="Click to edit label"
+                            onClick={handleEditLabelClick}
+                        >
+                            {relationshipText} ✏️
+                        </div>
+                    </div>
                 )}
-                {/* Hide editing UI in viewOnly mode */}
+                
+                {/* Editing UI */}
                 {isEditingLabel && !viewOnly && (
-                    <span className="relationship-edit inline-flex items-center mt-1">
-                        <input
-                            type="text"
-                            className="px-2 py-0.5 rounded-l bg-white border border-green-300 text-green-700 font-semibold text-center tracking-wide shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                            value={editLabelValue}
-                            onChange={e => setEditLabelValue(e.target.value)}
-                            style={{fontSize: `${fontSizeRelationship}px`}}
-                        />
-                        <button className="px-2 py-0.5 rounded-r bg-green-500 text-white font-bold" onClick={handleSaveLabel}>Save</button>
-                        <button className="px-2 py-0.5 rounded-r bg-gray-300 text-gray-700 font-bold" onClick={handleCancelEdit}>Cancel</button>
-                    </span>
+                    <div className="px-2 mt-auto">
+                        <div className="flex items-center gap-1">
+                            <input
+                                type="text"
+                                className="flex-1 px-2 py-1 rounded border-2 border-blue-300 text-blue-700 font-semibold text-center focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                value={editLabelValue}
+                                onChange={e => setEditLabelValue(e.target.value)}
+                                style={{fontSize: `${fontSizeRelationship - 1}px`}}
+                            />
+                            <button className="px-2 py-1 rounded bg-blue-500 text-white font-bold text-xs" onClick={handleSaveLabel}>✓</button>
+                            <button className="px-2 py-1 rounded bg-gray-300 text-gray-700 font-bold text-xs" onClick={handleCancelEdit}>✕</button>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>

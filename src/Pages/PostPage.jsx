@@ -28,17 +28,18 @@ const PostPage = () => {
   const [searchCaption, setSearchCaption] = useState("");
   const searchTimeoutRef = useRef(null);
   const { userInfo } = useUser();
-const [postComments, setPostComments] = useState({});
-const [loadingComments, setLoadingComments] = useState(new Set());
-const [postingComment, setPostingComment] = useState(new Set());
-const [newComment, setNewComment] = useState({});
-const [visibleComments, setVisibleComments] = useState({});
-const [showHeart, setShowHeart] = useState(null);
-const [showHeartAnimation, setShowHeartAnimation] = useState(false);
-const [likedPostId, setLikedPostId] = useState(null);
-
-
-
+  const [postComments, setPostComments] = useState({});
+  const [loadingComments, setLoadingComments] = useState(new Set());
+  const [postingComment, setPostingComment] = useState(new Set());
+  const [newComment, setNewComment] = useState({});
+  const [visibleComments, setVisibleComments] = useState({});
+  const [showHeart, setShowHeart] = useState(null);
+  const [showHeartAnimation, setShowHeartAnimation] = useState(false);
+  const [likedPostId, setLikedPostId] = useState(null);
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentText, setEditCommentText] = useState({});
+  const [replyingToCommentId, setReplyingToCommentId] = useState(null);
+  const [replyText, setReplyText] = useState({});
 
   useEffect(() => {
     const storedToken = localStorage.getItem("access_token");
@@ -245,6 +246,132 @@ const [likedPostId, setLikedPostId] = useState(null);
      } catch (error) {
        console.error("Failed to fetch comments:", error);
        return [];
+     }
+   };
+
+   // Build comment tree for nested replies (Instagram style)
+   const buildCommentTree = (comments) => {
+     const commentMap = {};
+     const rootComments = [];
+
+     // First pass: create a map of all comments
+     comments.forEach(comment => {
+       commentMap[comment.id] = { ...comment, replies: [] };
+     });
+
+     // Second pass: build the tree
+     comments.forEach(comment => {
+       if (comment.parentCommentId && commentMap[comment.parentCommentId]) {
+         commentMap[comment.parentCommentId].replies.push(commentMap[comment.id]);
+       } else {
+         rootComments.push(commentMap[comment.id]);
+       }
+     });
+
+     return rootComments;
+   };
+
+   // Handle inline edit comment
+   const handleEditComment = async (commentId, postId) => {
+     const newText = editCommentText[commentId]?.trim();
+     if (!newText) return;
+
+     try {
+       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/post/comment/${commentId}`, {
+         method: 'PUT',
+         headers: {
+           'Authorization': `Bearer ${token}`,
+           'Content-Type': 'application/json'
+         },
+         body: JSON.stringify({ comment: newText })
+       });
+       
+       if (response.ok) {
+         setPostComments(prev => ({
+           ...prev,
+           [postId]: prev[postId].map(c => 
+             c.id === commentId ? { ...c, content: newText, updatedAt: new Date().toISOString() } : c
+           )
+         }));
+         setEditingCommentId(null);
+         setEditCommentText({});
+       }
+     } catch (error) {
+       console.error('Failed to edit comment:', error);
+       alert('Failed to edit comment');
+     }
+   };
+
+   // Handle delete comment (with cascade for children)
+   const handleDeleteComment = async (commentId, postId) => {
+     if (!confirm('Are you sure you want to delete this comment?')) return;
+
+     try {
+       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/post/comment/${commentId}`, {
+         method: 'DELETE',
+         headers: {
+           'Authorization': `Bearer ${token}`
+         }
+       });
+       
+       if (response.ok) {
+         // Helper function to get all child comment IDs recursively
+         const getAllChildIds = (parentId, comments) => {
+           const childIds = [];
+           const children = comments.filter(c => c.parentCommentId === parentId);
+           children.forEach(child => {
+             childIds.push(child.id);
+             childIds.push(...getAllChildIds(child.id, comments));
+           });
+           return childIds;
+         };
+
+         // Remove comment and all its children from state
+         setPostComments(prev => {
+           const currentComments = prev[postId] || [];
+           const childIds = getAllChildIds(commentId, currentComments);
+           const idsToRemove = [commentId, ...childIds];
+           
+           return {
+             ...prev,
+             [postId]: currentComments.filter(c => !idsToRemove.includes(c.id))
+           };
+         });
+       }
+     } catch (error) {
+       console.error('Failed to delete comment:', error);
+       alert('Failed to delete comment');
+     }
+   };
+
+   // Handle reply to comment
+   const handleReplyToComment = async (parentCommentId, postId) => {
+     const replyContent = replyText[parentCommentId]?.trim();
+     if (!replyContent) return;
+
+     try {
+       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/post/comment/reply`, {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${token}`,
+           'Content-Type': 'application/json'
+         },
+         body: JSON.stringify({
+           postId,
+           parentCommentId,
+           comment: replyContent
+         })
+       });
+       
+       if (response.ok) {
+         const comments = await fetchComments(postId, token);
+         setPostComments(prev => ({ ...prev, [postId]: comments }));
+         setReplyingToCommentId(null);
+         setReplyText({});
+       }
+     } catch (error) {
+       console.error('Failed to reply to comment:', error);
+       alert('Failed to post reply');
      }
    };
 
@@ -486,61 +613,149 @@ const [likedPostId, setLikedPostId] = useState(null);
                       </div>
                     ) : postComments[post.id]?.length ? (
                       <>
-                        {/* 💬 Show limited comments */}
-                        <div className="sp mt-2">
-                          {postComments[post.id]
+                        {/* 💬 Show limited comments - Instagram style with nested replies */}
+                        <div className="sp mt-2 space-y-3">
+                          {buildCommentTree(postComments[post.id])
                             .slice(0, visibleComments[post.id] || 3)
-                            .map((comment) => (
-                              <div
-                                key={comment.id}
-                                className="flex items-start gap-2.5 bg-gray-50 hover:bg-gray-100 transition-all duration-300 opacity-0 animate-fadeIn p-2 rounded-lg"
-                              >
-                                <img
-                                  src={
-                                    comment.user?.profile || "/assets/user.png"
-                                  }
-                                  alt="User"
-                                  className="w-7 h-7 rounded-full object-cover border border-gray-200"
-                                />
-                                <div className="flex-1 text-[13px] leading-tight">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-semibold text-gray-900 text-[13px]">
-                                      {comment.user?.firstName}{" "}
-                                      {comment.user?.lastName}
-                                    </span>
-                                    <span className="text-[10px] text-gray-400">
-                                      {new Date(
-                                        comment.createdAt
-                                      ).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })}
-                                    </span>
+                            .map((comment) => {
+                              const renderComment = (cmt, isReply = false) => {
+                                const isOwner = cmt.userId === user?.id || cmt.userId === userInfo?.userId;
+                              
+                                return (
+                                <div key={cmt.id} className={isReply ? "ml-10 mt-2" : ""}>
+                                  <div className="flex items-start gap-2.5 opacity-0 animate-fadeIn">
+                                    <img
+                                      src={cmt.user?.profile || "/assets/user.png"}
+                                      alt="User"
+                                      className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                                    />
+                                    <div className="flex-1">
+                                      {editingCommentId === cmt.id ? (
+                                        <div className="mt-1">
+                                          <input
+                                            type="text"
+                                            autoFocus
+                                            value={editCommentText[cmt.id] || ''}
+                                            onChange={(e) => setEditCommentText({ ...editCommentText, [cmt.id]: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                          />
+                                          <div className="flex gap-2 mt-2">
+                                            <button
+                                              onClick={() => handleEditComment(cmt.id, post.id)}
+                                              className="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600"
+                                            >
+                                              Save
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                setEditingCommentId(null);
+                                                setEditCommentText({});
+                                              }}
+                                              className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-xs hover:bg-gray-400"
+                                            >
+                                              Cancel
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <div className="text-[13px]">
+                                            <span className="font-semibold text-gray-900 mr-2">
+                                              {cmt.user?.firstName} {cmt.user?.lastName}
+                                            </span>
+                                            <span className="text-gray-700">{cmt.content}</span>
+                                          </div>
+                                          
+                                          <div className="flex items-center gap-4 mt-1 text-[12px] text-gray-500">
+                                            <span className="text-[11px]">
+                                              {new Date(cmt.createdAt).toLocaleDateString('en-US', { 
+                                                month: 'short', 
+                                                day: 'numeric' 
+                                              })}
+                                            </span>
+                                            <button 
+                                              onClick={() => setReplyingToCommentId(cmt.id)}
+                                              className="font-medium hover:text-gray-700 bg-transparent"
+                                            >
+                                              Reply
+                                            </button>
+                                            {isOwner && (
+                                              <>
+                                                <button 
+                                                  onClick={() => {
+                                                    setEditingCommentId(cmt.id);
+                                                    setEditCommentText({ [cmt.id]: cmt.content });
+                                                  }}
+                                                  className="font-medium hover:text-gray-700 bg-transparent"
+                                                >
+                                                  Edit
+                                                </button>
+                                                <button 
+                                                  onClick={() => handleDeleteComment(cmt.id, post.id)}
+                                                  className="font-medium text-red-500 hover:text-red-700 bg-transparent"
+                                                >
+                                                  Delete
+                                                </button>
+                                              </>
+                                            )}
+                                          </div>
+
+                                          {replyingToCommentId === cmt.id && (
+                                            <div className="mt-2">
+                                              <input
+                                                type="text"
+                                                autoFocus
+                                                placeholder="Write a reply..."
+                                                value={replyText[cmt.id] || ''}
+                                                onChange={(e) => setReplyText({ ...replyText, [cmt.id]: e.target.value })}
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                              />
+                                              <div className="flex gap-2 mt-2">
+                                                <button
+                                                  onClick={() => handleReplyToComment(cmt.id, post.id)}
+                                                  className="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600"
+                                                >
+                                                  Reply
+                                                </button>
+                                                <button
+                                                  onClick={() => {
+                                                    setReplyingToCommentId(null);
+                                                    setReplyText({});
+                                                  }}
+                                                  className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-xs hover:bg-gray-400"
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
-                                  <p className="text-gray-700 text-[13px] mt-0.5">
-                                    {comment.content}
-                                  </p>
+                                  
+                                  {/* Render nested replies */}
+                                  {cmt.replies && cmt.replies.length > 0 && (
+                                    <div className="ml-10 mt-2 space-y-2">
+                                      {cmt.replies.map(reply => renderComment(reply, true))}
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            ))}
+                                );
+                              };
+                              
+                              return renderComment(comment);
+                            })}
                         </div>
 
-                        {/* 🔽 Load more button */}
-                        {postComments[post.id].length >
-                          (visibleComments[post.id] || 3) && (
-                          <div className="flex justify-center mt-3">
-                            <button
-                              onClick={() =>
-                                setVisibleComments((prev) => ({
-                                  ...prev,
-                                  [post.id]: (prev[post.id] || 3) + 3,
-                                }))
-                              }
-                              className="text-sm bg-white mt-1 text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                            >
-                              Show more comments...
-                            </button>
-                          </div>
+                        {/* 🔽 View all comments link - Instagram style */}
+                        {postComments[post.id].length > 3 && (
+                          <button
+                            onClick={() => handleViewPost(post)}
+                            className="text-[13px] bg-white text-gray-500 hover:text-gray-700 mt-2 font-normal"
+                          >
+                            View all {postComments[post.id].length} comments
+                          </button>
                         )}
                       </>
                     ) : (
@@ -678,6 +893,7 @@ const [likedPostId, setLikedPostId] = useState(null);
         onClose={() => setIsPostViewerOpen(false)}
         post={selectedPost}
         authToken={token}
+        currentUser={user}
       />
     </div>
   );

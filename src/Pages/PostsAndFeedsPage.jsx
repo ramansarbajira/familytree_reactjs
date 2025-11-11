@@ -568,6 +568,7 @@ const PostsAndFeedsPage = () => {
                 onClose={handleClosePostViewer}
                 post={selectedPost}
                 authToken={token}
+                currentUser={user}
             />
 
             {/* Floating Action Button for Mobile - Optional */}

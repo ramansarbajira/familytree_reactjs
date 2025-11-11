@@ -763,6 +763,7 @@ const ProfilePage = () => {
                 post={selectedPost}
                 onLikePost={handleLikePostInModal}
                 authToken={token}
+                currentUser={user}
             />
         </Layout>
     );

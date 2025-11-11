@@ -12,12 +12,13 @@
  * - No overlapping cards or connections
  */
 
-// Card dimensions for layout spacing (larger for better spacing)
-const CARD_WIDTH = 200;  // Layout spacing width (actual rendered ~170px)
-const CARD_HEIGHT = 100; // Layout spacing height (actual rendered ~220px)
-const HORIZONTAL_SPACING = 80;  // Space between siblings/family units
-const VERTICAL_SPACING = 150;   // Space between generations
-const SPOUSE_SPACING = 40;      // Space between spouse pairs
+// Card dimensions for layout spacing - responsive to screen size
+const isMobile = typeof window !== 'undefined' && window.innerWidth <= 640;
+const CARD_WIDTH = isMobile ? 120 : 200;  // Layout spacing width
+const CARD_HEIGHT = isMobile ? 80 : 100;  // Layout spacing height
+const HORIZONTAL_SPACING = isMobile ? 30 : 80;  // Space between siblings/family units
+const VERTICAL_SPACING = isMobile ? 100 : 150;   // Space between generations
+const SPOUSE_SPACING = isMobile ? 20 : 40;      // Space between spouse pairs
 
 /**
  * Calculate hierarchical tree layout positions
