@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import BottomNavBar from "./BottomNavBar";
 import { useNotificationSocket } from "../hooks/useNotificationSocket";
-import { FiMenu, FiBell, FiChevronDown, FiChevronRight } from "react-icons/fi";
+import { FiMenu, FiBell, FiChevronDown } from "react-icons/fi";
 import { RiUser3Line } from "react-icons/ri";
 import { useUser } from "../Contexts/UserContext";
 import ProfileFormModal from "./ProfileFormModal";
 import NotificationPanel from "./NotificationPanel";
 
-const Layout = ({ children, noScroll = false }) => {
+const Layout = ({ noScroll = false }) => {
   const [activeTab, setActiveTab] = useState("profile");
   const location = useLocation();
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ const Layout = ({ children, noScroll = false }) => {
   const profileRef = useRef(null);
 
   const { userInfo, userLoading, logout } = useUser();
-  const { isConnected, unreadCount, refetchUnreadCount } =
+  const { isConnected, unreadCount, refetchUnreadCount  , notifications} =
     useNotificationSocket(userInfo);
 
   // Responsive layout handling
@@ -65,16 +65,11 @@ const Layout = ({ children, noScroll = false }) => {
         !profileRef.current.contains(e.target)
       ) {
         setProfileOpen(false);
-        // NotificationPanel handles its own overlay click-to-close, so don't close it here
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const handleSidebarCollapseToggle = () => {
-    setSidebarCollapsed((collapsed) => !collapsed);
-  };
 
   const handleLogout = () => {
     logout();
@@ -108,7 +103,7 @@ const Layout = ({ children, noScroll = false }) => {
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-800">
-      {/* Desktop Sidebar */}
+      {/* ---------- Desktop Sidebar ---------- */}
       {!isMobile && (
         <div
           ref={sidebarRef}
@@ -121,25 +116,15 @@ const Layout = ({ children, noScroll = false }) => {
           {/* Sidebar Header */}
           <div className="flex items-center justify-center px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              {!sidebarCollapsed ? (
-                <>
-                  <div className="w-12 h-12">
-                    <img
-                      src="/assets/logo-green-light.png"
-                      alt="Familyss Logo"
-                      className="w-full h-full object-cover rounded-full"
-                    />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-800">Familyss</h2>
-                </>
-              ) : (
-                <div className="w-10 h-10">
-                  <img
-                    src="/assets/logo-green-light.png"
-                    alt="Familyss Logo"
-                    className="w-full h-full object-cover rounded-full"
-                  />
-                </div>
+              <div className="w-10 h-10">
+                <img
+                  src="/assets/logo-green-light.png"
+                  alt="Familyss Logo"
+                  className="w-full h-full object-cover rounded-full"
+                />
+              </div>
+              {!sidebarCollapsed && (
+                <h2 className="text-2xl font-bold text-gray-800">Familyss</h2>
               )}
             </div>
           </div>
@@ -153,7 +138,7 @@ const Layout = ({ children, noScroll = false }) => {
         </div>
       )}
 
-      {/* Mobile Sidebar + Overlay */}
+      {/* ---------- Mobile Sidebar + Overlay ---------- */}
       {isMobile && sidebarOpen && (
         <div
           className="fixed inset-0 z-50 bg-black bg-opacity-40"
@@ -164,12 +149,10 @@ const Layout = ({ children, noScroll = false }) => {
       {isMobile && (
         <div
           ref={sidebarRef}
-          onMouseLeave={() => setSidebarOpen(false)}
           className={`fixed top-0 left-0 z-[60] w-64 h-full bg-white shadow-2xl rounded-r-2xl transform transition-transform duration-300 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          {/* Compact logo header for mobile */}
           <div className="flex items-center gap-2 p-4 border-b border-gray-200">
             <div className="w-10 h-10">
               <img
@@ -181,7 +164,6 @@ const Layout = ({ children, noScroll = false }) => {
             <h2 className="text-xl font-bold text-gray-800">Familyss</h2>
           </div>
 
-          {/* Sidebar content */}
           <Sidebar
             activeTab={activeTab}
             setActiveTab={setActiveTab}
@@ -191,12 +173,12 @@ const Layout = ({ children, noScroll = false }) => {
         </div>
       )}
 
-      {/* Main Content */}
+      {/* ---------- Main Content ---------- */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-white border-b border-gray-100 px-4 lg:px-6 sticky top-0 z-50 shadow-md">
           <div className="flex items-center justify-between h-16">
-            {/* Left section */}
+            {/* Left Section */}
             <div className="flex items-center gap-2">
               {isMobile ? (
                 <button
@@ -207,28 +189,14 @@ const Layout = ({ children, noScroll = false }) => {
                 </button>
               ) : (
                 sidebarCollapsed && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8">
-                      <img
-                        src="/assets/logo-green-light.png"
-                        alt="Logo"
-                        className="w-full h-full object-cover rounded-full"
-                      />
-                    </div>
-                    <h2
-                      className={`font-semibold text-gray-800 ${
-                        isMobile ? "text-sm" : "text-lg"
-                      }`}
-                    >
-                      Familyss
-                    </h2>
-                  </div>
+                  <h2 className="font-semibold text-lg text-gray-800">
+                    Familyss
+                  </h2>
                 )
               )}
             </div>
 
-            {/* Right section */}
-            {/* Right: Notifications + Profile */}
+            {/* Right Section */}
             <div className="flex items-center space-x-4">
               {/* Notifications */}
               <div className="relative">
@@ -296,22 +264,22 @@ const Layout = ({ children, noScroll = false }) => {
                         </p>
                       )}
                     </div>
-                    <a
-                      href="/myprofile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    <button
+                      onClick={() => navigate("/myprofile")}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       My Profile
-                    </a>
+                    </button>
                     <button
                       onClick={openAddMemberModal}
-                      className="bg-unset block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       Settings
                     </button>
                     <div className="border-t border-gray-200"></div>
                     <button
                       onClick={handleLogout}
-                      className="bg-unset block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       Sign Out
                     </button>
@@ -322,22 +290,29 @@ const Layout = ({ children, noScroll = false }) => {
           </div>
         </header>
 
-        {/* Page Content */}
-        <div className={`flex-1 ${noScroll ? 'overflow-hidden' : 'overflow-y-auto'} p-1 md:p-2 bg-gray-50`}>
-          {children}
+        {/* Page Outlet (Content changes, layout persists) */}
+        <div
+          className={`flex-1 ${
+            noScroll ? "overflow-hidden" : "overflow-y-auto"
+          } p-1 md:p-2 bg-gray-50`}
+        >
+          <Outlet />
         </div>
 
-        {/* Bottom Navbar (only on mobile) */}
+        {/* Bottom Navbar for Mobile */}
         {isMobile && (
           <BottomNavBar activeTab={activeTab} setActiveTab={setActiveTab} />
         )}
       </main>
 
-      {/* Notifications */}
+      {/* Notification Panel */}
       <NotificationPanel
         open={notificationOpen}
         onClose={() => setNotificationOpen(false)}
         onNotificationCountUpdate={decrementUnreadCount}
+        wsNotifications={notifications}
+        isConnected={isConnected}
+        refetchUnreadCount={refetchUnreadCount}
       />
 
       {/* Settings/Profile Modal */}

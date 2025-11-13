@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Layout from '../Components/Layout';
 import { FaUserPlus, FaSearch, FaWhatsapp } from 'react-icons/fa';
 import { FiLoader, FiX } from 'react-icons/fi';
 import JoinFamilyModal from '../Components/JoinFamilyModal';
@@ -196,19 +195,19 @@ const FamilyMemberListing = () => {
 
   if (userLoading) {
     return (
-      <Layout>
+      <>
         <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col items-center justify-center py-20">
           <FiLoader className="text-6xl text-blue-600 animate-spin mb-4" />
           <h2 className="text-2xl font-semibold text-gray-700 mb-2">Loading...</h2>
           <p className="text-gray-500">Please wait while we verify your access.</p>
         </div>
-      </Layout>
+      </>
     );
   }
 
   if (!hasValidFamilyAccess) {
     return (
-      <Layout>
+      <>
         <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col items-center justify-center py-20">
           <div className="text-center">
             <FaUserPlus className="text-6xl text-gray-400 mx-auto mb-4" />
@@ -236,24 +235,24 @@ const FamilyMemberListing = () => {
             refetchUserInfo={refetchUser}
           />
         )}
-      </Layout>
+      </>
     );
   }
 
   if (isLoading) {
     return (
-      <Layout>
+      <>
         <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col items-center justify-center py-20">
           <FiLoader className="text-6xl text-blue-600 animate-spin mb-4" />
           <h2 className="text-2xl font-semibold text-gray-700 mb-2">Loading Members...</h2>
           <p className="text-gray-500">Please wait while we fetch family members.</p>
         </div>
-      </Layout>
+      </>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2 flex items-center">
@@ -308,7 +307,7 @@ const FamilyMemberListing = () => {
           member={selectedMember}
         />
       )}
-    </Layout>
+    </>
   );
 };
 

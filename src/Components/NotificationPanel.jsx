@@ -16,9 +16,9 @@ import AssociationRequestItem from './FamilyTree/AssociationRequestItem';
 import { useNotificationSocket } from '../hooks/useNotificationSocket';
 import { useUser } from '../Contexts/UserContext';
 
-const NotificationPanel = ({ open, onClose, onNotificationCountUpdate  }) => {
+const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnected ,wsNotifications , refetchUnreadCount  }) => {
   const { userInfo } = useUser();
-  const { isConnected, notifications: wsNotifications, refetchUnreadCount } = useNotificationSocket(userInfo);
+  // const { isConnected, notifications: wsNotifications, refetchUnreadCount } = useNotificationSocket(userInfo);
   
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);

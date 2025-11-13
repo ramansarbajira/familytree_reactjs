@@ -1,6 +1,5 @@
 // GiftListingPage.js
 import React, { useState, useEffect } from 'react';
-import Layout from '../Components/Layout';
 import ViewProductModal from '../Components/ViewProductModal';
 import BuyConfirmationModal from '../Components/BuyConfirmationModal';
 import { FiEye, FiShoppingCart, FiGift, FiChevronRight, FiHeart, FiStar, FiFilter, FiLoader, FiPackage, FiTrendingUp, FiMinus, FiPlus } from 'react-icons/fi';
@@ -225,7 +224,7 @@ const GiftListingPage = () => {
     // Loading state
     if (loading) {
         return (
-            <Layout>
+            <>
                 <div className="max-w-7xl mx-auto px-4 py-8 md:px-6 lg:px-8">
                     <div className="flex flex-col items-center justify-center py-20">
                         <FiLoader className="text-6xl text-primary animate-spin mb-4" />
@@ -233,14 +232,14 @@ const GiftListingPage = () => {
                         <p className="text-gray-500">Please wait while we fetch the latest products for you.</p>
                     </div>
                 </div>
-            </Layout>
+            </>
         );
     }
 
     // Error state
     if (error) {
         return (
-            <Layout>
+            <>
                 <div className="max-w-7xl mx-auto px-4 py-8 md:px-6 lg:px-8">
                     <div className="flex flex-col items-center justify-center py-20">
                         <FiGift className="text-6xl text-gray-400 mb-4" />
@@ -254,12 +253,12 @@ const GiftListingPage = () => {
                         </button>
                     </div>
                 </div>
-            </Layout>
+            </>
         );
     }
 
     return (
-        <Layout>
+        <>
             <div className="max-w-7xl mx-auto px-4 py-8 md:px-6 lg:px-8">
                 {/* Hero Section with Primary Color */}
                 <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-3xl p-8 md:p-12 text-center text-white mb-12 shadow-2xl relative overflow-hidden">
@@ -563,7 +562,7 @@ const GiftListingPage = () => {
                     />
                 )}
             </div>
-        </Layout>
+        </>
     );
 };  
 

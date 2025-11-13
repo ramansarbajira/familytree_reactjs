@@ -5,7 +5,6 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import Layout from '../Components/Layout';
 import { useUser } from '../Contexts/UserContext';
 import { FamilyTree } from '../utils/FamilyTree';
 import { calculateHierarchicalLayout } from '../utils/HierarchicalTreeLayout';
@@ -190,20 +189,20 @@ const FamilyTreeHierarchical = () => {
     // Loading state
     if (userLoading || !userInfo || userInfo.approveStatus !== 'approved' || !userInfo.familyCode) {
         return (
-            <Layout>
+            <>
                 <div className="flex items-center justify-center min-h-screen bg-gray-100">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                         <p className="text-gray-600">Loading family tree...</p>
                     </div>
                 </div>
-            </Layout>
+            </>
         );
     }
 
     return (
         <FamilyTreeProvider>
-            <Layout>
+            <>
                 <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
                 {/* Header */}
                 <div className="bg-white shadow-md border-b border-gray-200">
@@ -340,7 +339,7 @@ const FamilyTreeHierarchical = () => {
                     )}
                 </div>
             </div>
-        </Layout>
+        </>
         </FamilyTreeProvider>
     );
 };

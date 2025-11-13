@@ -1,38 +1,51 @@
-import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate  } from 'react-router-dom';
+import React, { Suspense, lazy } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./utils/queryClient";
 
-// PHASE 4 OPTIMIZATION: Lazy load all pages for code splitting
-const Login = lazy(() => import('./Pages/Login'));
-const Register = lazy(() => import('./Pages/Register'));
-const ForgotPassword = lazy(() => import('./Pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('./Pages/ResetPassword'));
-const OnBoarding = lazy(() => import('./Pages/OnBoarding'));
-const VerifyOtp = lazy(() => import('./Pages/VerifyOtp'));
-const Dashboard = lazy(() => import('./Pages/Dashboard'));
-const MyProfile = lazy(() => import('./Pages/MyProfile'));
-const MyFamilyMember = lazy(() => import('./Pages/MyFamilyMember'));
-const MyFamily = lazy(() => import('./Pages/MyFamily'));
-const FamilyTreePage = lazy(() => import('./Pages/FamilyTreePage'));
-const FamilyTreeHierarchical = lazy(() => import('./Pages/FamilyTreeHierarchical'));
-const PendingFamilyRequests = lazy(() => import('./Pages/PendingFamilyRequests'));
-const PostsAndFeedsPage = lazy(() => import('./Pages/PostsAndFeedsPage'));
-const FamilyGalleryPage = lazy(() => import('./Pages/FamilyGalleryPage'));
-const GiftListingPage = lazy(() => import('./Pages/GiftListingPage'));
-const EventsPage = lazy(() => import('./Pages/EventsPage'));
-const OrderManagementPage = lazy(() => import('./Pages/OrderManagementPage'));
-const SuggestionApproving = lazy(() => import('./Pages/SuggestionApproving'));
-const AssociatedFamilyTreePage = lazy(() => import('./Pages/AssociatedFamilyTreePage'));
-const ProfileModule = lazy(() => import('./Pages/ProfileFormPage'));
+import { UserProvider } from "./Contexts/UserContext";
+import { LanguageProvider } from "./Contexts/LanguageContext";
+import { FamilyTreeProvider } from "./Contexts/FamilyTreeContext";
 
-import { UserProvider } from './Contexts/UserContext';
-import { LanguageProvider } from './Contexts/LanguageContext';
-import PrivateRoute, { RoleBasedRoute } from './Routes/PrivateRoute';
-import GuestRoute from './Routes/GuestRoute';
-import { FamilyTreeProvider } from './Contexts/FamilyTreeContext';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from './utils/queryClient';
+import PrivateRoute, { RoleBasedRoute } from "./Routes/PrivateRoute";
+import GuestRoute from "./Routes/GuestRoute";
+import Layout from "./Components/Layout";
 
-// Loading component for Suspense fallback
+// ✅ Lazy load all pages for code splitting
+const Login = lazy(() => import("./Pages/Login"));
+const Register = lazy(() => import("./Pages/Register"));
+const ForgotPassword = lazy(() => import("./Pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./Pages/ResetPassword"));
+const VerifyOtp = lazy(() => import("./Pages/VerifyOtp"));
+const OnBoarding = lazy(() => import("./Pages/OnBoarding"));
+const Dashboard = lazy(() => import("./Pages/Dashboard"));
+const MyProfile = lazy(() => import("./Pages/MyProfile"));
+const MyFamilyMember = lazy(() => import("./Pages/MyFamilyMember"));
+const MyFamily = lazy(() => import("./Pages/MyFamily"));
+const FamilyTreePage = lazy(() => import("./Pages/FamilyTreePage"));
+const FamilyTreeHierarchical = lazy(() =>
+  import("./Pages/FamilyTreeHierarchical")
+);
+const PendingFamilyRequests = lazy(() =>
+  import("./Pages/PendingFamilyRequests")
+);
+const PostsAndFeedsPage = lazy(() => import("./Pages/PostsAndFeedsPage"));
+const FamilyGalleryPage = lazy(() => import("./Pages/FamilyGalleryPage"));
+const GiftListingPage = lazy(() => import("./Pages/GiftListingPage"));
+const EventsPage = lazy(() => import("./Pages/EventsPage"));
+const OrderManagementPage = lazy(() => import("./Pages/OrderManagementPage"));
+const SuggestionApproving = lazy(() => import("./Pages/SuggestionApproving"));
+const AssociatedFamilyTreePage = lazy(() =>
+  import("./Pages/AssociatedFamilyTreePage")
+);
+const ProfileModule = lazy(() => import("./Pages/ProfileFormPage"));
+
+// ---------------- Loading Fallback ----------------
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen bg-gray-50">
     <div className="text-center">
@@ -42,11 +55,11 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Add a wrapper for admin-only route
+// ---------------- Admin Route ----------------
 const AdminRoute = ({ children }) => {
   let userInfo = null;
   try {
-    userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    userInfo = JSON.parse(localStorage.getItem("userInfo"));
   } catch {}
   if (!userInfo || userInfo.role !== 3) {
     return <Navigate to="/dashboard" replace />;
@@ -61,45 +74,160 @@ function App() {
         <Router>
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
-          
-            {/* Guest-only routes */}
-            <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
-          <Route path="/" element={ <GuestRoute> <Login /> </GuestRoute> } />
-          <Route path="/register" element={ <GuestRoute> <Register /> </GuestRoute> } />
-          <Route path="/forgot-password" element={ <GuestRoute> <ForgotPassword /> </GuestRoute> } />
-          <Route path="/reset-password" element={ <GuestRoute> <ResetPassword /> </GuestRoute> } />
-          <Route path="/verify-otp" element={ <GuestRoute> <VerifyOtp /> </GuestRoute> } />
-          <Route path="/edit-profile" element={ <GuestRoute> <ProfileModule /> </GuestRoute> } />
+              {/* ---------------- Guest-only Routes ---------------- */}
+              <Route
+                path="/"
+                element={
+                  <GuestRoute>
+                    <Login />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/login"
+                element={
+                  <GuestRoute>
+                    <Login />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  <GuestRoute>
+                    <Register />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/forgot-password"
+                element={
+                  <GuestRoute>
+                    <ForgotPassword />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/reset-password"
+                element={
+                  <GuestRoute>
+                    <ResetPassword />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/verify-otp"
+                element={
+                  <GuestRoute>
+                    <VerifyOtp />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/edit-profile"
+                element={
+                  <GuestRoute>
+                    <ProfileModule />
+                  </GuestRoute>
+                }
+              />
 
-          {/* Authenticated-only route */}
-          <Route path="/on-boarding" element={<PrivateRoute> <OnBoarding /> </PrivateRoute>  } />
-          <Route path="/dashboard" element={<PrivateRoute><LanguageProvider><Dashboard /></LanguageProvider></PrivateRoute>} />
-          <Route path="/myprofile" element={<PrivateRoute><LanguageProvider><MyProfile /></LanguageProvider></PrivateRoute>} />
-          <Route path="/my-family-member" element={<PrivateRoute><LanguageProvider><MyFamilyMember /></LanguageProvider></PrivateRoute>  } />
-          <Route path="/my-family" element={<PrivateRoute><LanguageProvider><MyFamily /></LanguageProvider></PrivateRoute>  } />
-          <Route path="/family-tree" element={<PrivateRoute><LanguageProvider><FamilyTreePage /></LanguageProvider></PrivateRoute>  } />
-          <Route path="/family-tree/:code" element={<PrivateRoute><LanguageProvider><FamilyTreePage /></LanguageProvider></PrivateRoute>  } />
-          {/* Alternative hierarchical-only view */}
-          <Route path="/family-tree-hierarchical" element={<PrivateRoute><LanguageProvider><FamilyTreeHierarchical /></LanguageProvider></PrivateRoute>  } />
-          <Route path="/family-tree-hierarchical/:code" element={<PrivateRoute><LanguageProvider><FamilyTreeHierarchical /></LanguageProvider></PrivateRoute>  } />
-          <Route path="/associated-family-tree/:code" element={<PrivateRoute><LanguageProvider><FamilyTreeProvider><AssociatedFamilyTreePage /></FamilyTreeProvider></LanguageProvider></PrivateRoute>} />
-          <Route path="/associated-family-tree-user/:userId" element={<PrivateRoute><LanguageProvider><FamilyTreeProvider><AssociatedFamilyTreePage /></FamilyTreeProvider></LanguageProvider></PrivateRoute>} />
+              {/* ---------------- Onboarding (Authenticated) ---------------- */}
+              <Route
+                path="/on-boarding"
+                element={
+                  <PrivateRoute>
+                    <OnBoarding />
+                  </PrivateRoute>
+                }
+              />
 
-          <Route path="/pending-request" element={<PrivateRoute><LanguageProvider><PendingFamilyRequests /></LanguageProvider></PrivateRoute>} />
-          <Route path="/pending-approvals" element={<PrivateRoute><LanguageProvider><PendingFamilyRequests /></LanguageProvider></PrivateRoute>} />
-          <Route path="/posts-and-feeds" element={<PrivateRoute><LanguageProvider><PostsAndFeedsPage /></LanguageProvider></PrivateRoute>} />
-          <Route path="/family-gallery" element={<PrivateRoute><LanguageProvider><FamilyGalleryPage /></LanguageProvider></PrivateRoute>} />
-          <Route path="/gifts-memories" element={<PrivateRoute><LanguageProvider><GiftListingPage /></LanguageProvider></PrivateRoute>} />
-          <Route path="/gifts" element={<PrivateRoute><LanguageProvider><GiftListingPage /></LanguageProvider></PrivateRoute>} />
-          <Route path="/events" element={<PrivateRoute><LanguageProvider><EventsPage /></LanguageProvider></PrivateRoute>} />
-          <Route path="/upcoming-events" element={<PrivateRoute><LanguageProvider><EventsPage /></LanguageProvider></PrivateRoute>} />
-          <Route path="/orders" element={<PrivateRoute><AdminRoute><LanguageProvider><OrderManagementPage /></LanguageProvider></AdminRoute></PrivateRoute>} />
-          <Route path="/suggestion-approving" element={<PrivateRoute><LanguageProvider><SuggestionApproving /></LanguageProvider></PrivateRoute>} />
+              {/* ---------------- Authenticated Routes (Persistent Layout) ---------------- */}
+              <Route
+                element={
+                  <PrivateRoute>
+                    <LanguageProvider>
+                      <Layout />
+                    </LanguageProvider>
+                  </PrivateRoute>
+                }
+              >
+                {/* Dashboard & Profile */}
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/myprofile" element={<MyProfile />} />
 
-          </Routes>
-        </Suspense>
-      </Router>
-    </UserProvider>
+                {/* Family & Members */}
+                <Route path="/my-family" element={<MyFamily />} />
+                <Route path="/my-family-member" element={<MyFamilyMember />} />
+
+                {/* Family Trees */}
+                <Route path="/family-tree" element={<FamilyTreePage />} />
+                <Route path="/family-tree/:code" element={<FamilyTreePage />} />
+                <Route
+                  path="/family-tree-hierarchical"
+                  element={<FamilyTreeHierarchical />}
+                />
+                <Route
+                  path="/family-tree-hierarchical/:code"
+                  element={<FamilyTreeHierarchical />}
+                />
+                <Route
+                  path="/associated-family-tree/:code"
+                  element={
+                    <FamilyTreeProvider>
+                      <AssociatedFamilyTreePage />
+                    </FamilyTreeProvider>
+                  }
+                />
+                <Route
+                  path="/associated-family-tree-user/:userId"
+                  element={
+                    <FamilyTreeProvider>
+                      <AssociatedFamilyTreePage />
+                    </FamilyTreeProvider>
+                  }
+                />
+
+                {/* Requests, Posts, Events, Gifts */}
+                <Route
+                  path="/pending-request"
+                  element={<PendingFamilyRequests />}
+                />
+                <Route
+                  path="/pending-approvals"
+                  element={<PendingFamilyRequests />}
+                />
+                <Route
+                  path="/posts-and-feeds"
+                  element={<PostsAndFeedsPage />}
+                />
+                <Route path="/family-gallery" element={<FamilyGalleryPage />} />
+                <Route path="/gifts" element={<GiftListingPage />} />
+                <Route path="/gifts-memories" element={<GiftListingPage />} />
+                <Route path="/events" element={<EventsPage />} />
+                <Route path="/upcoming-events" element={<EventsPage />} />
+                <Route
+                  path="/suggestion-approving"
+                  element={<SuggestionApproving />}
+                />
+
+                {/* Admin-only */}
+                <Route
+                  path="/orders"
+                  element={
+                    <AdminRoute>
+                      <OrderManagementPage />
+                    </AdminRoute>
+                  }
+                />
+              </Route>
+
+              {/* ---------------- Catch-all Redirect ---------------- */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </Suspense>
+        </Router>
+      </UserProvider>
     </QueryClientProvider>
   );
 }

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { FiClock } from 'react-icons/fi';
-import Layout from '../Components/Layout';
 
 const Modal = ({ children, onClose }) => (
   <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
@@ -203,7 +202,7 @@ const SuggestionApproving = () => {
   });
 
   return (
-    <Layout activeTab="suggestionApproving">
+    <>
       <div className="flex-1 max-w-7xl mx-auto px-4 py-8 md:px-6 lg:px-8">
         <div className="flex items-center mb-6">
           <FiClock className="text-primary-600 text-3xl mr-3" />
@@ -462,7 +461,7 @@ const SuggestionApproving = () => {
           </div>
         </Modal>
       )}
-    </Layout>
+    </>
   );
 };
 

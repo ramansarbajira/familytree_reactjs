@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Layout from '../Components/Layout';
 import GalleryViewerModal from '../Components/GalleryViewerModal';
 import { FiSearch, FiPlusCircle } from 'react-icons/fi';
 import { MdPublic, MdPeople } from 'react-icons/md';
@@ -124,7 +123,7 @@ const FamilyGalleryPage = () => {
     };
 
     return (
-        <Layout>
+        <>
             <div className="flex flex-col max-w-7xl mx-auto px-4 py-8 md:px-6 lg:px-8">
 
                 {/* Main Content (Gallery) Column - Now full width */}
@@ -274,7 +273,7 @@ const FamilyGalleryPage = () => {
                 mode="create"
             />
             
-        </Layout>
+        </>
     );
 };
 

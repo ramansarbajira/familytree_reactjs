@@ -1,7 +1,7 @@
 import React from 'react';
 import { useUser } from '../Contexts/UserContext';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import Layout from '../Components/Layout';
+
 import AssociatedFamilyTree from '../Components/FamilyTree/AssociatedFamilyTree';
 import { useLanguage } from '../Contexts/LanguageContext';
 import LanguageSwitcher from '../Components/LanguageSwitcher';
@@ -20,7 +20,7 @@ const AssociatedFamilyTreePage = () => {
     : `Associated Family Tree: ${code}`;
 
   return (
-    <Layout noScroll={true}>
+    <>
       <div className="p-4 md:p-8 h-full overflow-auto">
         <div className="mb-6 flex justify-between items-start">
           <div>
@@ -56,7 +56,7 @@ const AssociatedFamilyTreePage = () => {
           )}
         </div>
       </div>
-    </Layout>
+    </>
   );
 };
 

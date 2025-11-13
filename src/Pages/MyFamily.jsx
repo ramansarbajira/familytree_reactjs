@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Layout from '../Components/Layout';
 import FamilyView from '../Components/FamilyView';
 import NoFamilyView from '../Components/NoFamilyView';
 import PendingApprovalView from '../Components/PendingApprovalView';
@@ -195,7 +194,7 @@ const FamilyHubPage = () => {
 
   if (userLoading) {
     return (
-      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <>
         <div className="max-w-7xl mx-auto px-4 py-8 md:px-6 lg:px-8">
             <div className="flex flex-col items-center justify-center py-20">
                 <FiLoader className="text-6xl text-primary-600 animate-spin mb-4" />
@@ -203,22 +202,22 @@ const FamilyHubPage = () => {
                 <p className="text-gray-500">Please wait while we fetch your information.</p>
             </div>
         </div>
-      </Layout>
+      </>
     );
   }
 
   if (error) {
     return (
-      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <>
         <div className="min-h-screen flex items-center justify-center text-red-600">
           {error}
         </div>
-      </Layout>
+      </>
     );
   }
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+    <>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           {/* Condition 1: No family code - show NoFamilyView */}
@@ -315,7 +314,7 @@ const FamilyHubPage = () => {
           onJoinFamily={() => {}} // No join logic for now
         />
       )}
-    </Layout>
+    </>
   );
 };
 

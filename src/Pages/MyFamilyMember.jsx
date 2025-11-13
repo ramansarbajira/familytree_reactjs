@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Layout from '../Components/Layout';
 import { useUser } from '../Contexts/UserContext';
 import FamilyOverView from '../Components/FamilyOverView';
 import ProfileFormModal from '../Components/ProfileFormModal';
@@ -226,7 +225,7 @@ const FamilyMemberListing = () => {
   // Show loading state while checking user info
   if (userLoading || !userInfo) {
     return (
-      <Layout>
+      <>
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex flex-col items-center justify-center py-20">
             <FiLoader className="text-6xl text-primary-600 animate-spin mb-4" />
@@ -234,28 +233,28 @@ const FamilyMemberListing = () => {
             <p className="text-gray-500">Please wait while we fetch your family information.</p>
           </div>
         </div>
-      </Layout>
+      </>
     );
   }
 
   // Show NoFamilyView if user has no family code
   if (!userInfo.familyCode) {
     return (
-      <Layout>
+      <>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <NoFamilyView 
             onCreateFamily={handleCreateFamily}
             onJoinFamily={handleJoinFamily}
           />
         </div>
-      </Layout>
+      </>
     );
   }
 
   // Show PendingApprovalView if user is not approved
   if (userInfo.approveStatus !== 'approved') {
     return (
-      <Layout>
+      <>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <PendingApprovalView 
             familyCode={userInfo.familyCode}
@@ -265,12 +264,12 @@ const FamilyMemberListing = () => {
             }}
           />
         </div>
-      </Layout>
+      </>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-extrabold mb-4">My Family Tree</h1>
 
@@ -335,7 +334,7 @@ const FamilyMemberListing = () => {
           token={token}
         />
       </div>
-    </Layout>
+    </>
   );
 };
 
