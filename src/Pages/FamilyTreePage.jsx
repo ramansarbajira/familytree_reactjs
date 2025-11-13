@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Layout from '../Components/Layout';
 import { useUser } from '../Contexts/UserContext';
 import { FamilyTree } from '../utils/FamilyTree';
 import { autoArrange } from '../utils/TreeLayout';
@@ -168,14 +167,14 @@ const FamilyTreePage = () => {
     // Show loading state while checking approval or if user is not approved
     if (userLoading || !userInfo || userInfo.approveStatus !== 'approved' || !userInfo.familyCode) {
         return (
-            <Layout>
+            <>
                 <div className="flex items-center justify-center min-h-screen bg-gray-100">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                         <p className="text-gray-600">Loading family tree...</p>
                     </div>
                 </div>
-            </Layout>
+            </>
         );
     }
 
@@ -1216,7 +1215,7 @@ const FamilyTreePage = () => {
     return (
         <FamilyTreeProvider language={language}>
             {/* All components that use useFamilyTreeLabels must be children here */}
-            <Layout noScroll={true}>
+            <>
                 {/* Main container for tree and controls */}
                 <div className="relative flex flex-col h-full w-full bg-gray-100">
                     {/* Navigation buttons when viewing another family's tree */}
@@ -1644,7 +1643,7 @@ const FamilyTreePage = () => {
                         </div>
                     </div>
                 )}
-            </Layout>
+            </>
         </FamilyTreeProvider>
     );
 };

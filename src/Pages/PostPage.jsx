@@ -106,26 +106,49 @@ const PostPage = () => {
     fetchPosts();
   }, [activeFeed]);
 
-  const toggleLike = (postId) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              liked: !post.liked,
-              likes: post.liked ? post.likes - 1 : post.likes + 1,
-            }
-          : post
-      )
-    );
+  const toggleLike = async (postId) => {
+     // prevent multiple clicks during loading
+    // Add postId to loading set
+    setLikeLoadingIds((prev) => new Set(prev).add(postId));
 
-    // ✅ Only trigger heart animation when liking, not unliking
-    const post = posts.find((p) => p.id === postId);
-    if (!post.liked) {
-      setLikedPostId(postId);
-      setShowHeartAnimation(true);
-      setTimeout(() => setShowHeartAnimation(false), 700);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/post/${postId}/like-toggle`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await response.json();
+
+      if (response.ok) {
+        // Update post like status and like count in posts array
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post.id === postId
+              ? { ...post, liked: data.liked, likes: data.totalLikes }
+              : post
+          )
+        );
+      } else {
+        console.error(
+          "Failed to toggle like:",
+          data.message || response.statusText
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
     }
+
+    // Remove postId from loading set
+    setLikeLoadingIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(postId);
+      return newSet;
+    });
   };
 
     const handlePostComment = async (postId) => {
@@ -138,9 +161,9 @@ const PostPage = () => {
         return;
       }
 
-      // 🟢 Optimistic comment (match your API structure)
-      const newTempComment = {
-        id: Date.now(), // temporary id
+      // 🟢 Optimistic temporary comment
+      const tempComment = {
+        id: Date.now(),
         content: commentText,
         createdAt: new Date().toISOString(),
         user: {
@@ -148,17 +171,16 @@ const PostPage = () => {
           lastName: userInfo?.lastName || "",
           profile: userInfo?.profile || "/assets/user.png",
         },
+        isTemp: true,
       };
 
-      // Update UI instantly
+      // Add optimistic comment
       setPostComments((prev) => ({
         ...prev,
-        [postId]: prev[postId]
-          ? [newTempComment, ...prev[postId]]
-          : [newTempComment],
+        [postId]: prev[postId] ? [tempComment, ...prev[postId]] : [tempComment],
       }));
 
-      // Clear input
+      // Clear input + set loading
       setNewComment((prev) => ({ ...prev, [postId]: "" }));
       setPostingComment((prev) => new Set(prev).add(postId));
 
@@ -176,43 +198,30 @@ const PostPage = () => {
         );
 
         if (res.ok) {
-          const data = await res.json();
-        
-          console.log("User Infooooo - ",userInfo)
-          // 🟣 Match your backend response structure:
-          const createdComment = {
-            id: data.id,
-            content: data.comment || data.content,
-            createdAt: data.createdAt,
-            user: {
-              firstName: data.user?.firstName || userInfo?.firstName || "You",
-              lastName: data.user?.lastName || userInfo?.lastName || "",
-              profile:
-                data.user?.profile || userInfo?.profileUrl || "/assets/user.png",
-            },
-          };
+          const newCommentData = await res.json(); // ✅ backend returns the same structure
+          console.log("Received Comment:", newCommentData);
 
-          // Replace temp comment with actual one
+          // Replace temp comment with actual comment object from backend
           setPostComments((prev) => ({
             ...prev,
             [postId]: prev[postId].map((c) =>
-              c.id === newTempComment.id ? createdComment : c
+              c.id === tempComment.id ? newCommentData : c
             ),
           }));
         } else {
           console.error("Failed to post comment");
-          // rollback if failed
+          // Rollback
           setPostComments((prev) => ({
             ...prev,
-            [postId]: prev[postId].filter((c) => c.id !== newTempComment.id),
+            [postId]: prev[postId].filter((c) => c.id !== tempComment.id),
           }));
         }
       } catch (err) {
         console.error("Error posting comment:", err);
-        // rollback if error
+        // Rollback
         setPostComments((prev) => ({
           ...prev,
-          [postId]: prev[postId].filter((c) => c.id !== newTempComment.id),
+          [postId]: prev[postId].filter((c) => c.id !== tempComment.id),
         }));
       } finally {
         setPostingComment((prev) => {
@@ -224,8 +233,11 @@ const PostPage = () => {
     };
 
 
+
     const handleLike = async (postId) => {
-      toggleLike(postId); // Your existing like toggle logic
+
+      console.log("Post ID liked:", postId);
+      await toggleLike(postId); // Your existing like toggle logic
       setShowHeart(postId);
       setTimeout(() => setShowHeart(null), 1000); // Hide heart after 0.8s
     };
@@ -277,30 +289,41 @@ const PostPage = () => {
      if (!newText) return;
 
      try {
-       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/post/comment/${commentId}`, {
-         method: 'PUT',
-         headers: {
-           'Authorization': `Bearer ${token}`,
-           'Content-Type': 'application/json'
-         },
-         body: JSON.stringify({ comment: newText })
-       });
-       
+       const response = await fetch(
+         `${import.meta.env.VITE_API_BASE_URL}/post/comment/${commentId}`,
+         {
+           method: "PUT",
+           headers: {
+             Authorization: `Bearer ${token}`,
+             "Content-Type": "application/json",
+           },
+           body: JSON.stringify({ comment: newText }),
+         }
+       );
+
        if (response.ok) {
-         setPostComments(prev => ({
+         const updatedComment = await response.json(); // ✅ use backend response directly
+
+         setPostComments((prev) => ({
            ...prev,
-           [postId]: prev[postId].map(c => 
-             c.id === commentId ? { ...c, content: newText, updatedAt: new Date().toISOString() } : c
-           )
+           [postId]: prev[postId].map((c) =>
+             c.id === commentId ? updatedComment : c
+           ),
          }));
+
+         // reset edit states
          setEditingCommentId(null);
          setEditCommentText({});
+       } else {
+         console.error("Failed to edit comment");
+         alert("Failed to edit comment");
        }
      } catch (error) {
-       console.error('Failed to edit comment:', error);
-       alert('Failed to edit comment');
+       console.error("Error editing comment:", error);
+       alert("Error editing comment");
      }
    };
+
 
    // Handle delete comment (with cascade for children)
    const handleDeleteComment = async (commentId, postId) => {

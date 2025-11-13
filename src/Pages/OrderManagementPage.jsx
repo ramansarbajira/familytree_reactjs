@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Layout from '../Components/Layout';
 import { useUser } from '../Contexts/UserContext';
 import { FiPackage, FiTruck, FiCreditCard, FiCalendar, FiUser, FiMapPin, FiMessageSquare, FiEdit3, FiCheck, FiX, FiChevronDown, FiSearch } from 'react-icons/fi';
 import Swal from 'sweetalert2';
@@ -204,18 +203,18 @@ const OrderManagementPage = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 border-solid"></div>
           </div>
         </div>
-      </Layout>
+      </>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Management</h1>
@@ -325,7 +324,7 @@ const OrderManagementPage = () => {
           onUpdate={handleStatusUpdate}
         />
       </div>
-    </Layout>
+    </>
   );
 };
 

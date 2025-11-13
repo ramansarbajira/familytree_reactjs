@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Layout from '../Components/Layout';
 import CreatePostModal from '../Components/CreatePostModal';
 import PostViewerModal from '../Components/PostViewerModal';
 import { useUser } from '../Contexts/UserContext';
@@ -237,7 +236,7 @@ const PostsAndFeedsPage = () => {
     
 
     return (
-        <Layout>
+        <>
             {/* Flex container for main content and right sidebar */}
             <div className="flex flex-col lg:flex-row lg:gap-8 max-w-7xl mx-auto px-4 py-6 md:px-6 lg:px-8">
 
@@ -579,7 +578,7 @@ const PostsAndFeedsPage = () => {
             >
                 <FiPlusCircle size={28} />
             </button>
-        </Layout>
+        </>
     );
 };
 

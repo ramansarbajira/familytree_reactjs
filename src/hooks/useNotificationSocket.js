@@ -36,6 +36,10 @@ export const useNotificationSocket = (userInfo) => {
   useEffect(() => {
     fetchUnreadCount();
   }, [userInfo?.userId]);
+  useEffect(() => {
+    console.log("🔁 useEffect triggered - connecting socket", userInfo?.userId);
+  }, [userInfo?.userId, queryClient]);
+
 
   useEffect(() => {
     // Only connect if we have a user

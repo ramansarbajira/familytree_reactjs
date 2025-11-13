@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from "react";
-import Layout from "../Components/Layout";
 import { useUser } from "../Contexts/UserContext";
 import CreateEventModal from "../Components/CreateEventModal";
 import ProfileFormModal from "../Components/ProfileFormModal";
@@ -87,12 +86,12 @@ const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
 
   if (isLoading) {
     return (
-      <Layout>
+      <>
         <div className="flex flex-col items-center justify-center h-screen">
           <FiLoader className="text-5xl text-blue-500 animate-spin mb-4" />
           <p className="text-gray-600">Loading Dashboard...</p>
         </div>
-      </Layout>
+      </>
     );
   }
 
@@ -124,7 +123,7 @@ const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
   ];
 
   return (
-    <Layout>
+    <>
       <div className="max-w-7xl mx-auto px-3 sm:px-5 py-6 pt-3 space-y-7">
         {/* Header */}
         {/* <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
@@ -232,7 +231,7 @@ const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
           onClose={() => setIsCreatePostModalOpen(false)}
         />
       </div>
-    </Layout>
+    </>
   );
 };
 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Layout from '../Components/Layout';
 import { getToken } from '../utils/auth';
 import { useUser } from '../Contexts/UserContext';
 import Swal from 'sweetalert2';
@@ -539,7 +538,7 @@ const EventsPage = () => {
   // Show loading while user data is being fetched
   if (userLoading) {
     return (
-      <Layout>
+      <>
         <div className="max-w-7xl mx-auto px-4 py-8 md:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-center py-20">
             <FiLoader className="text-6xl text-primary-600 animate-spin mb-4" />
@@ -547,38 +546,38 @@ const EventsPage = () => {
             <p className="text-gray-500">Please wait while we fetch your information.</p>
           </div>
         </div>
-      </Layout>
+      </>
     );
   }
 
   // Show NoFamilyView if user has no family code
   if (!userInfo?.familyCode) {
     return (
-      <Layout>
+      <>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
           <NoFamilyView onCreateFamily={handleCreateFamily} onJoinFamily={handleJoinFamily} />
         </div>
-      </Layout>
+      </>
     );
   }
 
   // Show PendingApprovalView if user has family code but is not approved
   if (userInfo?.familyCode && userInfo?.approveStatus !== 'approved') {
     return (
-      <Layout>
+      <>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
           <PendingApprovalView 
             familyCode={userInfo.familyCode} 
             onJoinFamily={handleJoinFamily} 
           />
         </div>
-      </Layout>
+      </>
     );
   }
 
   // Show events content only if user has family code and is approved
   return (
-    <Layout>
+    <>
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-8 md:px-6 lg:px-8 space-y-10">
           {/* Header Section */}
@@ -909,7 +908,7 @@ const EventsPage = () => {
         onFamilyJoined={handleFamilyJoined}
         token={getToken()}
       />
-    </Layout>
+    </>
   );
 };
 

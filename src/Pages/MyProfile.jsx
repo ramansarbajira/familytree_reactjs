@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
-import Layout from '../Components/Layout';
 import { FiEdit3, FiHeart, FiMessageCircle, FiGrid, FiPlusSquare, FiImage, FiSettings, FiCamera, FiTrash2 } from 'react-icons/fi';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -442,7 +441,7 @@ const ProfilePage = () => {
     const loadingUserProfile = userLoading || !user;
 
     return (
-        <Layout>
+        <>
             <div className="mx-auto px-4 py-4 md:px-6 lg:px-8 space-y-8 font-inter">
                 {/* Profile Header Section */}
                 {loadingUserProfile ? (
@@ -765,7 +764,7 @@ const ProfilePage = () => {
                 authToken={token}
                 currentUser={user}
             />
-        </Layout>
+        </>
     );
 };
 
