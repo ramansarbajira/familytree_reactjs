@@ -467,12 +467,8 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                     height: height, // Fixed height
                     margin: margin,
                     padding: padding,
-                    borderRadius: '4px', // Minimal rounded corners - almost square for perfect line connection
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: person.lifeStatus === 'remembering' ? 0.8 : 1,
+                    // borderRadius, display, flexDirection, alignItems, justifyContent defined later with more specific logic
+                    opacity: person.lifeStatus === 'remembering' ? 0.8 * cardOpacity : cardOpacity,
                     background: isRoot
                       ? 'linear-gradient(135deg, #fef2f2 0%, #ffe4e6 50%, #fce7f3 100%)' // premium rose gradient for root
                       : isNew
@@ -519,7 +515,6 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                     fontFamily: 'Poppins, Arial, sans-serif',
                     transition: 'box-shadow 0.18s, border 0.18s, background 0.18s',
                     overflow: 'visible',
-                    opacity: cardOpacity,
                 }}
                 onClick={viewOnly ? undefined : handleCardClick}
                 data-person-id={person.id}
