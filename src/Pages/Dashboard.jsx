@@ -11,6 +11,7 @@ import { fetchUserFamilyCodes } from "../utils/familyTreeApi";
 import { getToken } from "../utils/auth";
 import { useQuery } from "@tanstack/react-query";
 import PostPage from "./PostPage";
+import DashboardShimmer from "./DashboardShimmer";
 
 const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
@@ -87,10 +88,11 @@ const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
   if (isLoading) {
     return (
       <>
-        <div className="flex flex-col items-center justify-center h-screen">
+        {/* <div className="flex flex-col items-center justify-center h-screen">
           <FiLoader className="text-5xl text-blue-500 animate-spin mb-4" />
           <p className="text-gray-600">Loading Dashboard...</p>
-        </div>
+        </div> */}
+        <DashboardShimmer/>
       </>
     );
   }

@@ -93,12 +93,12 @@ const Sidebar = ({
           : []),
       ],
     },
-    {
-      id: "posts",
-      label: "Posts & Stories",
-      route: "/posts-and-feeds",
-      icon: <FiShare2 size={19} />,
-    },
+    // {
+    //   id: "posts",
+    //   label: "Posts & Stories",
+    //   route: "/posts-and-feeds",
+    //   icon: <FiShare2 size={19} />,
+    // },
     {
       id: "gallery",
       label: "Gallery Hub",

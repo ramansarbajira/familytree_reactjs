@@ -21,7 +21,7 @@ const Layout = ({ noScroll = false }) => {
       "/myprofile": "profile",
       "/events": "upcomingEvent",
       "/upcoming-events": "upcomingEvent",
-      "/posts-and-feeds": "postsStories",
+      // "/posts-and-feeds": "postsStories",
       "/gifts": "gifts",
       "/gifts-memories": "gifts",
     };
@@ -254,7 +254,7 @@ const Layout = ({ noScroll = false }) => {
                     className="fixed md:absolute right-4 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200"
                     style={{ top: "4rem" }}
                   >
-                    <div className="px-4 py-2 text-sm text-gray-800 border-b border-gray-100">
+                    <div className="px-4 py-2  text-sm text-gray-800 border-b border-gray-100">
                       <p className="font-semibold">
                         {userInfo?.firstName} {userInfo?.lastName}
                       </p>
@@ -266,20 +266,20 @@ const Layout = ({ noScroll = false }) => {
                     </div>
                     <button
                       onClick={() => navigate("/myprofile")}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full bg-white text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       My Profile
                     </button>
                     <button
                       onClick={openAddMemberModal}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full bg-white text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       Settings
                     </button>
                     <div className="border-t border-gray-200"></div>
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full bg-white text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       Sign Out
                     </button>

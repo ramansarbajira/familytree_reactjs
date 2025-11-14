@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useUser } from '../Contexts/UserContext';
 import LoadingSpinner from '../Components/LoadingSpinner';
 import { getToken } from '../utils/auth';
+import HomePageShimmer from '../Pages/HomePageShimmer';
 
 const PrivateRoute = ({ children }) => {
   const token = getToken();
@@ -15,7 +16,8 @@ const PrivateRoute = ({ children }) => {
 
   // If user context is still loading, show loading spinner
   if (userLoading) {
-    return <LoadingSpinner fullScreen={true} text="Loading..." />;
+    // return <LoadingSpinner fullScreen={true} text="Loading..." />;
+    return <HomePageShimmer/>
   }
 
   // If user is authenticated and context is loaded, allow access
