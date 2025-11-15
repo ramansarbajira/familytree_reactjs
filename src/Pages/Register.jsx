@@ -18,7 +18,8 @@ const Register = () => {
     mobile: '',
     countryCode: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    hasAcceptedTerms: false,
   });
   
   const [errors, setErrors] = useState({});
@@ -27,6 +28,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const apiErrorRef = useRef(null);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   // Password validation function
   const validatePassword = (password) => {
@@ -71,6 +73,10 @@ const Register = () => {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
+    if (!formData.hasAcceptedTerms) {
+      newErrors.hasAcceptedTerms = 'You must agree to the Terms & Conditions to create an account';
+    }
+
     setErrors(newErrors);
 
     if (newErrors.firstName) {
@@ -106,7 +112,9 @@ const Register = () => {
         email: formData.email,
         mobile: formData.mobile,
         countryCode: formData.countryCode,
-        password: formData.password
+        password: formData.password,
+        hasAcceptedTerms: true,
+        termsVersion: 'v1.0.0',
       };
 
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/register`, {
@@ -399,8 +407,33 @@ const Register = () => {
   {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
 </div>
 
+          <div className="pt-2">
+            <div className="flex items-start space-x-2">
+              <input
+                id="hasAcceptedTerms"
+                type="checkbox"
+                checked={formData.hasAcceptedTerms}
+                onChange={(e) => handleChange('hasAcceptedTerms', e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+              />
+              <label htmlFor="hasAcceptedTerms" className="text-xs text-gray-700">
+                I agree to the{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(true)}
+                  className="text-[var(--color-primary)] underline"
+                >
+                  Terms & Conditions
+                </button>
+                {' '}and confirm that I have permission to share my family members' information and will provide only valid contact details
+              </label>
+            </div>
+            {errors.hasAcceptedTerms && (
+              <p className="text-red-500 text-xs mt-1">{errors.hasAcceptedTerms}</p>
+            )}
+          </div>
 
-            {/* Submit Button with loading state */}
+          {/* Submit Button with loading state */}
             <button
             type="submit"
             disabled={isLoading}
@@ -421,6 +454,59 @@ const Register = () => {
             )}
             </button>
         </form>
+
+        {showTermsModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg border border-gray-200">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-800">Terms & Conditions</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="px-4 py-4 max-h-72 overflow-y-auto text-sm text-gray-700 space-y-3">
+                <p>
+                  This application is designed to help you build and maintain your family tree and share memories with your
+                  trusted family members. By using the application, you agree to provide accurate information about yourself and
+                  any family members you add.
+                </p>
+                <p>
+                  When you add details about your family members, you confirm that you have their permission where required by
+                  law, and that you will not provide fake, misleading, or harmful contact information.
+                </p>
+                <p>
+                  Non-app users are family members who do not have their own login. For these members, only general
+                  information should be stored. You must not use dummy or fabricated email addresses or phone numbers for them.
+                  Where contact details are unknown, you must leave those fields empty.
+                </p>
+                <p>
+                  You agree not to upload content that is unlawful, abusive, harassing, defamatory, or that violates the
+                  privacy or rights of others. We reserve the right to remove content that violates these rules and, if
+                  necessary, to restrict or disable your access.
+                </p>
+                <p>
+                  We may update these Terms & Conditions from time to time. When we do, we will update the version number
+                  displayed here. If there are material changes, you may be asked to review and accept the updated terms before
+                  continuing to use the application.
+                </p>
+                <p className="font-semibold">Current terms version: v1.0.0</p>
+              </div>
+              <div className="px-4 py-3 border-t border-gray-200 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(false)}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-[var(--color-primary)] rounded-lg hover:brightness-110"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Login Link */}
         <p className="text-center text-sm text-gray-500 mt-6 pb-8">

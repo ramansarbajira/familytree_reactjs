@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useUser } from '../Contexts/UserContext';
 import LoadingSpinner from '../Components/LoadingSpinner';
 import { getToken } from '../utils/auth';
@@ -7,17 +7,27 @@ import HomePageShimmer from '../Pages/HomePageShimmer';
 
 const PrivateRoute = ({ children }) => {
   const token = getToken();
-  const { userLoading } = useUser();
+  const { userInfo, userLoading } = useUser();
+  const location = useLocation();
 
   // If no token, redirect to login
   if (!token) {
     return <Navigate to="/" replace />;
   }
 
-  // If user context is still loading, show loading spinner
   if (userLoading) {
     // return <LoadingSpinner fullScreen={true} text="Loading..." />;
     return <HomePageShimmer/>
+  }
+
+  if (!userInfo) {
+    return <Navigate to="/" replace />;
+  }
+
+  const isOnTermsPage = location.pathname === '/terms';
+
+  if (!isOnTermsPage && userInfo.hasAcceptedTerms === false) {
+    return <Navigate to="/terms" replace />;
   }
 
   // If user is authenticated and context is loaded, allow access

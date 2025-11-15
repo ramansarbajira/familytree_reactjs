@@ -65,7 +65,18 @@ export const UserProvider = ({ children }) => {
       if (!response.ok) throw new Error('Failed to fetch user details');
 
       const jsonData = await response.json();
-      const { userProfile, email, countryCode, mobile, status, role } = jsonData.data || {};
+      const {
+        userProfile,
+        email,
+        countryCode,
+        mobile,
+        status,
+        role,
+        isAppUser,
+        hasAcceptedTerms,
+        termsVersion,
+        termsAcceptedAt,
+      } = jsonData.data || {};
       
       if (!userProfile) throw new Error('No user profile returned');
 
@@ -127,6 +138,10 @@ export const UserProvider = ({ children }) => {
         mobile: mobile || '',
         status: status || 0,
         role: role || 0,
+        isAppUser: typeof isAppUser === 'boolean' ? isAppUser : !!jsonData.currentUser?.isAppUser,
+        hasAcceptedTerms: typeof hasAcceptedTerms === 'boolean' ? hasAcceptedTerms : !!jsonData.currentUser?.hasAcceptedTerms,
+        termsVersion: termsVersion || 'v1.0.0',
+        termsAcceptedAt: termsAcceptedAt || null,
 
         raw: userProfile,
       });
