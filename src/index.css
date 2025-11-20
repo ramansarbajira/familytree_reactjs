@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --color-primary: #3f982c;
-    --color-secondary: #2e6b22;
+    --color-primary: #1976d2;
+    --color-secondary: #f97316;
     --color-error: 239, 68, 68;
   }
 
@@ -927,3 +927,41 @@ h6 { font-size: 0.9rem; }
   animation: shimmer 1.6s infinite;
 }
 
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+  
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+  
+  .animation-delay-500 {
+    animation-delay: 500ms;
+  }
+  
+  .animation-delay-600 {
+    animation-delay: 600ms;
+  }
+  
+  .animation-delay-700 {
+    animation-delay: 700ms;
+  }
+
+  /* Hide scrollbar for Chrome, Safari and Edge */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for Firefox */
+.no-scrollbar {
+  scrollbar-width: none;
+}
