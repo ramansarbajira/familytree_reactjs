@@ -209,6 +209,7 @@ const Dashboard = ({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL }) => {
             <span className="sm:hidden">Event</span>
           </button>
         </div>
+        
 
         {/* Posts Section */}
         <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 border border-gray-100">

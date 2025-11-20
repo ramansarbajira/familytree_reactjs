@@ -1,28 +1,41 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
-        primary: { // You can name this anything, 'primary' is common
-          DEFAULT: '#3f982c', // This sets 'primary' to your main green color
-          '50': '#f0f9ed',   // Lighter shades for backgrounds (optional, but good practice)
-          '100': '#e0f3dd',
-          '200': '#c2e7b9',
-          '300': '#a3dc95',
-          '400': '#85d071',
-          '500': '#66c44d',
-          '600': '#3f982c', // Your exact color can be at 600 or 700, whatever feels "default"
-          '700': '#2f7321', // Darker shades for text/hover
-          '800': '#1f4e16',
-          '900': '#10290b',
+        primary: {
+          // You can name this anything, 'primary' is common
+            DEFAULT: "#1976D2", // Your primary
+            50: "#E3F2FD",
+            100: "#BBDEFB",
+            200: "#90CAF9",
+            300: "#64B5F6",
+            400: "#42A5F5",
+            500: "#2196F3",
+            600: "#1E88E5",
+            700: "#1976D2", // Your shade
+            800: "#1565C0", // Your hover shade
+            900: "#0D47A1",
+          
         },
+        secondary: {
+          DEFAULT: "#f97316", // Main orange
+          50: "#fff7ed",
+          100: "#ffedd5",
+          200: "#fed7aa",
+          300: "#fdba74",
+          400: "#fb923c",
+          500: "#f97316",
+          600: "#ea580c",
+          700: "#c2410c",
+          800: "#9a3412",
+          900: "#7c2d12",
+        },
+
         // You can keep other colors or define more here (e.g., 'secondary', 'accent')
       },
     },
   },
   plugins: [],
-}
+};

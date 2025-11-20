@@ -338,55 +338,64 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnec
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
+        onClick={onClose}
+      />
       <div className="absolute right-0 top-0 h-full w-full max-w-md transform overflow-hidden bg-white shadow-xl transition-transform duration-300 ease-in-out">
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="border-b border-gray-200 bg-white px-4 py-3">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Notifications
+              </h3>
               <button
                 onClick={onClose}
-                className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                className="rounded-full p-1 bg-white text-gray-400 hover:bg-gray-100 hover:text-gray-500"
               >
                 <FiX className="h-5 w-5" />
               </button>
             </div>
-            
+
             {/* Tab Navigation - Uniform Green Style */}
             <div className="flex gap-2 p-2">
               <button
-                onClick={() => setActiveTab('all')}
+                onClick={() => setActiveTab("all")}
                 className={`flex-1 px-4 py-3 text-sm font-semibold rounded-lg transition-all ${
-                  activeTab === 'all'
-                    ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-md'
-                    : 'bg-gradient-to-r from-green-600 to-green-500 text-gray-300 opacity-60 hover:opacity-80'
+                  activeTab === "all"
+                    ? "bg-gradient-to-r from-secondary-600 to-secondary-500 text-white shadow-md"
+                    : "bg-gradient-to-r from-primary-600 to-primary-500 text-gray-300 opacity-90 hover:opacity-100"
                 }`}
               >
                 All
                 <span className="ml-1 text-xs">({notifications.length})</span>
               </button>
               <button
-                onClick={() => setActiveTab('requests')}
+                onClick={() => setActiveTab("requests")}
                 className={`flex-1 px-4 py-3 text-sm font-semibold rounded-lg transition-all ${
-                  activeTab === 'requests'
-                    ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-md'
-                    : 'bg-gradient-to-r from-green-600 to-green-500 text-gray-300 opacity-60 hover:opacity-80'
+                  activeTab === "requests"
+                    ? "bg-gradient-to-r from-secondary-600 to-secondary-500 text-white shadow-md"
+                    : "bg-gradient-to-r from-primary-600 to-primary-500 text-gray-300 opacity-90 hover:opacity-100"
                 }`}
               >
                 Requests
-                <span className="ml-1 text-xs">({allAssociationRequests.length})</span>
+                <span className="ml-1 text-xs">
+                  ({allAssociationRequests.length})
+                </span>
               </button>
               <button
-                onClick={() => setActiveTab('other')}
+                onClick={() => setActiveTab("other")}
                 className={`flex-1 px-4 py-3 text-sm font-semibold rounded-lg transition-all ${
-                  activeTab === 'other'
-                    ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-md'
-                    : 'bg-gradient-to-r from-green-600 to-green-500 text-gray-300 opacity-60 hover:opacity-80'
+                  activeTab === "other"
+                    ? "bg-gradient-to-r from-secondary-600 to-secondary-500 text-white shadow-md"
+                    : "bg-gradient-to-r from-primary-600 to-primary-500 text-gray-300 opacity-90 hover:opacity-100"
                 }`}
               >
                 Other
-                <span className="ml-1 text-xs">({allOtherNotifications.length})</span>
+                <span className="ml-1 text-xs">
+                  ({allOtherNotifications.length})
+                </span>
               </button>
             </div>
           </div>
@@ -395,40 +404,60 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnec
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex h-full items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500" />
+                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-500" />
               </div>
             ) : filteredNotifications.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center p-6 text-center">
                 <FiBell className="mb-2 h-10 w-10 text-gray-400" />
                 <h4 className="text-lg font-medium text-gray-900">
-                  {activeTab === 'requests' ? 'No association requests' : 
-                   activeTab === 'other' ? 'No other notifications' : 'No notifications'}
+                  {activeTab === "requests"
+                    ? "No association requests"
+                    : activeTab === "other"
+                    ? "No other notifications"
+                    : "No notifications"}
                 </h4>
                 <p className="mt-1 text-sm text-gray-500">
-                  {activeTab === 'requests' ? 'No pending family association requests.' : 
-                   activeTab === 'other' ? 'No other notifications available.' : 
-                   "We'll let you know when there's something new."}
+                  {activeTab === "requests"
+                    ? "No pending family association requests."
+                    : activeTab === "other"
+                    ? "No other notifications available."
+                    : "We'll let you know when there's something new."}
                 </p>
               </div>
             ) : (
               <>
                 {/* Time-grouped notifications - Instagram style */}
-                
+
                 {/* Today Section */}
-                {(associationGroups.today.length > 0 || otherGroups.today.length > 0) && (
+                {(associationGroups.today.length > 0 ||
+                  otherGroups.today.length > 0) && (
                   <>
                     <div className="bg-gray-50 px-4 py-2 sticky top-0 z-10">
-                      <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Today</h4>
+                      <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        Today
+                      </h4>
                     </div>
-                    
+
                     {/* Today's Association Requests */}
                     {associationGroups.today.map((notification) => {
-                      const requesterId = notification.data?.requesterId || notification.sender?.id || notification.data?.sender?.id;
-                      const requesterName = notification.data?.senderName || notification.data?.requesterName || 'Someone';
-                      const requesterFamilyCode = notification.data?.senderFamilyCode || notification.data?.requesterFamilyCode || 'Their Family';
-                      
+                      const requesterId =
+                        notification.data?.requesterId ||
+                        notification.sender?.id ||
+                        notification.data?.sender?.id;
+                      const requesterName =
+                        notification.data?.senderName ||
+                        notification.data?.requesterName ||
+                        "Someone";
+                      const requesterFamilyCode =
+                        notification.data?.senderFamilyCode ||
+                        notification.data?.requesterFamilyCode ||
+                        "Their Family";
+
                       return (
-                        <div key={notification.id} className="border-b border-gray-200">
+                        <div
+                          key={notification.id}
+                          className="border-b border-gray-200"
+                        >
                           <AssociationRequestItem
                             request={{
                               ...notification,
@@ -443,10 +472,12 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnec
                                 senderFamilyCode: requesterFamilyCode,
                                 targetUserId: notification.data?.targetUserId,
                                 targetName: notification.data?.targetName,
-                                targetFamilyCode: notification.data?.targetFamilyCode || notification.data?.familyCode,
-                                requestType: 'family_association'
+                                targetFamilyCode:
+                                  notification.data?.targetFamilyCode ||
+                                  notification.data?.familyCode,
+                                requestType: "family_association",
                               },
-                              createdAt: notification.createdAt
+                              createdAt: notification.createdAt,
                             }}
                             onAccept={() => handleAcceptRequest(notification)}
                             onReject={() => handleRejectRequest(notification)}
@@ -455,31 +486,50 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnec
                         </div>
                       );
                     })}
-                    
+
                     {/* Today's Other Notifications */}
                     {otherGroups.today.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`relative px-4 py-3 hover:bg-gray-50 border-b border-gray-200 ${!notification.read ? 'bg-blue-50' : ''}`}
-                        onClick={() => !notification.read && markAsRead(notification.id)}
+                        className={`relative px-4 py-3 hover:bg-gray-50 border-b border-gray-200 ${
+                          !notification.read ? "bg-blue-50" : ""
+                        }`}
+                        onClick={() =>
+                          !notification.read && markAsRead(notification.id)
+                        }
                       >
                         <div className="flex items-start">
-                          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${notificationTypes[notification.type]?.color || 'from-gray-400 to-gray-300'}`}>
-                            {notificationTypes[notification.type]?.icon || <FiBell className="h-5 w-5 text-white" />}
+                          <div
+                            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${
+                              notificationTypes[notification.type]?.color ||
+                              "from-gray-400 to-gray-300"
+                            }`}
+                          >
+                            {notificationTypes[notification.type]?.icon || (
+                              <FiBell className="h-5 w-5 text-white" />
+                            )}
                           </div>
                           <div className="ml-3 flex-1">
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-medium text-gray-900">
-                                {notification.title || getNotificationType(notification.type)}
+                                {notification.title ||
+                                  getNotificationType(notification.type)}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {new Date(notification.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(notification.time).toLocaleTimeString(
+                                  [],
+                                  { hour: "2-digit", minute: "2-digit" }
+                                )}
                               </p>
                             </div>
-                            <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
+                            <p className="mt-1 text-sm text-gray-600">
+                              {notification.message}
+                            </p>
                             {!notification.read && (
                               <div className="mt-1">
-                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">New</span>
+                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                                  New
+                                </span>
                               </div>
                             )}
                           </div>
@@ -490,20 +540,35 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnec
                 )}
 
                 {/* Last 7 Days Section */}
-                {(associationGroups.last7Days.length > 0 || otherGroups.last7Days.length > 0) && (
+                {(associationGroups.last7Days.length > 0 ||
+                  otherGroups.last7Days.length > 0) && (
                   <>
                     <div className="bg-gray-50 px-4 py-2 sticky top-0 z-10">
-                      <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Last 7 Days</h4>
+                      <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        Last 7 Days
+                      </h4>
                     </div>
-                    
+
                     {/* Last 7 Days Association Requests */}
                     {associationGroups.last7Days.map((notification) => {
-                      const requesterId = notification.data?.requesterId || notification.sender?.id || notification.data?.sender?.id;
-                      const requesterName = notification.data?.senderName || notification.data?.requesterName || 'Someone';
-                      const requesterFamilyCode = notification.data?.senderFamilyCode || notification.data?.requesterFamilyCode || 'Their Family';
-                      
+                      const requesterId =
+                        notification.data?.requesterId ||
+                        notification.sender?.id ||
+                        notification.data?.sender?.id;
+                      const requesterName =
+                        notification.data?.senderName ||
+                        notification.data?.requesterName ||
+                        "Someone";
+                      const requesterFamilyCode =
+                        notification.data?.senderFamilyCode ||
+                        notification.data?.requesterFamilyCode ||
+                        "Their Family";
+
                       return (
-                        <div key={notification.id} className="border-b border-gray-200">
+                        <div
+                          key={notification.id}
+                          className="border-b border-gray-200"
+                        >
                           <AssociationRequestItem
                             request={{
                               ...notification,
@@ -518,10 +583,12 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnec
                                 senderFamilyCode: requesterFamilyCode,
                                 targetUserId: notification.data?.targetUserId,
                                 targetName: notification.data?.targetName,
-                                targetFamilyCode: notification.data?.targetFamilyCode || notification.data?.familyCode,
-                                requestType: 'family_association'
+                                targetFamilyCode:
+                                  notification.data?.targetFamilyCode ||
+                                  notification.data?.familyCode,
+                                requestType: "family_association",
                               },
-                              createdAt: notification.createdAt
+                              createdAt: notification.createdAt,
                             }}
                             onAccept={() => handleAcceptRequest(notification)}
                             onReject={() => handleRejectRequest(notification)}
@@ -530,31 +597,50 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnec
                         </div>
                       );
                     })}
-                    
+
                     {/* Last 7 Days Other Notifications */}
                     {otherGroups.last7Days.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`relative px-4 py-3 hover:bg-gray-50 border-b border-gray-200 ${!notification.read ? 'bg-blue-50' : ''}`}
-                        onClick={() => !notification.read && markAsRead(notification.id)}
+                        className={`relative px-4 py-3 hover:bg-gray-50 border-b border-gray-200 ${
+                          !notification.read ? "bg-blue-50" : ""
+                        }`}
+                        onClick={() =>
+                          !notification.read && markAsRead(notification.id)
+                        }
                       >
                         <div className="flex items-start">
-                          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${notificationTypes[notification.type]?.color || 'from-gray-400 to-gray-300'}`}>
-                            {notificationTypes[notification.type]?.icon || <FiBell className="h-5 w-5 text-white" />}
+                          <div
+                            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${
+                              notificationTypes[notification.type]?.color ||
+                              "from-gray-400 to-gray-300"
+                            }`}
+                          >
+                            {notificationTypes[notification.type]?.icon || (
+                              <FiBell className="h-5 w-5 text-white" />
+                            )}
                           </div>
                           <div className="ml-3 flex-1">
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-medium text-gray-900">
-                                {notification.title || getNotificationType(notification.type)}
+                                {notification.title ||
+                                  getNotificationType(notification.type)}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {new Date(notification.time).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                {new Date(notification.time).toLocaleDateString(
+                                  [],
+                                  { month: "short", day: "numeric" }
+                                )}
                               </p>
                             </div>
-                            <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
+                            <p className="mt-1 text-sm text-gray-600">
+                              {notification.message}
+                            </p>
                             {!notification.read && (
                               <div className="mt-1">
-                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">New</span>
+                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                                  New
+                                </span>
                               </div>
                             )}
                           </div>
@@ -565,20 +651,35 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnec
                 )}
 
                 {/* Last 30 Days Section */}
-                {(associationGroups.last30Days.length > 0 || otherGroups.last30Days.length > 0) && (
+                {(associationGroups.last30Days.length > 0 ||
+                  otherGroups.last30Days.length > 0) && (
                   <>
                     <div className="bg-gray-50 px-4 py-2 sticky top-0 z-10">
-                      <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Last 30 Days</h4>
+                      <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        Last 30 Days
+                      </h4>
                     </div>
-                    
+
                     {/* Last 30 Days Association Requests */}
                     {associationGroups.last30Days.map((notification) => {
-                      const requesterId = notification.data?.requesterId || notification.sender?.id || notification.data?.sender?.id;
-                      const requesterName = notification.data?.senderName || notification.data?.requesterName || 'Someone';
-                      const requesterFamilyCode = notification.data?.senderFamilyCode || notification.data?.requesterFamilyCode || 'Their Family';
-                      
+                      const requesterId =
+                        notification.data?.requesterId ||
+                        notification.sender?.id ||
+                        notification.data?.sender?.id;
+                      const requesterName =
+                        notification.data?.senderName ||
+                        notification.data?.requesterName ||
+                        "Someone";
+                      const requesterFamilyCode =
+                        notification.data?.senderFamilyCode ||
+                        notification.data?.requesterFamilyCode ||
+                        "Their Family";
+
                       return (
-                        <div key={notification.id} className="border-b border-gray-200">
+                        <div
+                          key={notification.id}
+                          className="border-b border-gray-200"
+                        >
                           <AssociationRequestItem
                             request={{
                               ...notification,
@@ -593,10 +694,12 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnec
                                 senderFamilyCode: requesterFamilyCode,
                                 targetUserId: notification.data?.targetUserId,
                                 targetName: notification.data?.targetName,
-                                targetFamilyCode: notification.data?.targetFamilyCode || notification.data?.familyCode,
-                                requestType: 'family_association'
+                                targetFamilyCode:
+                                  notification.data?.targetFamilyCode ||
+                                  notification.data?.familyCode,
+                                requestType: "family_association",
                               },
-                              createdAt: notification.createdAt
+                              createdAt: notification.createdAt,
                             }}
                             onAccept={() => handleAcceptRequest(notification)}
                             onReject={() => handleRejectRequest(notification)}
@@ -605,31 +708,50 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnec
                         </div>
                       );
                     })}
-                    
+
                     {/* Last 30 Days Other Notifications */}
                     {otherGroups.last30Days.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`relative px-4 py-3 hover:bg-gray-50 border-b border-gray-200 ${!notification.read ? 'bg-blue-50' : ''}`}
-                        onClick={() => !notification.read && markAsRead(notification.id)}
+                        className={`relative px-4 py-3 hover:bg-gray-50 border-b border-gray-200 ${
+                          !notification.read ? "bg-blue-50" : ""
+                        }`}
+                        onClick={() =>
+                          !notification.read && markAsRead(notification.id)
+                        }
                       >
                         <div className="flex items-start">
-                          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${notificationTypes[notification.type]?.color || 'from-gray-400 to-gray-300'}`}>
-                            {notificationTypes[notification.type]?.icon || <FiBell className="h-5 w-5 text-white" />}
+                          <div
+                            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${
+                              notificationTypes[notification.type]?.color ||
+                              "from-gray-400 to-gray-300"
+                            }`}
+                          >
+                            {notificationTypes[notification.type]?.icon || (
+                              <FiBell className="h-5 w-5 text-white" />
+                            )}
                           </div>
                           <div className="ml-3 flex-1">
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-medium text-gray-900">
-                                {notification.title || getNotificationType(notification.type)}
+                                {notification.title ||
+                                  getNotificationType(notification.type)}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {new Date(notification.time).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                {new Date(notification.time).toLocaleDateString(
+                                  [],
+                                  { month: "short", day: "numeric" }
+                                )}
                               </p>
                             </div>
-                            <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
+                            <p className="mt-1 text-sm text-gray-600">
+                              {notification.message}
+                            </p>
                             {!notification.read && (
                               <div className="mt-1">
-                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">New</span>
+                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                                  New
+                                </span>
                               </div>
                             )}
                           </div>
@@ -641,28 +763,28 @@ const NotificationPanel = ({ open, onClose, onNotificationCountUpdate , isConnec
               </>
             )}
           </div>
-          
+
           {/* Footer */}
           <div className="border-t border-gray-200 p-4 text-center">
             <button
               onClick={() => fetchNotifications(true)}
               style={{
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#2563eb',
-                backgroundColor: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                textDecoration: 'none',
-                transition: 'all 0.2s ease'
+                fontSize: "14px",
+                fontWeight: "500",
+                color: "#2563eb",
+                backgroundColor: "transparent",
+                border: "none",
+                cursor: "pointer",
+                textDecoration: "none",
+                transition: "all 0.2s ease",
               }}
               onMouseEnter={(e) => {
-                e.target.style.color = '#1d4ed8';
-                e.target.style.textDecoration = 'underline';
+                e.target.style.color = "#1d4ed8";
+                e.target.style.textDecoration = "underline";
               }}
               onMouseLeave={(e) => {
-                e.target.style.color = '#2563eb';
-                e.target.style.textDecoration = 'none';
+                e.target.style.color = "#2563eb";
+                e.target.style.textDecoration = "none";
               }}
             >
               View all notifications

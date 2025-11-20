@@ -294,7 +294,7 @@ const FamilyHubPage = () => {
           bottom: '20px',
           left: '50%',
           transform: 'translateX(-50%)',
-          backgroundColor: '#4BB543',
+          backgroundColor: "#1976D2",
           color: 'white',
           padding: '10px 20px',
           borderRadius: '8px',
