@@ -2,9 +2,10 @@ import React, { useMemo, useState } from 'react';
 import RelationshipCalculator from '../../utils/relationshipCalculator';
 import { useFamilyTreeLabels } from '../../Contexts/FamilyTreeContext';
 import { useUser } from '../../Contexts/UserContext';
-import { FiEye } from 'react-icons/fi';
+import { FiEye, FiShare2, FiMoreVertical, FiUserX, FiUserCheck } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getToken } from '../../utils/auth';
 
 // Helper function to get inverse/opposite relationship code
 const getInverseRelationship = (relationshipCode) => {
@@ -59,7 +60,7 @@ const getInverseRelationship = (relationshipCode) => {
     inversedComponents.reverse();
     
     const result = inversedComponents.join('');
-    console.log(`🔄 Inverse relationship: ${relationshipCode} → ${result} (components: ${components.join(',')} → ${inversedComponents.join(',')})`);
+    console.log(` Inverse relationship: ${relationshipCode} → ${result} (components: ${components.join(',')} → ${inversedComponents.join(',')})`);
     
     return result;
 };
@@ -121,6 +122,14 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
     const { userInfo } = useUser();
     const { code } = useParams(); // Get current family code from URL
     const navigate = useNavigate();
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const isAdmin = !!(userInfo && (userInfo.role === 2 || userInfo.role === 3));
+    const canShare = !!person.memberId;
+    const canShowAdminMenu = isAdmin && !!person.memberId;
+    const currentFamilyCode = code || userInfo?.familyCode || person.familyCode || '';
+    const isSelf = !!(person.memberId && userInfo?.userId && person.memberId === userInfo.userId);
+    const isBlocked = !!person.isBlocked;
+    const canShowBlockAction = canShowAdminMenu && !isSelf;
     
     // Get source relationship from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -179,7 +188,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             const calculator = new RelationshipCalculator(tree);
             const rel = calculator.calculateRelationship(rootId, person.id);
             if (rel && rel.relationshipCode) {
-                console.log(`🔍 Relationship for ${person.name}: ${rel.relationshipCode}`);
+                console.log(` Relationship for ${person.name}: ${rel.relationshipCode}`);
                 return rel.relationshipCode;
             }
         }
@@ -296,6 +305,123 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
         onClick(person.id);
     };
 
+    const handleShareClick = async (e) => {
+        e.stopPropagation();
+
+        if (!person.memberId || !currentFamilyCode) {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Cannot share link',
+                text: 'Family or member information is missing for this person.',
+            });
+            return;
+        }
+
+        const inviteUrl = `${window.location.origin}/edit-profile?familyCode=${currentFamilyCode}&memberId=${person.memberId}`;
+
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: 'Family Tree Invitation',
+                    text: 'Update your family tree profile using this secure link.',
+                    url: inviteUrl,
+                });
+            } else {
+                await navigator.clipboard.writeText(inviteUrl);
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Invite Link Copied',
+                    text: 'The profile invite link has been copied to your clipboard. You can share it via WhatsApp or any app.',
+                });
+            }
+        } catch (err) {
+            console.error('Error sharing invite link from tree node:', err);
+            await Swal.fire({
+                icon: 'error',
+                title: 'Share Failed',
+                text: 'Unable to share the invite link. Please try again.',
+            });
+        }
+    };
+
+    const handleToggleBlock = async (e, shouldBlock) => {
+        e.stopPropagation();
+
+        if (!person.memberId || !currentFamilyCode) {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Cannot update member',
+                text: 'Family or member information is missing for this person.',
+            });
+            return;
+        }
+
+        const token = getToken();
+        if (!token) {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Session expired',
+                text: 'Please log in again to manage family members.',
+            });
+            return;
+        }
+
+        const actionLabel = shouldBlock ? 'block' : 'unblock';
+        const confirm = await Swal.fire({
+            icon: 'warning',
+            title: `Are you sure you want to ${actionLabel} this member?`,
+            text: shouldBlock
+                ? 'They will no longer be able to view or edit this family tree and members.'
+                : 'They will regain access to this family.',
+            showCancelButton: true,
+            confirmButtonText: `Yes, ${actionLabel}`,
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: shouldBlock ? '#e53e3e' : '#16a34a',
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const endpoint = shouldBlock ? 'block' : 'unblock';
+            const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/family/member/${endpoint}/${person.memberId}/${currentFamilyCode}`;
+            const res = await fetch(apiUrl, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const json = await res.json().catch(() => null);
+
+            if (!res.ok) {
+                const msg = json?.message || `Failed to ${actionLabel} member`;
+                throw new Error(msg);
+            }
+
+            await Swal.fire({
+                icon: 'success',
+                title: `Member ${shouldBlock ? 'Blocked' : 'Unblocked'}`,
+                text: json?.message || `Family member has been ${shouldBlock ? 'blocked' : 'unblocked'} successfully.`,
+            });
+
+            setIsMenuOpen(false);
+            window.location.reload();
+        } catch (err) {
+            console.error(`Error trying to ${actionLabel} member from tree node:`, err);
+            await Swal.fire({
+                icon: 'error',
+                title: 'Action Failed',
+                text: err.message || `Unable to ${actionLabel} this member. Please try again.`,
+            });
+        }
+    };
+
+    const handleMenuToggle = (e) => {
+        e.stopPropagation();
+        setIsMenuOpen((prev) => !prev);
+    };
+
     // Determine if this person has an associated family tree
     const getAssociatedCodes = () => {
         let codes = [];
@@ -374,7 +500,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
         
         // Validation 3: Check if trying to navigate to logged-in user's own family
         if (userInfo?.familyCode && personFamilyCode === userInfo.familyCode) {
-            console.log(`🚫 Navigation blocked: ${person.name}'s family (${personFamilyCode}) is user's own family (${userInfo.familyCode})`);
+            console.log(` Navigation blocked: ${person.name}'s family (${personFamilyCode}) is user's own family (${userInfo.familyCode})`);
             Swal.fire({
                 icon: 'info',
                 title: 'Your Own Family Tree',
@@ -385,7 +511,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
         }
         
         // All validations passed - proceed with navigation
-        console.log(`✅ Navigation allowed: ${person.name} (${personFamilyCode}) → Current: ${code} → User: ${userInfo?.familyCode}`);
+        console.log(` Navigation allowed: ${person.name} (${personFamilyCode}) → Current: ${code} → User: ${userInfo?.familyCode}`);
         
         // Determine focus and source based on relationship type
         let focusUserId = person.memberId || person.userId;
@@ -420,16 +546,16 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 focusUserId = spouseFound.memberId || spouseFound.userId;
                 // Source is the spouse's relationship (Z+ from Z+H)
                 sourceCode = relationshipCode.slice(0, -1);
-                console.log(`🔗 Spouse relationship: ${relationshipCode} → Focus on spouse: ${spouseFound.name} (${focusUserId}), source: ${sourceCode}`);
+                console.log(` Spouse relationship: ${relationshipCode} → Focus on spouse: ${spouseFound.name} (${focusUserId}), source: ${sourceCode}`);
             } else {
                 // Fallback if spouse not found
                 sourceCode = relationshipCode.slice(0, -1);
-                console.log(`⚠️ Spouse not found in tree for ${relationshipCode}, using clicked person as focus`);
+                console.log(` Spouse not found in tree for ${relationshipCode}, using clicked person as focus`);
             }
         } else if (relationshipCode) {
             // For direct relationships (Z+, B+, W, H, etc.), use inverse
             sourceCode = getInverseRelationship(relationshipCode);
-            console.log(`🔗 Direct relationship: ${relationshipCode} → Focus: ${person.name}, inverse source: ${sourceCode}`);
+            console.log(` Direct relationship: ${relationshipCode} → Focus: ${person.name}, inverse source: ${sourceCode}`);
         }
         
         const queryParams = {
@@ -449,7 +575,6 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
     const isLargeTree = memberCount > 50;
     const cardOpacity = isLargeTree ? 0.95 : 1;
     const shadowIntensity = isLargeTree ? 0.05 : 0.08;
-
 
     return (
         <div id={`person-${person.id}`} className="person-container" style={{ position: 'absolute', left: `${person.x - width / 2}px`, top: `${person.y - height / 2}px`, zIndex: 10 }}>
@@ -539,20 +664,68 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
             )}
             {/* Radial Menu Button - Top Right Corner (hide in viewOnly mode) */}
             {!viewOnly && (
-                <button
-                    className="radial-menu-button absolute top-1 right-1 w-5 h-5 bg-gradient-to-br from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-lg hover:shadow-xl transition-all duration-200 z-10 border-2 border-white"
-                    onClick={handleRadialMenuClick}
+                <div
+                    className="absolute flex flex-col items-center space-y-1 z-30"
                     style={{
-                        boxShadow: '0 4px 14px rgba(6, 182, 212, 0.45)',
-                        width: memberCount > 50 ? '16px' : '24px',
-                        height: memberCount > 50 ? '16px' : '24px',
                         top: memberCount > 50 ? '2px' : '8px',
                         right: memberCount > 50 ? '2px' : '8px',
                     }}
-                    title="Add family member"
                 >
-                    +
-                </button>
+                    {canShowAdminMenu && (
+                        <div className="relative">
+                            <button
+                                onClick={handleMenuToggle}
+                                className="w-5 h-5 md:w-6 md:h-6 bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 rounded-full flex items-center justify-center shadow-md border border-gray-200"
+                                title="More actions"
+                            >
+                                <FiMoreVertical size={14} />
+                            </button>
+                            {isMenuOpen && (
+                                <div className="absolute right-0 mt-1 w-40 bg-white rounded-md shadow-lg border border-gray-200 z-20">
+                                    {canShowBlockAction && (
+                                        <button
+                                            onClick={(e) => handleToggleBlock(e, !isBlocked)}
+                                            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                                        >
+                                            {isBlocked ? (
+                                                <>
+                                                    <FiUserCheck size={14} className="text-green-600" />
+                                                    <span>Unblock member</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FiUserX size={14} className="text-red-600" />
+                                                    <span>Block member</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {canShare && (
+                        <button
+                            onClick={handleShareClick}
+                            className="w-5 h-5 md:w-6 md:h-6 bg-white/90 hover:bg-white text-sky-600 hover:text-sky-700 rounded-full flex items-center justify-center shadow-md border border-cyan-300"
+                            title="Share profile link"
+                        >
+                            <FiShare2 size={14} />
+                        </button>
+                    )}
+                    <button
+                        className="radial-menu-button w-5 h-5 md:w-6 md:h-6 bg-gradient-to-br from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-lg hover:shadow-xl border-2 border-white"
+                        onClick={handleRadialMenuClick}
+                        style={{
+                            boxShadow: '0 4px 14px rgba(6, 182, 212, 0.45)',
+                            width: memberCount > 50 ? '16px' : '24px',
+                            height: memberCount > 50 ? '16px' : '24px',
+                        }}
+                        title="Add family member"
+                    >
+                        +
+                    </button>
+                </div>
             )}
             {/* Profile Picture - Overlapping Top Edge */}
             <div className="absolute left-1/2 transform -translate-x-1/2 z-20" style={{ top: `-${profileSize / 3}px` }}>
@@ -673,7 +846,7 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                         </div>
                     </div>
                 )}
-                
+
                 {/* Editing UI */}
                 {isEditingLabel && !viewOnly && (
                     <div className="px-2 mt-auto">
@@ -692,8 +865,9 @@ const Person = ({ person, isRoot, onClick, rootId, tree, language, isNew, isSele
                 )}
             </div>
         </div>
-        </div>
+    </div>
     );
 };
 
 export default Person;
+

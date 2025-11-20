@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiEdit2, FiTrash2, FiEye, FiLoader } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiEye, FiLoader, FiShare2, FiUserX, FiUserCheck } from 'react-icons/fi';
 import { FaBirthdayCake, FaPhone, FaHome, FaMale, FaFemale } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 
@@ -26,14 +26,32 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
 
   const fetchMembers = async () => {
     try {
-        const res = await fetch(`${BASE_URL}/family/member/${familyCode}`, {
+      const res = await fetch(`${BASE_URL}/family/member/${familyCode}`, {
         headers: {
-            Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
+      });
+
+      // If user is blocked from this family, backend will return 403
+      if (res.status === 403) {
+        let message = 'You have been blocked from this family';
+        try {
+          const error = await res.json();
+          if (error?.message) message = error.message;
+        } catch (_) {}
+
+        await Swal.fire({
+          icon: 'error',
+          title: 'Access Restricted',
+          text: message,
         });
-        if (!res.ok) throw new Error('Failed to fetch members');
-        const json = await res.json();
-        const members = json.data.map((item) => ({
+        setFamilyMembers([]);
+        return;
+      }
+
+      if (!res.ok) throw new Error('Failed to fetch members');
+      const json = await res.json();
+      const members = json.data.map((item) => ({
         id: item.id,
         memberId: item.memberId,
         userId: item.user.id,
@@ -51,9 +69,10 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
         dob: item.user.userProfile?.dob || '',
         profilePic: item.user.profileImage,
         isAdmin: item.user.role > 1,
+        isBlocked: item.isBlocked,
         lastUpdated: new Date(item.updatedAt).toLocaleDateString('en-IN'),
-        }));
-        setFamilyMembers(members);
+      }));
+      setFamilyMembers(members);
     } catch (err) {
         console.error('Error loading family members:', err);
     } finally {
@@ -110,26 +129,59 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
     }
   };
 
-  
-    const handleDeleteMember = async (userId, familyCode, e) => {
-  e.stopPropagation();
+  const handleShareInvite = async (member, e) => {
+    e.stopPropagation();
 
-  const result = await Swal.fire({
-    title: 'Are you sure?',
-    text: 'This member will be removed permanently from the family!',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#e53e3e',
-    cancelButtonColor: '#a0aec0',
-    confirmButtonText: 'Yes, delete it!',
-  });
-
-  if (result.isConfirmed) {
+    const inviteUrl = `${window.location.origin}/edit-profile?familyCode=${familyCode}&memberId=${member.memberId}`;
     try {
-      const response = await fetch(
-        `${BASE_URL}/family/member/delete/${userId}/${familyCode}`,
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Family Tree Invitation',
+          text: 'Update your family tree profile using this secure link.',
+          url: inviteUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(inviteUrl);
+        await Swal.fire({
+          icon: 'success',
+          title: 'Invite Link Copied',
+          text: 'The profile invite link has been copied to your clipboard. You can share it via WhatsApp or any app.',
+        });
+      }
+    } catch (err) {
+      console.error('Error sharing invite link:', err);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Share Failed',
+        text: 'Unable to share the invite link. Please try again.',
+      });
+    }
+  };
+
+  const handleToggleBlock = async (member, shouldBlock, e) => {
+    e.stopPropagation();
+
+    const actionLabel = shouldBlock ? 'block' : 'unblock';
+    const confirm = await Swal.fire({
+      icon: 'warning',
+      title: `Are you sure you want to ${actionLabel} this member?`,
+      text: shouldBlock
+        ? 'They will no longer be able to view or edit this family tree.'
+        : 'They will regain access to this family.',
+      showCancelButton: true,
+      confirmButtonText: `Yes, ${actionLabel}`,
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: shouldBlock ? '#e53e3e' : '#16a34a',
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      const endpoint = shouldBlock ? 'block' : 'unblock';
+      const res = await fetch(
+        `${BASE_URL}/family/member/${endpoint}/${member.memberId}/${familyCode}`,
         {
-          method: 'DELETE',
+          method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -137,20 +189,30 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
         }
       );
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete member');
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        const msg = json?.message || `Failed to ${actionLabel} member`;
+        throw new Error(msg);
       }
 
-      Swal.fire('Deleted!', 'The family member has been removed.', 'success');
+      await Swal.fire({
+        icon: 'success',
+        title: `Member ${shouldBlock ? 'Blocked' : 'Unblocked'}`,
+        text: json?.message || `Family member has been ${shouldBlock ? 'blocked' : 'unblocked'} successfully.`,
+      });
 
-      // Refetch members
+      // Refresh members
       fetchMembers();
     } catch (err) {
-      Swal.fire('Error!', err.message, 'error');
+      console.error(`Error trying to ${actionLabel} member:`, err);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Action Failed',
+        text: err.message || `Unable to ${actionLabel} this member. Please try again.`,
+      });
     }
-  }
-};
+  };
 
   const filteredMembers = familyMembers.filter((member) =>
     member.name && member.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -188,7 +250,14 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
         </div>
 
         <div className="ml-4 flex-1 min-w-0">
-          <h3 className="text-xl font-extrabold text-gray-900 truncate pr-2">{member.name}</h3>
+          <div className="flex items-center space-x-2">
+            <h3 className="text-xl font-extrabold text-gray-900 truncate pr-2">{member.name}</h3>
+            {member.isBlocked && (
+              <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                Blocked
+              </span>
+            )}
+          </div>
           <span
             className={`mt-1 inline-block text-sm font-semibold px-3 py-1 rounded-full ${
               relationColors[member.role] || 'bg-gray-100 text-gray-800'
@@ -232,6 +301,36 @@ const FamilyMemberCard = ({ familyCode, token, onEditMember, onViewMember, curre
           {/* Show view, edit, delete buttons only for Admin (role 2) and Superadmin (role 3) */}
           {(currentUser?.role === 2 || currentUser?.role === 3) && (
             <>
+              {/* Share profile invite link */}
+              <button
+                onClick={(e) => handleShareInvite(member, e)}
+                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700 transition-colors tooltip"
+                title="Share profile invite link"
+              >
+                <FiShare2 size={18} />
+              </button>
+
+              {/* Block / Unblock (cannot block yourself; backend also protects owner) */}
+              {currentUser?.userId !== member.userId && (
+                member.isBlocked ? (
+                  <button
+                    onClick={(e) => handleToggleBlock(member, false, e)}
+                    className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-700 transition-colors tooltip"
+                    title="Unblock Member"
+                  >
+                    <FiUserCheck size={18} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => handleToggleBlock(member, true, e)}
+                    className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700 transition-colors tooltip"
+                    title="Block Member"
+                  >
+                    <FiUserX size={18} />
+                  </button>
+                )
+              )}
+
               <button
                 onClick={(e) => handleEditMember(member.userId, e)}
                 disabled={editLoadingStates[member.userId]}

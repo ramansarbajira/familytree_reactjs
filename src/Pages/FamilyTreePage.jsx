@@ -307,7 +307,34 @@ const FamilyTreePage = () => {
                 const response = await authFetch(apiUrl, {
                     headers: { 'accept': '*/*' }
                 });
+
+                // authFetch can return null on 401 or network error
+                if (!response) {
+                    setTreeLoading(false);
+                    return;
+                }
+
                 console.log('📡 Debug - Response status:', response.status);
+
+                // If user is blocked from this family, backend returns 403
+                if (response.status === 403) {
+                    let message = 'You have been blocked from this family';
+                    try {
+                        const errorBody = await response.json();
+                        if (errorBody?.message) message = errorBody.message;
+                    } catch (e) {
+                        // ignore JSON parse errors
+                    }
+
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Access Restricted',
+                        text: message,
+                    });
+
+                    setTreeLoading(false);
+                    return;
+                }
 
                 if (response.ok) {
                     data = await response.json();
