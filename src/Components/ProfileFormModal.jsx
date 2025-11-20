@@ -1444,7 +1444,7 @@ const ProfileFormModal = ({ isOpen, onClose, onAddMember, onUpdateProfile, mode 
                   type="button"
                   onClick={handleDeleteProfile}
                   disabled={isDeleting}
-                  className={`px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors flex items-center ${
+                  className={`px-6 py-2.5 bg-gradient-to-r from-secondary-500 to-secondary-600 text-white font-medium rounded-lg transition-colors flex items-center ${
                     isDeleting ? 'opacity-75 cursor-not-allowed' : ''
                   }`}
                 >

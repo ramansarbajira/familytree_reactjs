@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaRegHeart, FaHeart, FaCommentDots, FaTimes } from "react-icons/fa";
 import { AnimatePresence, motion } from "framer-motion";
-import CommentItem from './CommentItem';
-import { buildCommentTree, countComments } from '../utils/commentUtils';
+import CommentItem from "./CommentItem";
+import { buildCommentTree, countComments } from "../utils/commentUtils";
 
-const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken, currentUser }) => {
+const PostViewerModal = ({
+  isOpen,
+  onClose,
+  post,
+  onLikePost,
+  authToken,
+  currentUser,
+}) => {
   const [likeCount, setLikeCount] = useState(post?.likes || 0);
   const [isLiked, setIsLiked] = useState(post?.isLiked || false);
   const [comments, setComments] = useState([]);
@@ -12,6 +19,7 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken, current
   const [isCommentLoading, setIsCommentLoading] = useState(false);
   const [isLikeLoading, setIsLikeLoading] = useState(false);
   const commentsRef = useRef(null);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   useEffect(() => {
     if (isOpen && post) {
@@ -63,7 +71,10 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken, current
         setIsLiked(data.liked);
         setLikeCount(data.totalLikes);
       } else {
-        console.error("Failed to toggle like:", data.message || response.statusText);
+        console.error(
+          "Failed to toggle like:",
+          data.message || response.statusText
+        );
       }
     } catch (error) {
       console.error("Error toggling like:", error);
@@ -92,7 +103,10 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken, current
         await fetchComments();
       } else {
         const errorData = await response.json();
-        console.error("Failed to post comment:", errorData.message || response.statusText);
+        console.error(
+          "Failed to post comment:",
+          errorData.message || response.statusText
+        );
       }
     } catch (error) {
       console.error("Error posting comment:", error);
@@ -102,59 +116,68 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken, current
 
   const handleEditComment = async (commentId, newText) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/post/comment/${commentId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ comment: newText })
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/post/comment/${commentId}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ comment: newText }),
+        }
+      );
       if (response.ok) {
         await fetchComments();
       }
     } catch (error) {
-      console.error('Failed to edit comment:', error);
+      console.error("Failed to edit comment:", error);
       throw error;
     }
   };
 
   const handleDeleteComment = async (commentId) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/post/comment/${commentId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${authToken}`
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/post/comment/${commentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
         }
-      });
+      );
       if (response.ok) {
         await fetchComments();
       }
     } catch (error) {
-      console.error('Failed to delete comment:', error);
+      console.error("Failed to delete comment:", error);
       throw error;
     }
   };
 
   const handleReplyComment = async (parentCommentId, replyText) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/post/comment/reply`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          postId: post.id,
-          parentCommentId,
-          comment: replyText
-        })
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/post/comment/reply`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            postId: post.id,
+            parentCommentId,
+            comment: replyText,
+          }),
+        }
+      );
       if (response.ok) {
         await fetchComments();
       }
     } catch (error) {
-      console.error('Failed to reply to comment:', error);
+      console.error("Failed to reply to comment:", error);
       throw error;
     }
   };
@@ -168,16 +191,20 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken, current
   };
 
   const modalVariants = {
-    hidden: { scale: 0.9, opacity: 0 },
-    visible: { scale: 1, opacity: 1, transition: { type: "spring", stiffness: 200, damping: 20 } },
-    exit: { scale: 0.9, opacity: 0, transition: { duration: 0.2 } },
+    hidden: { scale: 0.97, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 200, damping: 18 },
+    },
+    exit: { scale: 0.96, opacity: 0, transition: { duration: 0.18 } },
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-85 p-4 sm:p-6 backdrop-blur-sm font-inter"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 backdrop-blur"
           variants={backdropVariants}
           initial="hidden"
           animate="visible"
@@ -185,85 +212,77 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken, current
           onClick={onClose}
         >
           <motion.div
-            className="relative bg-white rounded-3xl shadow-3xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden transform-gpu"
+            className="relative bg-white rounded-3xl m-2 shadow-2xl w-full max-w-4xl h-[100vh] flex flex-col overflow-hidden"
             variants={modalVariants}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* CLOSE BUTTON */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 text-gray-700 hover:text-gray-900 z-50 bg-white rounded-full p-2.5 transition-all duration-300 shadow-lg hover:scale-110"
-              title="Close post viewer"
+              className="absolute top-3 right-3 text-gray-800 hover:text-black bg-white rounded-full p-2 shadow z-50"
             >
-              <FaTimes size={22} />
+              <FaTimes size={21} />
             </button>
 
-            <div className="flex flex-1 flex-col md:flex-row overflow-hidden">
-              {/* Left image section */}
-              <div className="relative flex-1 bg-gray-950 flex items-center justify-center p-3 sm:p-5 overflow-hidden">
+            <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+              {/* IMAGE - left */}
+              <div className="md:w-1/2 bg-black flex items-center justify-center p-0 md:p-5 h-[40vh] md:h-auto relative overflow-hidden">
                 {post.url || post.fullImageUrl ? (
                   <img
                     src={post.url || post.fullImageUrl}
-                    alt={post.caption || "Post image"}
-                    className="max-h-full max-w-full object-contain rounded-lg shadow-md"
+                    alt="Post"
+                    className="max-h-full max-w-full object-contain rounded-2xl shadow cursor-pointer"
+                    onClick={() => setIsFullScreen(true)} // enable click to full-screen
                   />
                 ) : (
-                  <div className="text-white text-center text-lg italic">
-                    No image available for this post.
+                  <div className="text-gray-200 text-lg italic text-center w-full">
+                    No image available.
                   </div>
                 )}
               </div>
 
-              {/* Right content & comments */}
-              <motion.div className="w-full md:w-96 bg-gray-50 p-6 border-t md:border-t-0 md:border-l border-gray-200 flex flex-col relative">
-                {/* Caption / Post Content */}
-                <div
-                  className="text-gray-900 mb-3 leading-relaxed overflow-auto max-h-[15vh] md:max-h-[18vh] pr-2"
-                  style={{
-                    fontSize: "16px",
-                    fontWeight: "normal",
-                    whiteSpace: "pre-wrap",
-                  }}
-                  title={post.caption}
-                >
-                  {post.caption || "No Caption"}
+              {/* RIGHT PANEL - info/comments */}
+              <div className="flex-1 flex flex-col h-full bg-gray-50 border-t md:border-t-0 md:border-l border-gray-200 min-h-0">
+                {/* Caption + actions */}
+                <div className="p-4 pb-2 border-b flex-shrink-0">
+                  <div className="text-gray-900 text-base font-medium mb-2 break-words">
+                    {post.caption || "No Caption"}
+                  </div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <button
+                      onClick={handleLikeClick}
+                      disabled={isLikeLoading}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full text-base font-semibold shadow-sm transition
+                      ${
+                        isLiked
+                          ? "bg-red-500 text-white"
+                          : "bg-gray-200 text-gray-700 hover:bg-red-200 hover:text-red-700"
+                      }
+                    `}
+                    >
+                      {isLikeLoading ? (
+                        <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                      ) : isLiked ? (
+                        <FaHeart size={18} />
+                      ) : (
+                        <FaRegHeart size={18} />
+                      )}
+                      <span>{likeCount}</span>
+                    </button>
+                    <span className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 text-gray-700">
+                      <FaCommentDots size={18} /> {comments.length}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Like & Comment buttons */}
-                <div className="flex items-center gap-4 mb-5 flex-shrink-0">
-                  <button
-                    onClick={handleLikeClick}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-all duration-300 ${
-                      isLiked
-                        ? "bg-red-500 text-white shadow-md"
-                        : "bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-600"
-                    }`}
-                    disabled={isLikeLoading}
-                  >
-                    {isLikeLoading ? (
-                      <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-                    ) : isLiked ? (
-                      <FaHeart size={18} />
-                    ) : (
-                      <FaRegHeart size={18} />
-                    )}{" "}
-                    {likeCount}
-                  </button>
-
-                  <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
-                    <FaCommentDots size={18} /> {comments.length}
-                  </button>
-                </div>
-
-                {/* Comments section */}
-                <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
-                  <h4 className="font-semibold text-lg text-gray-800 mb-3 flex-shrink-0">
+                {/* Comments */}
+                <div className="flex-1 flex flex-col min-h-0">
+                  <h4 className="px-4 pt-4 pb-2 font-semibold text-base text-gray-800 flex-shrink-0">
                     Comments ({countComments(buildCommentTree(comments))})
                   </h4>
-
                   <div
                     ref={commentsRef}
-                    className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-grow"
-                    style={{ maxHeight: "calc(100% - 110px)" }}
+                    className="flex-1 overflow-y-auto px-4 pb-4 space-y-3 custom-scrollbar min-h-0"
                   >
                     {comments.length > 0 ? (
                       buildCommentTree(comments).map((comment) => (
@@ -277,39 +296,73 @@ const PostViewerModal = ({ isOpen, onClose, post, onLikePost, authToken, current
                         />
                       ))
                     ) : (
-                      <p className="text-md text-gray-500 italic p-3 bg-gray-100 rounded-lg">
+                      <p className="text-gray-500 italic p-3 bg-gray-100 rounded-lg text-center">
                         Be the first to leave a comment!
                       </p>
                     )}
                   </div>
-
-                  {/* New comment input */}
-                  <div className="mt-4 flex flex-col flex-shrink-0">
+                  {/* Comment input (sticks at bottom) */}
+                  <div className="flex mb-14  items-end gap-2 p-4 pt-0 bg-gray-50 flex-shrink-0 border-t">
                     <textarea
-                      placeholder="Add a comment..."
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-transparent text-sm resize-none"
-                      rows="2"
+                      rows="1"
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
-                    ></textarea>
+                      placeholder="Write a comment..."
+                      className="flex-1 p-3 mt-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 text-sm resize-none min-h-[38px] max-h-[100px] md:min-h-[38px] md:max-h-[60px]"
+                      style={{ lineHeight: "1.4" }}
+                    />
                     <button
                       onClick={handlePostComment}
                       disabled={!newComment.trim() || isCommentLoading}
-                      className={`mt-2 w-full py-2 rounded-lg font-semibold transition-colors shadow-md ${
-                        isCommentLoading
-                          ? "bg-gray-400"
-                          : "bg-primary-600 hover:bg-primary-700 text-white"
-                      }`}
+                      className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap shadow-md
+                        ${
+                          isCommentLoading
+                            ? "bg-gray-400 text-white"
+                            : "bg-primary-600 hover:bg-primary-700 text-white"
+                        }
+                      `}
+                      style={{ minHeight: "38px", height: "auto" }}
                     >
-                      {isCommentLoading ? "Posting..." : "Post Comment"}
+                      {isCommentLoading ? "..." : "Post"}
                     </button>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </div>
           </motion.div>
         </motion.div>
       )}
+
+      <AnimatePresence>
+        {isFullScreen && (
+          <motion.div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-95"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsFullScreen(false)}
+          >
+            {/* Close button positioned relative to viewport */}
+            <button
+              onClick={() => setIsFullScreen(false)}
+              className="fixed top-4 right-4 bg-white/70 hover:bg-white/90 rounded-full p-2 shadow z-50"
+            >
+              <FaTimes size={28} />
+            </button>
+
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-full max-h-full p-4"
+            >
+              <img
+                src={post.url || post.fullImageUrl}
+                alt="Full screen"
+                className="max-w-screen max-h-screen object-contain rounded"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 };

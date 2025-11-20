@@ -456,15 +456,15 @@ const PostPage = () => {
       <div className="flex justify-between items-center mb-4 sm:mb-6 px-2 sm:px-0">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Feed</h1>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {/* Feed Switch */}
           <div className="bg-gray-100 border border-gray-200 rounded-full flex p-1 gap-1">
             <button
               onClick={() => setActiveFeed("public")}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
                 activeFeed === "public"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-gray-700 bg-white hover:text-blue-600 hover:bg-blue-50"
+                  ? "bg-secondary-600 text-white shadow-sm"
+                  : "text-white bg-primary-700  hover:bg-primry-800"
               }`}
             >
               <MdPublic size={16} /> Public
@@ -475,8 +475,8 @@ const PostPage = () => {
                 onClick={() => setActiveFeed("family")}
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
                   activeFeed === "family"
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-gray-700 bg-white hover:text-blue-600 hover:bg-blue-50"
+                    ? "bg-secondary-600 text-white shadow-sm"
+                    : "text-white bg-primary-700  hover:bg-primary-800"
                 }`}
               >
                 <MdPeople size={16} /> Family
@@ -485,7 +485,7 @@ const PostPage = () => {
           </div>
 
           {/* Search */}
-          {showSearchInput ? (
+          {/* {showSearchInput ? (
             <input
               type="text"
               autoFocus
@@ -510,7 +510,7 @@ const PostPage = () => {
             >
               <FiSearch size={18} />
             </button>
-          )}
+          )} */}
         </div>
       </div>
 
@@ -530,7 +530,7 @@ const PostPage = () => {
           </button>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="p-2 sm:p-2.5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-all"
+            className="p-2 sm:p-2.5 rounded-full bg-blue-100 text-primary-700 hover:bg-primary-200 transition-all"
           >
             <FiImage size={18} />
           </button>
@@ -565,7 +565,7 @@ const PostPage = () => {
                       <p className="text-xs text-gray-500">{post.time}</p>
                     </div>
                   </div>
-                  <span className="text-blue-500 flex items-center gap-1 text-xs sm:text-sm">
+                  <span className="text-secondary-600 flex items-center gap-1 text-xs sm:text-sm">
                     {post.privacy === "family" ? <FiUsers /> : <FiGlobe />}
                     {post.privacy === "family" ? "Family" : "Public"}
                   </span>
@@ -593,23 +593,23 @@ const PostPage = () => {
                     />
 
                     {/* ❤️ Like animation overlay */}
-                    {likedPostId === post.id && showHeartAnimation && (
+                    {showHeart === post.id && (
                       <div className="absolute inset-0 flex items-center justify-center bg-transparent animate-heart-pop">
-                        <FaHeart className="text-pink-700 text-7xl drop-shadow-lg" />
+                        <FaHeart className="text-secondary-600 text-7xl drop-shadow-lg" />
                       </div>
                     )}
                   </div>
                 )}
 
                 {/* Actions */}
-                <div className="flex items-center gap-8 px-4 pt-3 pb-1">
+                <div className="flex items-center gap-8 px-4 pt-3 pb-1 ">
                   {/* Like */}
                   <button
                     onClick={() => handleLike(post.id)}
-                    className="flex items-center bg-white gap-2 text-gray-700 hover:text-pink-600 transition-colors duration-200 active:scale-95"
+                    className="flex items-center bg-white gap-2 text-gray-700 hover:text-secondary-600 transition-colors duration-200 active:scale-95"
                   >
                     {post.liked ? (
-                      <FaHeart size={20} className="text-pink-600" />
+                      <FaHeart size={20} className="text-secondary-600" />
                     ) : (
                       <FaRegHeart size={20} />
                     )}
