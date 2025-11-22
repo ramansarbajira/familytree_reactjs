@@ -9,7 +9,7 @@ const BottomNavBar = ({ activeTab, setActiveTab }) => {
   const tabs = [
     { id: 'home', label: 'Home', icon: <FiHome size={20} />, path: '/dashboard' },
     { id: 'upcomingEvent', label: 'Events', icon: <FiCalendar size={20} />, path: '/events' },
-    { id: 'postsStories', label: 'Posts', icon: <FiShare2 size={20} />, path: '/posts-and-feeds' },
+    // { id: 'postsStories', label: 'Posts', icon: <FiShare2 size={20} />, path: '/posts-and-feeds' },
     { id: 'gifts', label: 'Gifts', icon: <FiGift size={20} />, path: '/gifts-memories' },
     { id: 'profile', label: 'Profile', icon: <FiUser size={20} />, path: '/myprofile' },
   ];

@@ -1250,17 +1250,15 @@ const FamilyTreePage = () => {
                     {/* Mobile Top Header - Edit Mode */}
                     {canEdit && (
                         <>
-                            {/* Compact Top Bar */}
-                            <div className="sm:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm z-50 px-3 py-2">
+                        
+                            <div className="sm:hidden fixed top-16 left-0 right-0 bg-white border-b border-gray-200 shadow-sm z-50 px-3 py-2">
                                 <div className="flex items-center justify-between gap-2">
-                                    {/* Left: Menu Icon (placeholder - you can add menu functionality) */}
-                                    <button className="w-10 h-10 bg-green-600 text-white rounded-lg flex items-center justify-center active:scale-95 transition-transform">
+                                    {/* <button className="w-10 h-10 bg-green-600 text-white rounded-lg flex items-center justify-center active:scale-95 transition-transform">
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                                         </svg>
-                                    </button>
+                                    </button> */}
 
-                                    {/* Center: Search */}
                                     <div className="flex-1">
                                         <SearchBar
                                             tree={tree}
@@ -1271,14 +1269,12 @@ const FamilyTreePage = () => {
                                         />
                                     </div>
 
-                                    {/* Right: Language Switcher */}
                                     <div className="flex-shrink-0">
                                         <LanguageSwitcher />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Bottom Left Corner: Zoom Controls */}
                             <div className="sm:hidden fixed bottom-[88px] left-3 z-50 flex flex-col gap-2">
                                 <button
                                     onClick={zoomIn}
@@ -1297,7 +1293,6 @@ const FamilyTreePage = () => {
                                 </button>
                             </div>
 
-                            {/* Bottom Right Corner: Action Buttons */}
                             <div className="sm:hidden fixed bottom-[88px] right-3 z-50 flex flex-col gap-2">
                                 <button
                                     onClick={resetTree}
@@ -1330,9 +1325,9 @@ const FamilyTreePage = () => {
                         <div className="hidden sm:flex w-full bg-white border-b-2 border-gray-100 shadow-sm z-40">
                             <div className="w-full max-w-none 2xl:max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
                                 <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 lg:gap-6">
-                                    {/* Top Section: Stats */}
+        
                                     <div className="flex items-center justify-center lg:justify-start gap-3 xl:gap-6 flex-wrap">
-                                        {/* Navigation Buttons */}
+                                        
                                         {code && code !== userInfo.familyCode && (
                                             <div className="flex items-center gap-2 pr-3 border-r border-gray-300">
                                                 <button
@@ -1352,7 +1347,7 @@ const FamilyTreePage = () => {
                                             </div>
                                         )}
 
-                                        {/* Stats Inline */}
+                                      
                                         <div className="flex items-center gap-6 text-sm">
                                             <span className="text-gray-700">
                                                 <span className="font-medium">Total:</span> <span className="font-bold text-gray-900">{stats.total}</span>
@@ -1369,14 +1364,14 @@ const FamilyTreePage = () => {
                                         </div>
                                     </div>
 
-                                    {/* Bottom Section: Controls */}
+                                
                                     <div className="flex items-center justify-center lg:justify-end gap-3 lg:gap-4 flex-shrink-0">
-                                        {/* Language Switcher */}
+                                      
                                         <div className="flex items-center">
                                             <LanguageSwitcher />
                                         </div>
 
-                                        {/* Search */}
+                            
                                         <SearchBar
                                             tree={tree}
                                             onSearchResults={handleSearchResults}
@@ -1385,10 +1380,10 @@ const FamilyTreePage = () => {
                                             language={language}
                                         />
 
-                                        {/* Vertical Separator */}
+                                        
                                         <div className="w-px h-8 bg-gray-300"></div>
 
-                                        {/* Action Buttons */}
+                                        
                                         <div className="flex items-center gap-2">
                                             <button
                                                 className="flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 text-sm font-semibold active:scale-95 transition-all duration-200 shadow-sm"
@@ -1474,9 +1469,9 @@ const FamilyTreePage = () => {
                         <div className="hidden sm:flex w-full bg-white border-b-2 border-gray-100 shadow-sm z-40">
                             <div className="w-full max-w-none 2xl:max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
                                 <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 lg:gap-6">
-                                    {/* Top Section: Stats */}
+                                    
                                     <div className="flex items-center justify-center lg:justify-start gap-3 xl:gap-6 flex-wrap">
-                                        {/* Navigation Buttons */}
+                                        
                                         {code && code !== userInfo.familyCode && (
                                             <div className="flex items-center gap-2 pr-3 border-r border-gray-300">
                                                 <button
@@ -1496,7 +1491,6 @@ const FamilyTreePage = () => {
                                             </div>
                                         )}
 
-                                        {/* Stats Inline */}
                                         <div className="flex items-center gap-6 text-sm">
                                             <span className="text-gray-700">
                                                 <span className="font-medium">Total:</span> <span className="font-bold text-gray-900">{stats.total}</span>
@@ -1513,7 +1507,7 @@ const FamilyTreePage = () => {
                                         </div>
                                     </div>
 
-                                    {/* Bottom Section: Controls */}
+                                    
                                     <div className="flex items-center justify-center lg:justify-end gap-3 lg:gap-4 flex-shrink-0">
                                         <LanguageSwitcher />
 
